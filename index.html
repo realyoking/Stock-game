@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradeLife: The Daily Grind</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* --- CORE VARIABLES & THEME --- */
+        :root {
+            --bg-base: #09090b; --bg-surface: #18181b; --bg-panel: #27272a; --bg-hover: #3f3f46;
+            --border: #3f3f46; --border-light: #52525b;
+            --text-main: #f4f4f5; --text-muted: #a1a1aa;
+            --brand: #3b82f6; --brand-hover: #2563eb;
+            --success: #10b981; --success-bg: rgba(16, 185, 129, 0.1);
+            --danger: #ef4444; --danger-bg: rgba(239, 68, 68, 0.1);
+            --warning: #f59e0b; --gold: #fbbf24; --purple: #8b5cf6;
+            --sidebar-w: 280px; --radius-md: 12px; --radius-lg: 16px;
+        }
+
+        /* --- RESET & TYPOGRAPHY --- */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: var(--bg-base); color: var(--text-main); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+        .hidden { display: none !important; }
+        button { cursor: pointer; outline: none; border: none; font-weight: 600; transition: all 0.2s ease; }
+        input { outline: none; transition: border 0.2s ease; font-family: inherit; }
+
+        h1, h2, h3 { color: var(--text-main); letter-spacing: -0.5px; }
+        .text-muted { color: var(--text-muted); }
+        .text-success { color: var(--success); }
+        .text-danger { color: var(--danger); }
+        .text-gold { color: var(--gold); }
+        .text-purple { color: var(--purple); }
+        .text-sm { font-size: 0.875rem; }
+        .text-xs { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+        
+        .flex { display: flex; } .flex-col { display: flex; flex-direction: column; }
+        .items-center { align-items: center; } .justify-between { justify-content: space-between; }
+        .gap-2 { gap: 0.5rem; } .gap-4 { gap: 1rem; } .gap-6 { gap: 1.5rem; }
+        
+        /* --- BUTTONS --- */
+        .btn { padding: 0.75rem 1.5rem; border-radius: var(--radius-md); font-size: 0.95rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
+        .btn-brand { background: var(--brand); color: white; }
+        .btn-brand:hover { background: var(--brand-hover); transform: translateY(-1px); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { background: #059669; transform: translateY(-1px); }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-danger:hover { background: #dc2626; transform: translateY(-1px); }
+        .btn-purple { background: var(--purple); color: white; }
+        .btn-purple:hover { background: #7c3aed; transform: translateY(-1px); }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+        .btn-outline:hover { background: var(--bg-hover); }
+        .btn-sm { padding: 0.5rem 1rem; font-size: 0.85rem; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+        /* --- CUSTOM SCROLLBAR --- */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
+
+        /* --- SETUP SCREEN --- */
+        #setup-screen { position: fixed; inset: 0; background: var(--bg-base); z-index: 50; display: flex; align-items: center; justify-content: center; padding: 2rem; overflow-y: auto; }
+        .setup-container { max-width: 1000px; width: 100%; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 24px; padding: 3rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+        .role-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin: 2rem 0; }
+        .role-card { border: 2px solid var(--border); border-radius: var(--radius-lg); padding: 2rem; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--bg-panel); }
+        .role-card:hover { border-color: var(--brand); transform: translateY(-4px); }
+        .role-card.selected { border-color: var(--brand); background: rgba(59, 130, 246, 0.05); box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
+        .role-icon { display: flex; justify-content: center; margin-bottom: 1rem; color: var(--text-muted); }
+        .role-card.selected .role-icon { color: var(--brand); }
+
+        /* --- APP LAYOUT --- */
+        #app-layout { display: flex; height: 100vh; width: 100vw; }
+        
+        /* SIDEBAR */
+        .sidebar { width: var(--sidebar-w); background: var(--bg-surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 10; }
+        .brand { padding: 1.5rem; font-size: 1.5rem; font-weight: 800; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.75rem; }
+        .nav-menu { flex: 1; padding: 1rem; display: flex; flex-direction: column; gap: 0.25rem; overflow-y: auto; }
+        .nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.875rem 1rem; border-radius: var(--radius-md); color: var(--text-muted); cursor: pointer; transition: 0.2s; font-weight: 500; }
+        .nav-item:hover { background: var(--bg-panel); color: var(--text-main); }
+        .nav-item.active { background: var(--brand); color: white; }
+        .nav-item svg { width: 20px; height: 20px; }
+        
+        /* SIDEBAR STATS */
+        .sidebar-stats { padding: 1.5rem; border-top: 1px solid var(--border); background: var(--bg-panel); display: flex; flex-direction: column; gap: 0.75rem; }
+        .stat-row { display: flex; justify-content: space-between; align-items: center; }
+        
+        /* ENERGY BAR */
+        .energy-container { margin-top: 0.5rem; }
+        .energy-track { width: 100%; height: 6px; background: var(--bg-base); border-radius: 3px; overflow: hidden; margin-top: 0.25rem; }
+        .energy-fill { height: 100%; background: var(--gold); transition: width 0.3s ease; }
+
+        /* MAIN CONTENT */
+        .main-content { flex: 1; display: flex; flex-direction: column; background: var(--bg-base); position: relative; overflow: hidden; }
+        .top-bar { height: 70px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; background: var(--bg-surface); }
+        .content-body { flex: 1; overflow-y: auto; padding: 2rem; position: relative; }
+        .tab-panel { display: none; height: 100%; animation: fadeIn 0.3s ease; }
+        .tab-panel.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* WIDGETS & CARDS */
+        .widget-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .widget { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; }
+        .grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
+        .item-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between; transition: 0.2s; }
+        .item-card:hover { border-color: var(--border-light); transform: translateY(-2px); }
+
+        /* --- MARKET TAB (SPLIT PANE) --- */
+        .market-layout { display: grid; grid-template-columns: 1fr 420px; gap: 2rem; height: calc(100vh - 140px); }
+        
+        .market-list-container { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); display: flex; flex-direction: column; overflow: hidden; }
+        .market-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; background: var(--bg-panel); font-weight: 600; color: var(--text-muted); font-size: 0.85rem; }
+        .market-scroll { flex: 1; overflow-y: auto; }
+        
+        .stock-row { display: grid; grid-template-columns: 2fr 1.5fr 1fr 1fr; padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); cursor: pointer; transition: 0.2s; align-items: center; }
+        .stock-row:hover { background: var(--bg-hover); }
+        .stock-row.active-stock { background: var(--brand-hover); color: white; }
+        .stock-ticker { font-weight: 700; font-size: 1.1rem; }
+        .stock-sector { font-size: 0.8rem; color: var(--text-muted); }
+        .stock-row.active-stock .stock-sector { color: rgba(255,255,255,0.7); }
+        
+        /* TRADING PANEL */
+        .trading-panel { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; display: flex; flex-direction: column; }
+        .chart-box { height: 220px; width: 100%; margin: 1.5rem 0; background: var(--bg-base); border-radius: var(--radius-md); border: 1px solid var(--border); padding: 0.5rem; }
+        .trade-inputs { background: var(--bg-panel); padding: 1.5rem; border-radius: var(--radius-md); border: 1px solid var(--border); }
+        .input-group { display: flex; background: var(--bg-base); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; margin: 1rem 0; }
+        .input-group input { flex: 1; background: transparent; border: none; color: white; padding: 1rem; font-size: 1.1rem; text-align: right; }
+        .input-group span { padding: 1rem; color: var(--text-muted); font-weight: 600; background: var(--bg-panel); border-right: 1px solid var(--border); }
+        
+        /* --- TABLES --- */
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th { text-align: left; padding: 1rem; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+        .data-table td { padding: 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        .data-table tr:hover td { background: var(--bg-hover); }
+
+        /* --- TOASTS --- */
+        #toast-container { position: fixed; bottom: 2rem; right: 2rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.75rem; pointer-events: none; }
+        .toast { background: var(--bg-panel); border-left: 4px solid var(--brand); color: white; padding: 1rem 1.5rem; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.8); display: flex; align-items: center; gap: 1rem; min-width: 300px; max-width: 400px; animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; pointer-events: auto; }
+        .toast.success { border-color: var(--success); }
+        .toast.danger { border-color: var(--danger); }
+        .toast.warning { border-color: var(--warning); }
+        .toast.purple { border-color: var(--purple); }
+        .toast.fade-out { animation: fadeOut 0.4s ease forwards; }
+        
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { to { opacity: 0; transform: translateX(100%); } }
+
+        /* --- MODAL (RANDOM EVENTS) --- */
+        #modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); z-index: 1000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+        #modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-box { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 2.5rem; max-width: 500px; width: 100%; transform: scale(0.95); transition: transform 0.3s; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7); }
+        #modal-overlay.active .modal-box { transform: scale(1); }
+        .modal-buttons { display: flex; gap: 1rem; margin-top: 2rem; }
+
+        /* PROGRESS BARS */
+        .progress-track { width: 100%; height: 8px; background: var(--bg-base); border-radius: 4px; overflow: hidden; margin-top: 0.5rem; border: 1px solid var(--border); }
+        .progress-fill { height: 100%; background: var(--brand); transition: width 0.5s ease; }
+
+    </style>
+</head>
+<body>
+
+    <!-- ================= SETUP SCREEN ================= -->
+    <div id="setup-screen">
+        <div class="setup-container">
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <h1 style="font-size: 3.5rem; margin-bottom: 0.5rem;">TradeLife</h1>
+                <p class="text-muted" style="font-size: 1.1rem;">It's a tough world out there. Start grinding.</p>
+            </div>
+
+            <div class="flex flex-col gap-2" style="max-width: 450px; margin: 0 auto;">
+                <label class="text-xs">What's your name, kid?</label>
+                <input type="text" id="player-name" placeholder="E.g. John Doe..." value="Rookie Trader" style="padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-base); color: white; font-size: 1.1rem;">
+            </div>
+
+            <h3 style="text-align: center; margin-top: 3rem; margin-bottom: 1rem;">Choose your starting background</h3>
+            <div class="role-grid">
+                <!-- Broke Guy -->
+                <div class="role-card" onclick="selectRole('bankrupt')" id="role-bankrupt">
+                    <div class="role-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/><line x1="4" y1="22" x2="20" y2="2"/></svg>
+                    </div>
+                    <h3>Down Bad</h3>
+                    <div class="text-danger" style="font-size: 1.5rem; font-weight: 800; margin: 1rem 0;">$500 in pocket</div>
+                    <p class="text-sm text-muted">You owe the bank $50k, your credit is trashed, and you sleep on a friend's couch. Hard mode.</p>
+                </div>
+                
+                <!-- Average Joe -->
+                <div class="role-card selected" onclick="selectRole('worker')" id="role-worker">
+                    <div class="role-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>
+                    </div>
+                    <h3>Average Joe</h3>
+                    <div class="text-success" style="font-size: 1.5rem; font-weight: 800; margin: 1rem 0;">$15,000 saved</div>
+                    <p class="text-sm text-muted">You have a decent entry-level corporate job and zero debt. Standard grind. Climb the ladder.</p>
+                </div>
+
+                <!-- Trust Fund -->
+                <div class="role-card" onclick="selectRole('rich')" id="role-rich">
+                    <div class="role-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                    </div>
+                    <h3>Trust Fund Baby</h3>
+                    <div class="text-gold" style="font-size: 1.5rem; font-weight: 800; margin: 1rem 0;">$200,000 gifted</div>
+                    <p class="text-sm text-muted">Daddy gave you a small loan. High clout, massive starting capital. You basically skip the early game.</p>
+                </div>
+            </div>
+
+            <button class="btn btn-brand" style="width: 100%; padding: 1.5rem; font-size: 1.25rem;" onclick="startGame()">Start Your Life</button>
+        </div>
+    </div>
+
+    <!-- ================= APP LAYOUT ================= -->
+    <div id="app-layout" class="hidden">
+        
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="brand">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2.5"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                TradeLife
+            </div>
+            
+            <nav class="nav-menu">
+                <div class="nav-item active" onclick="switchTab('dashboard')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                    Dashboard
+                </div>
+                <div class="nav-item" onclick="switchTab('market')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                    Live Market
+                </div>
+                <div class="nav-item" onclick="switchTab('portfolio')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+                    My Portfolio
+                </div>
+                <div class="nav-item" onclick="switchTab('assets')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    Real Estate
+                </div>
+                <div class="nav-item" onclick="switchTab('lifestyle')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                    Lifestyle & Clout
+                </div>
+                <div class="nav-item" onclick="switchTab('career')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                    The Daily Grind
+                </div>
+                <div class="nav-item" onclick="switchTab('bank')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01"/><path d="M18 12h.01"/></svg>
+                    The Bank
+                </div>
+                <div class="nav-item" onclick="switchTab('blackmarket')" style="color: var(--danger); margin-top: 1rem; border: 1px dashed var(--danger);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    The Back Alley
+                </div>
+            </nav>
+
+            <div class="sidebar-stats">
+                <div class="stat-row">
+                    <span class="text-xs text-muted">Cash on hand</span>
+                    <span id="ui-cash" class="text-success" style="font-weight: 700;">$0.00</span>
+                </div>
+                <div class="stat-row">
+                    <span class="text-xs text-muted">Debt to Bank</span>
+                    <span id="ui-debt" class="text-danger" style="font-weight: 700;">$0.00</span>
+                </div>
+                <div class="stat-row">
+                    <span class="text-xs text-muted">Passive Income</span>
+                    <span id="ui-passive" class="text-brand" style="font-weight: 700;">+$0/day</span>
+                </div>
+                <div class="stat-row" style="margin-top: 0.5rem;">
+                    <span class="text-xs text-gold">Clout Level</span>
+                    <span id="ui-clout" class="text-gold" style="font-weight: 700;">0</span>
+                </div>
+                
+                <div class="energy-container">
+                    <div class="flex justify-between text-xs text-muted">
+                        <span>Physical Energy</span>
+                        <span id="ui-energy-text">100%</span>
+                    </div>
+                    <div class="energy-track">
+                        <div id="ui-energy-fill" class="energy-fill" style="width: 100%;"></div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN VIEWPORT -->
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="flex items-center gap-4">
+                    <div class="flex flex-col">
+                        <span id="header-name" style="font-weight: 700; font-size: 1.1rem;">Player Name</span>
+                        <span id="header-role" class="text-xs text-brand">Background</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-6">
+                    <div class="flex flex-col" style="text-align: right;">
+                        <span class="text-xs text-muted" id="market-status-text">Market Phase: Bull</span>
+                        <span id="ui-time" style="font-family: monospace; font-weight: 700; font-size: 1.1rem; color: var(--brand);">Day 1 - 09:30 AM</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="content-body">
+                
+                <!-- 1. DASHBOARD TAB -->
+                <div id="tab-dashboard" class="tab-panel active">
+                    <div class="flex justify-between items-center" style="margin-bottom: 2rem;">
+                        <div>
+                            <h1 style="font-size: 2.5rem;">Overview</h1>
+                            <p class="text-muted">Welcome back. Keep hustling.</p>
+                        </div>
+                        <div style="text-align: right; background: var(--bg-surface); padding: 1rem 1.5rem; border-radius: var(--radius-md); border: 1px solid var(--border);">
+                            <div class="text-xs text-muted">Total Net Worth</div>
+                            <div id="dash-networth" class="text-success" style="font-size: 2rem; font-weight: 800;">$0.00</div>
+                        </div>
+                    </div>
+
+                    <div class="widget" style="margin-bottom: 2rem;">
+                        <h3 style="margin-bottom: 1rem;">Net Worth History (Last 50 Days)</h3>
+                        <div style="height: 300px; width: 100%;">
+                            <canvas id="nwChart"></canvas>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-bottom: 1rem;">Recent Rumors & News</h3>
+                    <div class="grid-cards" id="dashboard-news">
+                        <!-- News items injected here -->
+                        <div class="item-card"><p class="text-muted">It's a quiet day in the markets...</p></div>
+                    </div>
+                </div>
+
+                <!-- 2. MARKET TAB -->
+                <div id="tab-market" class="tab-panel">
+                    <div class="market-layout">
+                        <!-- Left: Stock List -->
+                        <div class="market-list-container">
+                            <div class="market-header">
+                                <span style="flex:2">COMPANY</span>
+                                <span style="flex:1.5; text-align:right">PRICE</span>
+                                <span style="flex:1; text-align:right">DAY %</span>
+                            </div>
+                            <div class="market-scroll" id="market-list-body">
+                                <!-- Populated via JS -->
+                            </div>
+                        </div>
+
+                        <!-- Right: Trading Panel -->
+                        <div class="trading-panel" id="trading-panel">
+                            <div id="trade-empty" style="text-align: center; margin: auto; color: var(--text-muted);">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="margin-bottom: 1rem; opacity: 0.5;"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                                <p>Click a stock on the left<br>to pull up the terminal.</p>
+                            </div>
+                            
+                            <div id="trade-active" class="hidden flex-col" style="height: 100%;">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <h2 id="trade-ticker" style="font-size: 2rem;">AAPL</h2>
+                                        <span id="trade-sector" class="text-sm text-brand">Sector</span>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div id="trade-price" style="font-size: 1.75rem; font-weight: 700; font-family: monospace;">$0.00</div>
+                                        <div id="trade-delta" class="text-success text-sm">+0.00%</div>
+                                    </div>
+                                </div>
+
+                                <div class="chart-box">
+                                    <canvas id="stockChart"></canvas>
+                                </div>
+
+                                <div class="trade-inputs" style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end;">
+                                    <div class="flex justify-between text-sm" style="margin-bottom: 0.5rem;">
+                                        <span class="text-muted">Shares in your bag:</span>
+                                        <span id="trade-owned" style="font-weight: 700;">0</span>
+                                    </div>
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-muted">Cash available:</span>
+                                        <span id="trade-power" style="font-weight: 700;" class="text-success">$0.00</span>
+                                    </div>
+
+                                    <div class="input-group">
+                                        <span>AMOUNT</span>
+                                        <input type="number" id="trade-qty" value="1" min="1" oninput="calculateTradeEstimate()">
+                                    </div>
+
+                                    <div class="flex justify-between text-sm" style="margin-bottom: 1rem;">
+                                        <span class="text-muted">Total Cost/Value:</span>
+                                        <span id="trade-estimate" style="font-weight: 700; font-family: monospace;">$0.00</span>
+                                    </div>
+
+                                    <div class="flex gap-2" style="margin-bottom: 0.5rem;">
+                                        <button class="btn btn-outline" style="flex: 1;" onclick="setTradeQty('max-buy')">Spend All Cash</button>
+                                        <button class="btn btn-outline" style="flex: 1;" onclick="setTradeQty('max-sell')">Dump Everything</button>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button class="btn btn-success" style="flex: 1; padding: 1rem;" onclick="executeTrade('buy')">BUY</button>
+                                        <button class="btn btn-danger" style="flex: 1; padding: 1rem;" onclick="executeTrade('sell')">SELL</button>
+                                    </div>
+                                    <p class="text-xs text-muted" style="text-align: center; margin-top: 1rem;">Note: The IRS takes a 15% cut on any profits when you sell.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. PORTFOLIO TAB -->
+                <div id="tab-portfolio" class="tab-panel">
+                    <h1 style="font-size: 2.5rem; margin-bottom: 1.5rem;">Your Portfolio</h1>
+                    <div class="widget-grid">
+                        <div class="widget">
+                            <div class="text-xs text-muted">Value of all stocks</div>
+                            <div id="port-total-val" style="font-size: 1.8rem; font-weight: 700; margin-top: 0.5rem;">$0.00</div>
+                        </div>
+                        <div class="widget">
+                            <div class="text-xs text-muted">Total Profit / Loss</div>
+                            <div id="port-total-pnl" style="font-size: 1.8rem; font-weight: 700; margin-top: 0.5rem;">$0.00</div>
+                        </div>
+                        <div class="widget">
+                            <div class="text-xs text-muted">Passive Dividends Collected</div>
+                            <div id="port-dividends" class="text-brand" style="font-size: 1.8rem; font-weight: 700; margin-top: 0.5rem;">$0.00</div>
+                        </div>
+                    </div>
+
+                    <div style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Asset</th>
+                                    <th>Shares Held</th>
+                                    <th>Avg Buy Price</th>
+                                    <th>Current Price</th>
+                                    <th>Total Value</th>
+                                    <th>Your Return</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="portfolio-list">
+                                <!-- Populated via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 4. REAL ESTATE TAB -->
+                <div id="tab-assets" class="tab-panel">
+                    <div class="flex justify-between items-end" style="margin-bottom: 2rem;">
+                        <div>
+                            <h1 style="font-size: 2.5rem;">Real Estate Market</h1>
+                            <p class="text-muted">Buy brick and mortar to earn passive rent every day.</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="text-xs text-muted">Total Daily Rent</div>
+                            <div id="re-revenue" class="text-success" style="font-size: 1.5rem; font-weight: 700;">+$0 / day</div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid-cards" id="real-estate-list">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+
+                <!-- 5. LIFESTYLE & CLOUT TAB -->
+                <div id="tab-lifestyle" class="tab-panel">
+                    <div class="flex justify-between items-end" style="margin-bottom: 2rem;">
+                        <div>
+                            <h1 style="font-size: 2.5rem;">Lifestyle & Clout</h1>
+                            <p class="text-muted">Buy fancy things to increase your Clout. High clout unlocks CEO jobs and better shady deals.</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="text-xs text-gold">Your Total Clout</div>
+                            <div id="life-clout" class="text-gold" style="font-size: 1.5rem; font-weight: 700;">0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid-cards" id="lifestyle-list">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+
+                <!-- 6. CAREER TAB -->
+                <div id="tab-career" class="tab-panel">
+                    <h1 style="font-size: 2.5rem; margin-bottom: 1.5rem;">The Daily Grind</h1>
+                    
+                    <div class="widget" style="margin-bottom: 2rem; border-left: 4px solid var(--brand);">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="text-xs text-muted">Current Job Title</div>
+                                <h2 id="career-title" style="font-size: 2rem; color: var(--brand);">Unemployed</h2>
+                            </div>
+                            <div style="text-align: right;">
+                                <div class="text-xs text-muted">Pay Per Shift</div>
+                                <h2 id="career-salary" class="text-success" style="font-size: 2rem;">$0</h2>
+                            </div>
+                        </div>
+                        <div style="margin-top: 1.5rem;">
+                            <div class="flex justify-between text-sm mb-2">
+                                <span>Experience to next promotion:</span>
+                                <span id="career-exp-text">0 / 100</span>
+                            </div>
+                            <div class="progress-track">
+                                <div id="career-exp-fill" class="progress-fill" style="width: 0%;"></div>
+                            </div>
+                            <p id="career-req-text" class="text-xs text-warning" style="margin-top: 0.5rem;"></p>
+                        </div>
+                    </div>
+
+                    <div class="grid-cards">
+                        <div class="item-card">
+                            <h3>Go To Work</h3>
+                            <p class="text-sm text-muted" style="margin: 1rem 0;">Put your head down and work a shift. Earns cash and experience, but drains your physical Energy.</p>
+                            <div class="text-xs text-danger" style="margin-bottom: 1rem;">Costs: 20% Energy</div>
+                            <button class="btn btn-brand" id="btn-work" style="width: 100%;" onclick="workShift()">Grind a Shift</button>
+                        </div>
+                        <div class="item-card">
+                            <h3>Buy Expensive Coffee</h3>
+                            <p class="text-sm text-muted" style="margin: 1rem 0;">Feeling tired? Buy an overpriced artisan coffee to instantly restore your Energy so you can keep working.</p>
+                            <div class="text-xs text-success" style="margin-bottom: 1rem;">Restores: 50% Energy | Cost: $50</div>
+                            <button class="btn btn-outline" style="width: 100%;" onclick="buyCoffee()">Buy Coffee ($50)</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 7. BANK TAB -->
+                <div id="tab-bank" class="tab-panel">
+                    <h1 style="font-size: 2.5rem; margin-bottom: 1.5rem;">The Bank</h1>
+                    <div class="widget-grid">
+                        <div class="widget">
+                            <div class="text-xs text-muted">Your Credit Score</div>
+                            <div id="bank-credit" style="font-size: 2rem; font-weight: 700; color: var(--brand);">300</div>
+                            <div class="text-sm text-muted" style="margin-top: 0.5rem;">Pay off debt to raise this. A higher score means bigger loans and lower interest.</div>
+                        </div>
+                        <div class="widget">
+                            <div class="text-xs text-muted">What you owe us</div>
+                            <div id="bank-debt" class="text-danger" style="font-size: 2rem; font-weight: 700;">$0.00</div>
+                            <div id="bank-interest" class="text-sm text-muted" style="margin-top: 0.5rem;">Interest rate: 15.0% APR</div>
+                        </div>
+                    </div>
+
+                    <div class="grid-cards">
+                        <div class="item-card">
+                            <h3>Take Out a Loan</h3>
+                            <p class="text-sm text-muted" style="margin: 1rem 0;">Need cash fast? Borrow against your credit score. Be careful, interest builds up every day.</p>
+                            <input type="number" id="loan-amount" placeholder="How much do you need?" style="width: 100%; padding: 1rem; background: var(--bg-base); border: 1px solid var(--border); color: white; border-radius: var(--radius-md); margin-bottom: 1rem;">
+                            <button class="btn btn-brand" onclick="processLoan('take')">Beg for Loan</button>
+                        </div>
+                        <div class="item-card">
+                            <h3>Pay Off Debt</h3>
+                            <p class="text-sm text-muted" style="margin: 1rem 0;">Get the bank off your back. Paying this down is the fastest way to fix your credit score.</p>
+                            <input type="number" id="repay-amount" placeholder="Amount to pay..." style="width: 100%; padding: 1rem; background: var(--bg-base); border: 1px solid var(--border); color: white; border-radius: var(--radius-md); margin-bottom: 1rem;">
+                            <div class="flex gap-2">
+                                <button class="btn btn-outline" style="flex: 1" onclick="document.getElementById('repay-amount').value = Math.floor(state.player.debt)">Max</button>
+                                <button class="btn btn-success" style="flex: 2" onclick="processLoan('repay')">Pay the Bank</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 8. BLACK MARKET TAB -->
+                <div id="tab-blackmarket" class="tab-panel">
+                    <h1 class="text-danger" style="font-size: 2.5rem; margin-bottom: 1.5rem;">The Back Alley</h1>
+                    <p class="text-muted" style="margin-bottom: 2rem;">Welcome to the dark web. High rewards, but if you get caught, you're screwed.</p>
+                    
+                    <div class="grid-cards" id="dark-market-list">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- ================= TOAST CONTAINER ================= -->
+    <div id="toast-container"></div>
+
+    <!-- ================= RANDOM EVENT MODAL ================= -->
+    <div id="modal-overlay">
+        <div class="modal-box">
+            <h2 id="modal-title" style="margin-bottom: 1rem; font-size: 1.75rem;">Event</h2>
+            <p id="modal-desc" class="text-muted" style="margin-bottom: 2rem; font-size: 1.1rem; line-height: 1.5;">Description goes here.</p>
+            <div id="modal-buttons" class="modal-buttons">
+                <!-- Buttons injected via JS -->
+            </div>
+        </div>
+    </div>
+
+<script>
+/**
+ * TRADELIFE: THE DAILY GRIND
+ * Over 1,200 lines of fully simulated life, market, and career mechanics.
+ */
+
+// ==========================================
+// 1. DATA DICTIONARIES & CONSTANTS
+// ==========================================
+
+const TICKERS = [
+    { s: 'Big Tech', t: ['Pear(AAPL)', 'Macrosoft(MSFT)', 'Vidya(NVDA)', 'Search(GOOG)', 'Social(META)'] },
+    { s: 'Banking', t: ['Chase(JPM)', 'BoA(BAC)', 'Wells(WFC)', 'Sachs(GS)', 'Visa(V)'] },
+    { s: 'Oil & Gas', t: ['Exx(XOM)', 'Chev(CVX)', 'Shell(SHEL)', 'BP(BP)'] },
+    { s: 'Retail', t: ['A-Z(AMZN)', 'Mart(WMT)', 'Cost(COST)', 'Target(TGT)'] },
+    { s: 'Crypto', t: ['BitCoin(BTC)', 'Ether(ETH)', 'Doge(DOGE)', 'Sol(SOL)'] }
+];
+
+const REAL_ESTATE = [
+    { id: 're1', name: 'Crappy Garage', price: 15000, yield: 50, type: 'commercial', desc: 'Rent it out to a local band for practice space.' },
+    { id: 're2', name: 'Suburban Studio', price: 85000, yield: 300, type: 'residential', desc: 'A tiny apartment. The plumbing leaks, but it pays.' },
+    { id: 're3', name: 'Downtown Condo', price: 250000, yield: 900, type: 'residential', desc: 'Nice place in the city. Good reliable tenants.' },
+    { id: 're4', name: 'Strip Mall Plaza', price: 1200000, yield: 5000, type: 'commercial', desc: 'Has a vape shop, a bad pizza place, and a laundromat.' },
+    { id: 're5', name: 'Corporate Office', price: 5000000, yield: 22000, type: 'commercial', desc: 'A massive glass building leased to tech startups.' }
+];
+
+const LIFESTYLE_ITEMS = [
+    { id: 'ls1', name: 'Fake Designer Watch', price: 500, clout: 5, desc: 'It ticks too loud, but from 10 feet away it looks real.' },
+    { id: 'ls2', name: 'Tailored Italian Suit', price: 2500, clout: 20, desc: 'Dress for the job you want. Makes you look serious.' },
+    { id: 'ls3', name: 'Rolex Submariner', price: 15000, clout: 100, desc: 'The classic flex. Bosses start taking you seriously now.' },
+    { id: 'ls4', name: 'Used Sports Car', price: 45000, clout: 250, desc: 'A 10-year old Porsche. Still turns heads.' },
+    { id: 'ls5', name: 'Italian Supercar', price: 300000, clout: 1500, desc: 'Bright red, extremely loud, completely impractical.' },
+    { id: 'ls6', name: 'Private Yacht', price: 2000000, clout: 10000, desc: 'The ultimate status symbol. You have arrived.' }
+];
+
+const CAREER_LADDER = [
+    { title: "Unemployed", reqExp: 0, reqClout: 0, pay: 0 },
+    { title: "Mailroom Intern", reqExp: 1, reqClout: 0, pay: 80 },
+    { title: "Data Entry Drone", reqExp: 50, reqClout: 0, pay: 200 },
+    { title: "Junior Analyst", reqExp: 200, reqClout: 10, pay: 450 },
+    { title: "Senior Associate", reqExp: 500, reqClout: 50, pay: 900 },
+    { title: "Department Manager", reqExp: 1200, reqClout: 200, pay: 1800 },
+    { title: "Vice President", reqExp: 3000, reqClout: 1000, pay: 4500 },
+    { title: "Chief Executive Officer", reqExp: 8000, reqClout: 5000, pay: 15000 }
+];
+
+const DARK_MARKET = [
+    { id: 'dm1', name: 'Buy Insider Tip', price: 25000, reqClout: 50, desc: 'Pay a shady broker to tell you exactly which stock is going to randomly pump tomorrow.' },
+    { id: 'dm2', name: 'Bribe an IRS Agent', price: 75000, reqClout: 200, desc: 'Reduces your Capital Gains Tax to 0% for the next 100 days. 10% chance you get caught and fined heavily.' },
+    { id: 'dm3', name: 'Hire a Hacker Botnet', price: 150000, reqClout: 500, desc: 'Crash a random company\'s stock by leaking fake documents. Perfect for buying the dip. 20% risk of jail.' },
+    { id: 'dm4', name: 'Erase Bank Debt', price: 500000, reqClout: 2000, desc: 'Hack the bank\'s mainframe and set your debt to zero. Extremely high risk (30% chance to lose all cash).' }
+];
+
+const RANDOM_EVENTS = [
+    {
+        title: "Your buddy needs a favor",
+        desc: "Hey man, my car broke down and I need to get to work. Can you spot me $500? I swear I'll pay you back.",
+        chance: 0.1,
+        options: [
+            { text: "Give him $500", action: () => { 
+                if(state.player.cash >= 500) { state.player.cash -= 500; showToast("Good Karma", "You helped a friend out. He might remember this.", "success"); }
+                else showToast("Broke", "You tried to help, but your card declined. Embarrassing.", "warning");
+            }},
+            { text: "Tell him to walk", action: () => { showToast("Cold Blooded", "You left him on read. Save that money.", "warning"); } }
+        ]
+    },
+    {
+        title: "Market Rumor",
+        desc: "You overhear some guys in suits at the coffee shop talking about a big merger in the Big Tech sector.",
+        chance: 0.15,
+        options: [
+            { text: "Act on it", action: () => {
+                const techStocks = state.market.filter(s => s.sector === 'Big Tech');
+                techStocks.forEach(s => s.sentiment = 0.5); // Boost sentiment
+                showToast("Rumor Mill", "Tech stocks are starting to rally!", "success");
+            }},
+            { text: "Ignore it", action: () => {} }
+        ]
+    },
+    {
+        title: "Speeding Ticket",
+        desc: "You were driving way too fast and got pulled over by a cop having a bad day. That's a $1,000 fine.",
+        chance: 0.08,
+        options: [
+            { text: "Pay the fine ($1,000)", action: () => {
+                state.player.cash -= 1000;
+                if(state.player.cash < 0) { state.player.debt += Math.abs(state.player.cash); state.player.cash = 0; }
+                showToast("Busted", "Paid the ticket. Slow down.", "danger");
+            }}
+        ]
+    },
+    {
+        title: "Lucky Break",
+        desc: "You found a dropped wallet on the street. It has $300 cash in it and no ID.",
+        chance: 0.05,
+        options: [
+            { text: "Keep the cash", action: () => { state.player.cash += 300; showToast("Lucky!", "Found $300 cash. Finders keepers.", "success"); } }
+        ]
+    }
+];
+
+// ==========================================
+// 2. GLOBAL GAME STATE
+// ==========================================
+
+let state = {
+    player: {
+        name: "Trader", role: "worker",
+        cash: 0, debt: 0, credit: 500,
+        exp: 0, jobLevel: 0, energy: 100, clout: 0,
+        taxRate: 0.15, taxFreeTicks: 0, totalDividends: 0
+    },
+    portfolio: {}, // ticker: { shares, totalCost }
+    properties: [], // array of IDs
+    lifestyle: [], // array of IDs
+    market: [], // Live stock objects
+    marketPhase: 'bull', // 'bull', 'bear', 'flat'
+    marketPhaseTicks: 0,
+    chart: null,
+    nwChart: null,
+    activeTicker: null,
+    time: { day: 1, hour: 9, min: 30, ticks: 0 },
+    history: { netWorth: [] },
+    loopInterval: null
+};
+
+// ==========================================
+// 3. INITIALIZATION & SETUP
+// ==========================================
+
+function selectRole(role) {
+    document.querySelectorAll('.role-card').forEach(el => el.classList.remove('selected'));
+    document.getElementById(`role-${role}`).classList.add('selected');
+    state.player.role = role;
+}
+
+function startGame() {
+    const nameInp = document.getElementById('player-name').value.trim();
+    if(nameInp) state.player.name = nameInp;
+
+    // Apply Background Stats
+    if (state.player.role === 'bankrupt') { 
+        state.player.cash = 500; state.player.debt = 50000; state.player.credit = 300; 
+    } else if (state.player.role === 'worker') { 
+        state.player.cash = 15000; state.player.debt = 0; state.player.credit = 600; state.player.exp = 1;
+    } else if (state.player.role === 'rich') { 
+        state.player.cash = 200000; state.player.debt = 0; state.player.credit = 800; state.player.clout = 100;
+    }
+
+    // Hide setup, show app
+    document.getElementById('setup-screen').classList.add('hidden');
+    document.getElementById('app-layout').classList.remove('hidden');
+
+    // Initial UI Population
+    document.getElementById('header-name').innerText = state.player.name;
+    const roles = { bankrupt: 'Down Bad', worker: 'Average Joe', rich: 'Trust Fund Baby' };
+    document.getElementById('header-role').innerText = roles[state.player.role];
+
+    generateMarket();
+    renderRealEstate();
+    renderLifestyle();
+    renderDarkMarket();
+    updateCareerUI();
+    initNetWorthChart();
+    
+    // Start the Game Loop (1 tick = 1 game minute = 0.5 real seconds)
+    state.loopInterval = setInterval(gameTick, 500);
+    showToast("Welcome to the Grind", "Market is open. Try not to go broke.", "success");
+    addNews("The market opens. Traders are feeling optimistic today.");
+}
+
+function generateMarket() {
+    TICKERS.forEach(sector => {
+        sector.t.forEach(tickerStr => {
+            // Extract Name and Ticker: "Pear(AAPL)" -> name:"Pear", ticker:"AAPL"
+            const parts = tickerStr.split('(');
+            const name = parts[0];
+            const ticker = parts[1].replace(')', '');
+
+            const basePrice = 10 + (Math.random() * 200);
+            const vol = sector.s === 'Crypto' ? 0.06 : (sector.s === 'Big Tech' ? 0.03 : 0.015);
+            const yieldRate = sector.s === 'Banking' || sector.s === 'Oil & Gas' ? (0.01 + Math.random()*0.03) : 0;
+            
+            state.market.push({
+                ticker: ticker, name: name, sector: sector.s,
+                price: basePrice, openPrice: basePrice,
+                volatility: vol, sentiment: 0,
+                divYield: yieldRate,
+                history: Array(50).fill(basePrice)
+            });
+        });
+    });
+    
+    // Render the market list once
+    const list = document.getElementById('market-list-body');
+    let html = '';
+    state.market.forEach(s => {
+        html += `
+            <div class="stock-row" id="row-${s.ticker}" onclick="selectStock('${s.ticker}')">
+                <div>
+                    <div class="stock-ticker">${s.ticker}</div>
+                    <div class="stock-sector">${s.name}</div>
+                </div>
+                <div style="text-align:right; font-family:monospace; font-weight:700;" id="price-${s.ticker}">$${s.price.toFixed(2)}</div>
+                <div style="text-align:right; font-weight:600;" id="delta-${s.ticker}">0.00%</div>
+            </div>
+        `;
+    });
+    list.innerHTML = html;
+}
+
+// ==========================================
+// 4. MAIN GAME LOOP (HEARTBEAT)
+// ==========================================
+
+function gameTick() {
+    state.time.ticks++;
+    
+    // 1 tick = 1 game minute. Market is open 9:30 to 16:00
+    state.time.min++;
+    if(state.time.min >= 60) { state.time.min = 0; state.time.hour++; }
+    
+    // End of day logic
+    if(state.time.hour >= 16) { 
+        processDailyClose(); 
+    }
+    
+    // UI Time
+    const period = state.time.hour >= 12 ? 'PM' : 'AM';
+    const dispHour = state.time.hour > 12 ? state.time.hour - 12 : (state.time.hour === 0 ? 12 : state.time.hour);
+    document.getElementById('ui-time').innerText = 
+        `Day ${state.time.day} - ${dispHour.toString().padStart(2,'0')}:${state.time.min.toString().padStart(2,'0')} ${period}`;
+
+    // Process Sub-systems
+    processMarketPhysics();
+    
+    // Run economy every 10 ticks (approx 5 seconds real time)
+    if (state.time.ticks % 10 === 0) processEconomy();
+    
+    // Restore some energy passively over time
+    if (state.time.ticks % 20 === 0 && state.player.energy < 100) {
+        state.player.energy = Math.min(100, state.player.energy + 2);
+    }
+
+    // Tax Evasion timer
+    if (state.player.taxFreeTicks > 0) {
+        state.player.taxFreeTicks--;
+        if(state.player.taxFreeTicks === 0) {
+            state.player.taxRate = 0.15;
+            showToast("IRS is back", "Your bribe wore off. Taxes are back to 15%.", "warning");
+        }
+    }
+
+    // Random Event Trigger (every ~30 seconds real time)
+    if (state.time.ticks % 60 === 0) {
+        if(Math.random() < 0.3) triggerRandomEvent();
+    }
+
+    updateGlobalUI();
+}
+
+// ==========================================
+// 5. MARKET & ECONOMY ENGINE
+// ==========================================
+
+function processMarketPhysics() {
+    // Handle Market Phases (Bull vs Bear)
+    state.marketPhaseTicks--;
+    if(state.marketPhaseTicks <= 0) {
+        const r = Math.random();
+        if(r < 0.2) { state.marketPhase = 'bear'; addNews("Market enters Bear phase. Expect red."); }
+        else if (r < 0.5) { state.marketPhase = 'flat'; addNews("Market consolidating. Expect sideways trading."); }
+        else { state.marketPhase = 'bull'; addNews("Bull market! Everyone is buying."); }
+        
+        state.marketPhaseTicks = 100 + Math.floor(Math.random() * 200); // Lasts for a while
+        
+        document.getElementById('market-status-text').innerText = `Market Phase: ${state.marketPhase.toUpperCase()}`;
+        document.getElementById('market-status-text').className = 
+            state.marketPhase === 'bull' ? 'text-xs text-success' : (state.marketPhase === 'bear' ? 'text-xs text-danger' : 'text-xs text-muted');
+    }
+
+    // Move Stocks
+    state.market.forEach(s => {
+        let bias = 0;
+        if(state.marketPhase === 'bull') bias = 0.05;
+        if(state.marketPhase === 'bear') bias = -0.05;
+        
+        // Sentiment slowly decays back to 0
+        s.sentiment = s.sentiment * 0.95;
+
+        const noise = (Math.random() - 0.5) * 2; // -1 to 1
+        const movePct = (noise + bias + s.sentiment) * s.volatility;
+        
+        s.price = Math.max(0.01, s.price * (1 + movePct));
+        
+        // Update history for chart
+        s.history.push(s.price);
+        if(s.history.length > 50) s.history.shift();
+
+        // Fast DOM update for list
+        const priceEl = document.getElementById(`price-${s.ticker}`);
+        const deltaEl = document.getElementById(`delta-${s.ticker}`);
+        
+        if (priceEl && deltaEl) {
+            priceEl.innerText = `$${s.price.toFixed(2)}`;
+            const delta = ((s.price - s.openPrice) / s.openPrice) * 100;
+            deltaEl.innerText = `${delta >= 0 ? '+' : ''}${delta.toFixed(2)}%`;
+            deltaEl.className = delta >= 0 ? 'text-success' : 'text-danger';
+        }
+    });
+
+    if (state.activeTicker) updateTradingChart();
+}
+
+function processEconomy() {
+    // Real Estate Income
+    let reIncome = 0;
+    state.properties.forEach(pid => {
+        const p = REAL_ESTATE.find(x => x.id === pid);
+        if(p) reIncome += p.yield;
+    });
+    state.player.cash += reIncome;
+
+    // Debt Interest (Accrues constantly if you have debt)
+    if (state.player.debt > 0) {
+        const apr = Math.max(0.05, 0.3 - (state.player.credit / 3000));
+        // Micro-compounding per economy tick
+        const tickInterest = (state.player.debt * apr) / 500; 
+        state.player.debt += tickInterest;
+    }
+
+    // Dividends
+    for (const [ticker, data] of Object.entries(state.portfolio)) {
+        if (data.shares > 0) {
+            const stock = state.market.find(s => s.ticker === ticker);
+            if (stock && stock.divYield > 0) {
+                const payout = (stock.price * data.shares * stock.divYield) / 200; // micro payout
+                state.player.cash += payout;
+                state.player.totalDividends += payout;
+            }
+        }
+    }
+}
+
+function processDailyClose() {
+    showToast("Bell Rang", "Market is closed. Resting until tomorrow.", "brand");
+    
+    // Jump to next day 9:30 AM
+    state.time.day++;
+    state.time.hour = 9;
+    state.time.min = 30;
+
+    // Reset daily open prices
+    state.market.forEach(s => s.openPrice = s.price);
+    
+    // Track Net worth history for the dashboard chart
+    const nw = calculateNetWorth();
+    state.history.netWorth.push(nw);
+    if(state.history.netWorth.length > 50) state.history.netWorth.shift();
+    updateNetWorthChart();
+
+    // End of day summary
+    addNews(`Day ${state.time.day - 1} closes. Total Net Worth is $${nw.toLocaleString(undefined, {maximumFractionDigits:0})}.`);
+}
+
+function calculateNetWorth() {
+    let stockVal = 0;
+    for (const [t, d] of Object.entries(state.portfolio)) {
+        if (d.shares > 0) {
+            const s = state.market.find(x => x.ticker === t);
+            if(s) stockVal += (d.shares * s.price);
+        }
+    }
+    let reVal = 0;
+    state.properties.forEach(pid => {
+        const p = REAL_ESTATE.find(x => x.id === pid);
+        if(p) reVal += p.price;
+    });
+    let lsVal = 0;
+    state.lifestyle.forEach(pid => {
+        const p = LIFESTYLE_ITEMS.find(x => x.id === pid);
+        if(p) lsVal += (p.price * 0.5); // Depreciated value
+    });
+    
+    return state.player.cash + stockVal + reVal + lsVal - state.player.debt;
+}
+
+// ==========================================
+// 6. TRADING & CHARTS
+// ==========================================
+
+function selectStock(ticker) {
+    if (state.activeTicker) {
+        document.getElementById(`row-${state.activeTicker}`).classList.remove('active-stock');
+    }
+    state.activeTicker = ticker;
+    document.getElementById(`row-${ticker}`).classList.add('active-stock');
+    
+    document.getElementById('trade-empty').classList.add('hidden');
+    document.getElementById('trade-active').classList.remove('hidden');
+    document.getElementById('trade-active').style.display = 'flex';
+    
+    const stock = state.market.find(s => s.ticker === ticker);
+    document.getElementById('trade-ticker').innerText = stock.ticker;
+    document.getElementById('trade-sector').innerText = stock.name + ' - ' + stock.sector;
+    
+    initChart(stock);
+    updateTradeInputs();
+}
+
+function initChart(stock) {
+    const ctx = document.getElementById('stockChart').getContext('2d');
+    if (state.chart) state.chart.destroy();
+    
+    state.chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: Array(50).fill(''),
+            datasets: [{
+                data: stock.history,
+                borderColor: '#3b82f6',
+                borderWidth: 2,
+                pointRadius: 0,
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            animation: { duration: 0 },
+            scales: { x: { display: false }, y: { display: false } },
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            layout: { padding: 0 }
+        }
+    });
+}
+
+function updateTradingChart() {
+    const stock = state.market.find(s => s.ticker === state.activeTicker);
+    document.getElementById('trade-price').innerText = `$${stock.price.toFixed(2)}`;
+    const delta = ((stock.price - stock.openPrice) / stock.openPrice) * 100;
+    document.getElementById('trade-delta').innerText = `${delta >= 0 ? '+' : ''}${delta.toFixed(2)}%`;
+    document.getElementById('trade-delta').className = delta >= 0 ? 'text-success text-sm' : 'text-danger text-sm';
+    
+    // Update Chart dynamically
+    state.chart.data.datasets[0].data = stock.history;
+    state.chart.data.datasets[0].borderColor = delta >= 0 ? '#10b981' : '#ef4444';
+    state.chart.update();
+    
+    updateTradeInputs();
+}
+
+function calculateTradeEstimate() {
+    if (!state.activeTicker) return;
+    const qty = parseInt(document.getElementById('trade-qty').value) || 0;
+    const stock = state.market.find(s => s.ticker === state.activeTicker);
+    document.getElementById('trade-estimate').innerText = `$${(qty * stock.price).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+}
+
+function setTradeQty(type) {
+    if (!state.activeTicker) return;
+    const stock = state.market.find(s => s.ticker === state.activeTicker);
+    if (type === 'max-buy') {
+        const max = Math.floor(state.player.cash / stock.price);
+        document.getElementById('trade-qty').value = max > 0 ? max : 1;
+    } else {
+        const owned = state.portfolio[state.activeTicker]?.shares || 0;
+        document.getElementById('trade-qty').value = owned > 0 ? owned : 1;
+    }
+    calculateTradeEstimate();
+}
+
+function updateTradeInputs() {
+    if(!state.activeTicker) return;
+    const owned = state.portfolio[state.activeTicker]?.shares || 0;
+    document.getElementById('trade-owned').innerText = owned;
+    document.getElementById('trade-power').innerText = `$${state.player.cash.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+    calculateTradeEstimate();
+}
+
+function executeTrade(type) {
+    if (!state.activeTicker) return;
+    const qty = parseInt(document.getElementById('trade-qty').value);
+    if (isNaN(qty) || qty <= 0) return;
+    
+    const stock = state.market.find(s => s.ticker === state.activeTicker);
+    const cost = stock.price * qty;
+
+    if (!state.portfolio[stock.ticker]) {
+        state.portfolio[stock.ticker] = { shares: 0, totalCost: 0 };
+    }
+    const port = state.portfolio[stock.ticker];
+
+    if (type === 'buy') {
+        if (state.player.cash >= cost) {
+            state.player.cash -= cost;
+            port.shares += qty;
+            port.totalCost += cost;
+            showToast("Bought", `You picked up ${qty} shares of ${stock.ticker}.`, "success");
+        } else {
+            showToast("Too Broke", "You don't have enough cash for that, buddy.", "danger");
+        }
+    } else if (type === 'sell') {
+        if (port.shares >= qty) {
+            // Calculate Profit & Tax
+            const avgCost = port.totalCost / port.shares;
+            const revenue = cost;
+            const costBasis = avgCost * qty;
+            const profit = revenue - costBasis;
+            
+            let tax = 0;
+            if (profit > 0 && state.player.taxRate > 0) {
+                tax = profit * state.player.taxRate;
+                showToast("IRS Profit Cut", `Uncle Sam took $${tax.toFixed(2)} from your profits.`, "warning");
+            }
+
+            state.player.cash += (revenue - tax);
+            
+            // Adjust average cost
+            port.totalCost -= costBasis;
+            port.shares -= qty;
+            if(port.shares === 0) port.totalCost = 0;
+
+            showToast("Sold", `Dumped ${qty} shares of ${stock.ticker} for cash.`, "success");
+        } else {
+            showToast("Error", "You don't own that many shares.", "danger");
+        }
+    }
+    
+    updateTradeInputs();
+    updateGlobalUI();
+    if(document.getElementById('tab-portfolio').classList.contains('active')) renderPortfolio();
+}
+
+// ==========================================
+// 7. REAL ESTATE & LIFESTYLE
+// ==========================================
+
+function renderRealEstate() {
+    const list = document.getElementById('real-estate-list');
+    list.innerHTML = REAL_ESTATE.map(p => {
+        const owned = state.properties.includes(p.id);
+        return `
+        <div class="item-card" style="border-color: ${owned ? 'var(--brand)' : 'var(--border)'}">
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs text-muted">${p.type}</span>
+                    ${owned ? '<span class="text-xs text-brand" style="font-weight:700; background:rgba(59,130,246,0.1); padding:2px 6px; border-radius:4px;">OWNED</span>' : ''}
+                </div>
+                <h3>${p.name}</h3>
+                <p class="text-sm text-muted" style="margin:0.5rem 0 1rem 0;">${p.desc}</p>
+                <div class="flex justify-between mt-auto">
+                    <div>
+                        <div class="text-xs text-muted">Price</div>
+                        <div style="font-weight:700; font-size:1.2rem;">$${p.price.toLocaleString()}</div>
+                    </div>
+                    <div style="text-align:right">
+                        <div class="text-xs text-muted">Daily Rent</div>
+                        <div class="text-success" style="font-weight:700;">+$${p.yield}</div>
+                    </div>
+                </div>
+            </div>
+            ${owned ? 
+                `<button class="btn btn-outline" style="margin-top:1.5rem; width:100%" onclick="sellProperty('${p.id}')">Sell Property</button>` : 
+                `<button class="btn btn-brand" style="margin-top:1.5rem; width:100%" onclick="buyProperty('${p.id}')">Buy the Deed</button>`
+            }
+        </div>
+        `;
+    }).join('');
+}
+
+function buyProperty(id) {
+    const p = REAL_ESTATE.find(x => x.id === id);
+    if (state.player.cash >= p.price) {
+        state.player.cash -= p.price;
+        state.properties.push(id);
+        showToast("Keys in Hand", `You just bought ${p.name}. Rent starts flowing immediately.`, "success");
+        renderRealEstate();
+        updateGlobalUI();
+    } else {
+        showToast("Denied", "You can't afford this property right now.", "danger");
+    }
+}
+
+function sellProperty(id) {
+    const p = REAL_ESTATE.find(x => x.id === id);
+    const salePrice = p.price * (0.9 + Math.random() * 0.2); // Market fluctuation
+    state.player.cash += salePrice;
+    state.properties = state.properties.filter(x => x !== id);
+    showToast("Sold", `Flipped ${p.name} for $${salePrice.toLocaleString(undefined, {maximumFractionDigits:0})}.`, "brand");
+    renderRealEstate();
+    updateGlobalUI();
+}
+
+function renderLifestyle() {
+    const list = document.getElementById('lifestyle-list');
+    list.innerHTML = LIFESTYLE_ITEMS.map(item => {
+        const owned = state.lifestyle.includes(item.id);
+        return `
+        <div class="item-card" style="border-color: ${owned ? 'var(--gold)' : 'var(--border)'}">
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs text-gold">Grants +${item.clout} Clout</span>
+                    ${owned ? '<span class="text-xs text-gold" style="font-weight:700; background:rgba(251,191,36,0.1); padding:2px 6px; border-radius:4px;">OWNED</span>' : ''}
+                </div>
+                <h3>${item.name}</h3>
+                <p class="text-sm text-muted" style="margin:0.5rem 0 1rem 0;">${item.desc}</p>
+                <div style="font-weight:700; font-size:1.2rem;">$${item.price.toLocaleString()}</div>
+            </div>
+            ${owned ? 
+                `<button class="btn btn-outline" style="margin-top:1.5rem; width:100%" disabled>Already in your closet</button>` : 
+                `<button class="btn btn-gold" style="margin-top:1.5rem; width:100%; color:black;" onclick="buyLifestyle('${item.id}')">Buy Item</button>`
+            }
+        </div>
+        `;
+    }).join('');
+}
+
+function buyLifestyle(id) {
+    const item = LIFESTYLE_ITEMS.find(x => x.id === id);
+    if (state.player.cash >= item.price) {
+        state.player.cash -= item.price;
+        state.lifestyle.push(id);
+        recalcClout();
+        showToast("Looking Good", `You bought a ${item.name}. Your clout went up!`, "gold");
+        renderLifestyle();
+        updateGlobalUI();
+        updateCareerUI(); // Check if they qualify for promo now
+    } else {
+        showToast("Too Broke", "You can't afford to flex that hard yet.", "danger");
+    }
+}
+
+function recalcClout() {
+    let clout = state.player.role === 'rich' ? 100 : 0; // Base clout
+    state.lifestyle.forEach(id => {
+        const item = LIFESTYLE_ITEMS.find(x => x.id === id);
+        if(item) clout += item.clout;
+    });
+    state.player.clout = clout;
+}
+
+// ==========================================
+// 8. CAREER (THE GRIND)
+// ==========================================
+
+function updateCareerUI() {
+    const lvl = CAREER_LADDER[state.player.jobLevel];
+    const nextLvl = CAREER_LADDER[state.player.jobLevel + 1];
+    
+    document.getElementById('career-title').innerText = lvl.title;
+    document.getElementById('career-salary').innerText = `$${lvl.pay}`;
+    
+    if (nextLvl) {
+        document.getElementById('career-exp-text').innerText = `${state.player.exp} / ${nextLvl.reqExp} EXP`;
+        const pct = Math.min(100, (state.player.exp / nextLvl.reqExp) * 100);
+        document.getElementById('career-exp-fill').style.width = `${pct}%`;
+        
+        let reqText = "";
+        if(state.player.clout < nextLvl.reqClout) {
+            reqText = `NOTE: You need ${nextLvl.reqClout} Clout to be promoted to ${nextLvl.title}. Buy Lifestyle items!`;
+        }
+        document.getElementById('career-req-text').innerText = reqText;
+    } else {
+        document.getElementById('career-exp-text').innerText = "MAX LEVEL";
+        document.getElementById('career-exp-fill').style.width = `100%`;
+        document.getElementById('career-req-text').innerText = "You own the company.";
+    }
+
+    const btn = document.getElementById('btn-work');
+    if (state.player.energy < 20) {
+        btn.disabled = true;
+        btn.innerText = "Too Exhausted to Work";
+    } else {
+        btn.disabled = false;
+        btn.innerText = "Grind a Shift";
+    }
+}
+
+function workShift() {
+    if (state.player.energy < 20) {
+        showToast("Exhausted", "You're too tired to work. Wait or buy coffee.", "warning");
+        return;
+    }
+
+    const lvl = CAREER_LADDER[state.player.jobLevel];
+    state.player.cash += lvl.pay;
+    state.player.exp += Math.floor(2 + Math.random() * 8); // Gain EXP
+    state.player.energy -= 20; // Costs energy
+    
+    const nextLvl = CAREER_LADDER[state.player.jobLevel + 1];
+    if (nextLvl && state.player.exp >= nextLvl.reqExp && state.player.clout >= nextLvl.reqClout) {
+        state.player.jobLevel++;
+        showToast("Promotion!", `The boss noticed you. You're now a ${nextLvl.title}.`, "gold");
+    }
+    
+    updateCareerUI();
+    updateGlobalUI();
+}
+
+function buyCoffee() {
+    if (state.player.cash >= 50) {
+        state.player.cash -= 50;
+        state.player.energy = Math.min(100, state.player.energy + 50);
+        showToast("Caffeinated", "Drank a $50 artisan espresso. Back to the grind.", "brand");
+        updateCareerUI();
+        updateGlobalUI();
+    } else {
+        showToast("Broke", "Can't even afford coffee. Tragic.", "danger");
+    }
+}
+
+// ==========================================
+// 9. BANKING & LOANS
+// ==========================================
+
+function processLoan(action) {
+    const takeAmt = parseInt(document.getElementById('loan-amount').value);
+    const repAmt = parseInt(document.getElementById('repay-amount').value);
+    
+    const maxLoan = Math.pow(state.player.credit / 100, 3) * 1000;
+
+    if (action === 'take' && !isNaN(takeAmt) && takeAmt > 0) {
+        if (state.player.debt + takeAmt <= maxLoan) {
+            state.player.cash += takeAmt;
+            state.player.debt += takeAmt;
+            state.player.credit = Math.max(300, state.player.credit - Math.floor(takeAmt/15000));
+            showToast("Loan Approved", `The bank wired $${takeAmt.toLocaleString()} to your account.`, "brand");
+            document.getElementById('loan-amount').value = '';
+        } else {
+            showToast("Loan Denied", `Your credit score is too low for that much. Max total allowed is $${Math.floor(maxLoan).toLocaleString()}.`, "danger");
+        }
+    } else if (action === 'repay' && !isNaN(repAmt) && repAmt > 0) {
+        const actualRepay = Math.min(repAmt, state.player.cash, state.player.debt);
+        if (actualRepay > 0) {
+            state.player.cash -= actualRepay;
+            state.player.debt -= actualRepay;
+            state.player.credit = Math.min(850, state.player.credit + Math.floor(actualRepay/5000) + 1);
+            showToast("Debt Paid", `Wired $${actualRepay.toLocaleString()} back to the bank. Credit score went up!`, "success");
+            document.getElementById('repay-amount').value = '';
+        } else {
+            showToast("Error", "You don't have the cash, or you don't owe anything.", "warning");
+        }
+    }
+    updateGlobalUI();
+}
+
+// ==========================================
+// 10. THE BLACK MARKET
+// ==========================================
+
+function renderDarkMarket() {
+    const list = document.getElementById('dark-market-list');
+    list.innerHTML = DARK_MARKET.map(item => `
+        <div class="item-card" style="border-color: var(--danger);">
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs text-danger">Requires ${item.reqClout} Clout</span>
+                </div>
+                <h3 class="text-danger">${item.name}</h3>
+                <p class="text-sm text-muted" style="margin: 1rem 0;">${item.desc}</p>
+                <div style="font-weight:700; font-size:1.2rem;">Fee: $${item.price.toLocaleString()}</div>
+            </div>
+            <button class="btn btn-danger" style="margin-top: 1.5rem; width:100%;" onclick="buyDarkItem('${item.id}')">Execute Shady Deal</button>
+        </div>
+    `).join('');
+}
+
+function buyDarkItem(id) {
+    const item = DARK_MARKET.find(i => i.id === id);
+    if (state.player.clout < item.reqClout) {
+        showToast("Who are you?", "The dealer ignores you. Your Clout is too low. Buy lifestyle items.", "warning");
+        return;
+    }
+    if (state.player.cash < item.price) {
+        showToast("No Cash", "The dealer laughs. Come back when you have the fee.", "danger");
+        return;
+    }
+    
+    state.player.cash -= item.price;
+    
+    if (id === 'dm1') { // Insider Tip
+        const target = state.market[Math.floor(Math.random() * state.market.length)];
+        target.sentiment = 1.0; // Massive pump coming
+        showToast("Insider Info", `The whisper is that ${target.ticker} is going to skyrocket very soon. Buy now!`, "purple");
+    } else if (id === 'dm2') { // Bribe IRS
+        if (Math.random() < 0.1) {
+            const fine = state.player.cash * 0.5;
+            state.player.cash -= fine;
+            showToast("BUSTED", `The IRS caught wind of the bribe. They fined you $${Math.floor(fine).toLocaleString()}.`, "danger");
+        } else {
+            state.player.taxRate = 0;
+            state.player.taxFreeTicks = 100; // Lasts 100 ticks
+            showToast("Bribe Accepted", "The IRS will look the other way on your stock sales for a while. 0% tax active.", "success");
+        }
+    } else if (id === 'dm3') { // Sabotage
+        if (Math.random() < 0.2) {
+            state.player.credit = 300; // Trashes credit completely
+            showToast("CAUGHT", "The feds caught your hacker. Your credit score is completely ruined.", "danger");
+        } else {
+            const target = state.market[Math.floor(Math.random() * state.market.length)];
+            target.sentiment = -1.0; // Massive dump coming
+            showToast("Sabotage Executed", `Fake news just dropped about ${target.ticker}. Watch it crash, then buy the dip.`, "purple");
+            addNews(`SCANDAL: Massive fraud allegations hit ${target.ticker} HQ.`);
+        }
+    } else if (id === 'dm4') { // Erase Debt
+        if (Math.random() < 0.3) {
+            state.player.cash = 0;
+            showToast("BANK FROZE YOU", "The bank caught the intrusion and froze your accounts. You lost all your liquid cash.", "danger");
+        } else {
+            state.player.debt = 0;
+            showToast("Hack Successful", "All records of your debt have been wiped from the mainframe.", "success");
+        }
+    }
+    updateGlobalUI();
+}
+
+// ==========================================
+// 11. RANDOM EVENTS & NEWS SYSTEM
+// ==========================================
+
+function triggerRandomEvent() {
+    if(document.getElementById('modal-overlay').classList.contains('active')) return; // One at a time
+    
+    // Pick random based on chance
+    const rand = Math.random();
+    let selected = null;
+    let cumulative = 0;
+    for(const ev of RANDOM_EVENTS) {
+        cumulative += ev.chance;
+        if(rand < cumulative) { selected = ev; break; }
+    }
+    
+    if(!selected) return; // Chance didn't hit anything
+
+    document.getElementById('modal-title').innerText = selected.title;
+    document.getElementById('modal-desc').innerText = selected.desc;
+    
+    const btnContainer = document.getElementById('modal-buttons');
+    btnContainer.innerHTML = '';
+    
+    selected.options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-outline';
+        btn.innerText = opt.text;
+        btn.onclick = () => {
+            opt.action();
+            closeModal();
+            updateGlobalUI();
+        };
+        btnContainer.appendChild(btn);
+    });
+
+    document.getElementById('modal-overlay').classList.add('active');
+}
+
+function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('active');
+}
+
+function addNews(text) {
+    const container = document.getElementById('dashboard-news');
+    const el = document.createElement('div');
+    el.className = 'item-card';
+    el.innerHTML = `<p class="text-sm">"${text}"</p><div class="text-xs text-muted mt-2">Just Now</div>`;
+    container.prepend(el);
+    if(container.children.length > 6) {
+        container.removeChild(container.lastChild);
+    }
+}
+
+// ==========================================
+// 12. DASHBOARD & UI UPDATES
+// ==========================================
+
+function initNetWorthChart() {
+    const ctx = document.getElementById('nwChart').getContext('2d');
+    state.nwChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: Array(50).fill(''),
+            datasets: [{
+                label: 'Net Worth',
+                data: state.history.netWorth,
+                borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                borderWidth: 2, fill: true, tension: 0.2
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            scales: { x: { display: false }, y: { ticks: { color: '#a1a1aa' }, grid: { color: '#27272a' } } },
+            plugins: { legend: { display: false } }
+        }
+    });
+}
+
+function updateNetWorthChart() {
+    if(state.nwChart) {
+        state.nwChart.data.datasets[0].data = state.history.netWorth;
+        state.nwChart.update();
+    }
+}
+
+function renderPortfolio() {
+    const list = document.getElementById('portfolio-list');
+    let html = '';
+    let totalVal = 0;
+    let totalUnrealized = 0;
+
+    for (const [ticker, data] of Object.entries(state.portfolio)) {
+        if (data.shares <= 0) continue;
+        const stock = state.market.find(s => s.ticker === ticker);
+        if(!stock) continue;
+
+        const avgCost = data.totalCost / data.shares;
+        const mktVal = data.shares * stock.price;
+        const pnl = mktVal - data.totalCost;
+        const pnlPct = (pnl / data.totalCost) * 100;
+        
+        totalVal += mktVal;
+        totalUnrealized += pnl;
+
+        html += `
+            <tr>
+                <td style="font-weight:700;">${ticker}</td>
+                <td>${data.shares}</td>
+                <td>$${avgCost.toFixed(2)}</td>
+                <td>$${stock.price.toFixed(2)}</td>
+                <td style="font-weight:600;">$${mktVal.toFixed(2)}</td>
+                <td class="${pnl >= 0 ? 'text-success' : 'text-danger'}">
+                    ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPct.toFixed(2)}%)
+                </td>
+                <td><button class="btn btn-outline btn-sm" onclick="switchTab('market'); selectStock('${ticker}')">Trade</button></td>
+            </tr>
+        `;
+    }
+
+    if (html === '') {
+        html = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding: 2rem;">Your bag is empty. Buy some stock.</td></tr>`;
+    }
+
+    list.innerHTML = html;
+    document.getElementById('port-total-val').innerText = `$${totalVal.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+    document.getElementById('port-total-pnl').innerText = `${totalUnrealized >= 0 ? '+' : ''}$${totalUnrealized.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+    document.getElementById('port-total-pnl').className = totalUnrealized >= 0 ? 'text-success' : 'text-danger';
+    document.getElementById('port-dividends').innerText = `$${state.player.totalDividends.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+}
+
+function updateGlobalUI() {
+    // Top bar & Sidebar Stats
+    document.getElementById('ui-cash').innerText = `$${state.player.cash.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+    document.getElementById('ui-debt').innerText = `$${state.player.debt.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+    
+    // Energy Bar
+    document.getElementById('ui-energy-fill').style.width = `${state.player.energy}%`;
+    document.getElementById('ui-energy-text').innerText = `${state.player.energy}%`;
+    document.getElementById('ui-energy-fill').style.background = state.player.energy > 50 ? 'var(--success)' : (state.player.energy > 20 ? 'var(--warning)' : 'var(--danger)');
+
+    // Clout
+    document.getElementById('ui-clout').innerText = state.player.clout;
+
+    // Passive Income Text
+    let reInc = 0;
+    state.properties.forEach(pid => {
+        const p = REAL_ESTATE.find(x => x.id === pid);
+        if(p) reInc += p.yield;
+    });
+    document.getElementById('ui-passive').innerText = `+$${reInc}/day`;
+    document.getElementById('re-revenue').innerText = `+$${reInc}/day`;
+
+    // Net Worth (Dashboard)
+    const nw = calculateNetWorth();
+    document.getElementById('dash-networth').innerText = `$${nw.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+
+    // Bank UI Updates
+    document.getElementById('bank-credit').innerText = state.player.credit;
+    document.getElementById('bank-debt').innerText = `$${state.player.debt.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+    const rate = Math.max(0.05, 0.3 - (state.player.credit / 3000)) * 100;
+    document.getElementById('bank-interest').innerText = `Current Interest Rate: ${rate.toFixed(1)}% APR`;
+
+    // Active Tab specific renders
+    const activeTab = document.querySelector('.tab-panel.active').id;
+    if (activeTab === 'tab-portfolio') renderPortfolio();
+    if (activeTab === 'tab-career') updateCareerUI();
+}
+
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    
+    document.getElementById(`tab-${tabId}`).classList.add('active');
+    event.currentTarget.classList.add('active');
+    
+    if(tabId === 'portfolio') renderPortfolio();
+    if(tabId === 'dashboard') updateNetWorthChart();
+}
+
+function showToast(title, message, type="brand") {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    let icon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg>`; // info
+    if(type === 'danger') icon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>`;
+    if(type === 'warning' || type === 'gold') icon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>`;
+    if(type === 'purple') icon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h4l3-9 5 18 3-9h5"/></svg>`; // activity
+
+    toast.innerHTML = `
+        <div style="flex-shrink: 0;">${icon}</div>
+        <div>
+            <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 0.1rem;">${title}</div>
+            <div style="font-size: 0.85rem; opacity: 0.9;">${message}</div>
+        </div>
+    `;
+    
+    container.appendChild(toast);
+    
+    // Auto remove
+    setTimeout(() => {
+        toast.classList.add('fade-out');
+        setTimeout(() => toast.remove(), 400);
+    }, 4500);
+}
+
+</script>
+</body>
+</html>
