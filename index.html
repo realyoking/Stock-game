@@ -8,7 +8,7 @@
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, onSnapshot, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getDatabase, ref as rtdbRef, set as rtdbSet, get as rtdbGet, onValue as rtdbOnValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
@@ -36,7 +36,7 @@
         window.fbGoogleProvider = googleProvider;
         window.fbMethods = { 
             createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut,
-            signInWithPopup,
+            signInWithPopup, updateProfile,
             doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, onSnapshot, updateDoc, arrayUnion,
             rtdbRef, rtdbSet, rtdbGet, rtdbOnValue
         };
@@ -292,11 +292,15 @@
                     <p class="setup-subtitle">Login to sync your progress</p>
                 </div>
                 <div id="auth-form">
-                    <div class="input-group" style="margin-bottom:1rem"><input type="email" id="auth-email" placeholder="Email" style="text-align:left"></div>
-                    <div class="input-group" style="margin-bottom:1.5rem"><input type="password" id="auth-password" placeholder="Password" style="text-align:left"></div>
+                    <div id="auth-tabs" style="display:flex;gap:0;margin-bottom:1.5rem;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+                        <button id="tab-login" onclick="switchAuthTab('login')" style="flex:1;padding:0.6rem;background:var(--brand);color:white;border:none;font-weight:700;cursor:pointer">Login</button>
+                        <button id="tab-signup" onclick="switchAuthTab('signup')" style="flex:1;padding:0.6rem;background:transparent;color:var(--text-muted);border:none;font-weight:700;cursor:pointer">Sign Up</button>
+                    </div>
+                    <div class="input-group" style="margin-bottom:1rem"><input type="text" id="auth-username" placeholder="Username" style="text-align:left" autocomplete="username"></div>
+                    <div class="input-group" id="auth-email-group" style="margin-bottom:1rem;display:none"><input type="email" id="auth-email-field" placeholder="Email (for sign up)" style="text-align:left" autocomplete="email"></div>
+                    <div class="input-group" style="margin-bottom:1.5rem"><input type="password" id="auth-password" placeholder="Password" style="text-align:left" autocomplete="current-password"></div>
                     <div class="button-group" style="flex-direction:column;gap:0.75rem">
-                        <button class="btn btn-primary" onclick="handleAuth('login')" style="width:100%">Login</button>
-                        <button class="btn btn-secondary" onclick="handleAuth('signup')" style="width:100%">Create Account</button>
+                        <button class="btn btn-primary" id="auth-submit-btn" onclick="handleAuth(state._authTab||'login')" style="width:100%">Login</button>
                         <div style="display:flex;align-items:center;gap:0.75rem;margin:0.25rem 0">
                             <div style="flex:1;height:1px;background:var(--border)"></div>
                             <span style="color:var(--text-muted);font-size:0.85rem">or</span>
@@ -450,12 +454,23 @@
 
     <!-- Save Management Modal -->
     <div id="save-modal" class="modal-overlay hidden">
-        <div class="modal-content" style="max-width:450px">
+        <div class="modal-content" style="max-width:500px">
             <div class="modal-header" id="save-modal-title">Save Game</div>
+            <!-- Dual Save Info -->
+            <div id="save-info-bar" style="display:flex;gap:0.75rem;margin-bottom:1rem">
+                <div style="flex:1;background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:0.75rem;font-size:0.8rem">
+                    <div style="font-weight:700;margin-bottom:0.25rem">💾 Local Auto-Save</div>
+                    <div style="color:var(--text-muted)" id="local-save-status">Checking...</div>
+                </div>
+                <div style="flex:1;background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:0.75rem;font-size:0.8rem">
+                    <div style="font-weight:700;margin-bottom:0.25rem">☁️ Cloud Save</div>
+                    <div style="color:var(--text-muted)" id="cloud-save-status">Saves below are cloud-synced</div>
+                </div>
+            </div>
             <div id="save-modal-list" style="margin-bottom:1.5rem;max-height:300px;overflow-y:auto"></div>
             <div class="input-group" id="new-save-group">
                 <input type="text" id="new-save-name" placeholder="New Save Name">
-                <button class="btn btn-primary" onclick="createNewSave()" style="border-radius:0">Create</button>
+                <button class="btn btn-primary" onclick="createNewSave()" style="border-radius:0">☁️ Create &amp; Upload</button>
             </div>
             <div class="modal-buttons">
                 <button class="btn btn-secondary" onclick="document.getElementById('save-modal').classList.add('hidden')">Close</button>
@@ -482,6 +497,7 @@
                 <div class="nav-item" onclick="switchTab('education')">Education</div>
                 <div class="nav-item" onclick="switchTab('achievements')">Achievements</div>
                 <div class="nav-item" onclick="switchTab('leaderboard')" style="color:var(--warning)">Leaderboard</div>
+                <div class="nav-item" onclick="switchTab('profile')" style="color:var(--brand);border-top:1px solid var(--border);margin-top:auto;padding-top:1rem">Profile</div>
             </div>
             <div class="sidebar-stats">
                 <div class="stat-row"><span class="stat-label">Cash</span><span class="stat-value" id="stat-cash">$0</span></div>
@@ -496,7 +512,7 @@
             <div class="top-bar">
                 <h2 class="top-bar-title" id="tab-title">Dashboard</h2>
                 <div class="top-bar-right">
-                    <button class="btn btn-secondary" onclick="endDay(true)" style="font-size:0.8rem;background:var(--warning);color:#000;border:none;">Skip Day (10%)</button>
+                    <button class="btn btn-secondary" onclick="endDay(true)" id="skip-day-btn" style="font-size:0.8rem;background:var(--warning);color:#000;border:none;">⏭ Skip Day (10%) — 💵 <span id="skip-day-cost">$0</span></button>
                     <button class="btn btn-success" onclick="openSaveModal()" style="font-size: 0.8rem;">Save Game</button>
                     <button class="btn btn-secondary" id="theme-btn2" onclick="toggleTheme()" style="font-size: 0.8rem;">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
@@ -737,11 +753,104 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            <!-- Profile Tab -->
+            <div id="profile" class="tab-panel">
+                <h2 style="margin-bottom:1.5rem">Profile &amp; Settings</h2>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+                    <!-- Left: Avatar & Display Name -->
+                    <div class="widget">
+                        <h3 style="margin-bottom:1.5rem">Your Profile</h3>
+                        <!-- Avatar -->
+                        <div style="text-align:center;margin-bottom:1.5rem">
+                            <div id="profile-avatar-display" style="font-size:4rem;margin-bottom:0.75rem;cursor:pointer" onclick="toggleAvatarPicker()">🧑</div>
+                            <div style="color:var(--text-muted);font-size:0.8rem">Click to change avatar</div>
+                        </div>
+                        <!-- Avatar Picker -->
+                        <div id="avatar-picker" style="display:none;background:var(--bg-panel);border-radius:8px;padding:1rem;margin-bottom:1rem;border:1px solid var(--border)">
+                            <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:0.5rem;font-size:1.5rem">
+                                <span onclick="setAvatar('🧑')" style="cursor:pointer;text-align:center;padding:0.25rem;border-radius:4px" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">🧑</span>
+                                <span onclick="setAvatar('👩')" style="cursor:pointer;text-align:center;padding:0.25rem;border-radius:4px" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">👩</span>
+                                <span onclick="setAvatar('🧔')" style="cursor:pointer;text-align:center;padding:0.25rem;border-radius:4px" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">🧔</span>
+                                <span onclick="setAvatar('👨‍💼')" style="cursor:pointer;text-align:center;padding:0.25rem;border-radius:4px" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">👨‍💼</span>
+                                <span onclick="setAvatar('👩‍💼')" style="cursor:pointer;text-align:center;padding:0.25rem;border-radius:4px" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">👩‍💼</span>
+                                <span onclick="setAvatar('🤑')" style="cursor:pointer;text-align:center;padding:0.25rem;border-radius:4px" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">🤑</span>
+                                <span onclick="setAvatar('🦸')" style="cursor:pointer;text-align:center;padding:0.25rem;border-radius:4px" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">🦸</span>
+                                <span onclick="setAvatar('🥷')" style="cursor:pointer;text-align:center;padding:0.25rem;border-radius:4px" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">🥷</span>
+                                <span onclick="setAvatar('🤠')" style="cursor:pointer;text-align:center;padding:0.25rem;border-radius:4px" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">🤠</span>
+                                <span onclick="setAvatar('🧙')" style="cursor:pointer;text-align:center;padding:0.25rem;border-radius:4px" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">🧙</span>
+                                <span onclick="setAvatar('👾')" style="cursor:pointer;text-align:center;padding:0.25rem;border-radius:4px" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">👾</span>
+                                <span onclick="setAvatar('🤖')" style="cursor:pointer;text-align:center;padding:0.25rem;border-radius:4px" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">🤖</span>
+                            </div>
+                        </div>
+                        <!-- Display Name -->
+                        <div style="margin-bottom:1rem">
+                            <label style="display:block;color:var(--text-muted);font-size:0.85rem;margin-bottom:0.5rem">Display Name</label>
+                            <div style="display:flex;gap:0.5rem">
+                                <input type="text" id="profile-display-name" placeholder="Your display name" style="flex:1;padding:0.6rem;background:var(--bg-base);border:1px solid var(--border);border-radius:6px;color:var(--text-main);font-size:0.9rem">
+                                <button class="btn btn-primary" onclick="saveDisplayName()" style="font-size:0.8rem">Save</button>
+                            </div>
+                        </div>
+                        <!-- Account info -->
+                        <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;border:1px solid var(--border);font-size:0.9rem">
+                            <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem">
+                                <span style="color:var(--text-muted)">Username:</span>
+                                <span style="font-weight:700" id="profile-user-email">—</span>
+                            </div>
+                            <div style="display:flex;justify-content:space-between">
+                                <span style="color:var(--text-muted)">Account Type:</span>
+                                <span style="font-weight:700" id="profile-account-type">—</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Right: Settings & Actions -->
+                    <div class="widget">
+                        <h3 style="margin-bottom:1.5rem">Settings</h3>
+                        <!-- Theme Toggle -->
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem;background:var(--bg-panel);border-radius:8px;margin-bottom:1rem;border:1px solid var(--border)">
+                            <div>
+                                <div style="font-weight:600">Theme</div>
+                                <div style="color:var(--text-muted);font-size:0.8rem">Toggle light / dark mode</div>
+                            </div>
+                            <button class="btn btn-secondary" id="profile-theme-btn" onclick="toggleTheme()" style="font-size:0.8rem">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                                <span id="profile-theme-text">Dark</span>
+                            </button>
+                        </div>
+                        <!-- Stats -->
+                        <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;margin-bottom:1rem;border:1px solid var(--border);font-size:0.9rem">
+                            <h4 style="margin-bottom:0.75rem">Game Stats</h4>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">
+                                <div><span style="color:var(--text-muted)">Day:</span> <strong id="profile-stat-day">1</strong></div>
+                                <div><span style="color:var(--text-muted)">Level:</span> <strong id="profile-stat-level">1</strong></div>
+                                <div><span style="color:var(--text-muted)">Clout:</span> <strong id="profile-stat-clout">0</strong></div>
+                                <div><span style="color:var(--text-muted)">XP:</span> <strong id="profile-stat-xp">0</strong></div>
+                            </div>
+                        </div>
+                        <!-- Save -->
+                        <button class="btn btn-success" onclick="openSaveModal()" style="width:100%;margin-bottom:0.75rem">💾 Save Game to Cloud</button>
+                        <!-- Logout -->
+                        <button class="btn btn-danger" onclick="handleLogout()" style="width:100%;margin-bottom:0.75rem">🚪 Logout</button>
+                        <!-- Reset -->
+                        <button class="btn btn-secondary" onclick="resetGame()" style="width:100%;background:var(--danger);color:white">⚠️ Reset All Data</button>
+                    </div>
+                </div>
             </div>       </div>
 
             <!-- News Ticker -->
             <div class="news-ticker"><div class="news-ticker-inner" id="news-ticker-text">Loading news...</div></div>
         </div>
+    </div>
+
+    <!-- Debt Lock Screen -->
+    <div id="debt-lock-screen" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9998;align-items:center;justify-content:center;flex-direction:column">
+        <div style="font-size:5rem;margin-bottom:1rem">⛓️🔒⛓️</div>
+        <div style="font-size:1.8rem;font-weight:900;color:var(--danger);margin-bottom:0.5rem">ACCOUNT LOCKED</div>
+        <div style="color:var(--text-muted);margin-bottom:1.5rem;text-align:center;max-width:400px">You failed to repay your loan on time. Pay back the money to unlock your account.</div>
+        <div style="font-size:3rem;font-weight:900;color:var(--warning);margin-bottom:1.5rem" id="debt-lock-timer">1:00</div>
+        <div style="color:var(--text-muted);margin-bottom:1.5rem;font-size:0.9rem">Amount owed: <span style="color:var(--danger);font-weight:700" id="debt-lock-amount">$0</span></div>
+        <button class="btn btn-success" onclick="payDebtLock()" id="debt-lock-pay-btn" style="font-size:1rem;padding:1rem 2rem">💰 Pay Now &amp; Unlock</button>
     </div>
 
     <!-- Toast Container -->
@@ -1703,6 +1812,10 @@
         ];
 
 
+        // ===================== DUAL SAVE CONSTANTS =====================
+        const LOCAL_AUTOSAVE_KEY = 'tradelife_autosave_local';
+        let _pendingCloudSync = false;
+
         // ===================== GAME STATE =====================
         let state = {
             initialized: false,
@@ -1710,6 +1823,9 @@
             selectedStock: null,
             selectedCrypto: null,
             selectedCharacter: null,
+            _authTab: 'login',
+            _debtLocked: false,
+            _currentUsername: '',
             chartInstance: null,
             cryptoChartInstance: null,
             currentGameTask: null,
@@ -1799,7 +1915,9 @@
             state.player.career = CAREERS[0];
             state.player.salary = CAREERS[0].salary;
             if (state.player.debt > 0) {
-                state.player.loans.push({ amount: state.player.debt, rate: 0.085, remaining: state.player.debt, monthly: Math.round(state.player.debt * 0.085 / 12 + state.player.debt / 60) });
+                const monthly = Math.round(state.player.debt * 0.085 / 12 + state.player.debt / 60);
+                const dueIn = Math.max(10, Math.floor(state.player.debt / monthly));
+                state.player.loans.push({ amount: state.player.debt, rate: 0.085, remaining: state.player.debt, monthly, dueTriggerDay: dueIn });
             }
             initPrices();
             saveGame();
@@ -1816,9 +1934,26 @@
             const list = document.getElementById('save-modal-list');
             const title = document.getElementById('save-modal-title');
             const newSaveGroup = document.getElementById('new-save-group');
+            const saveInfoBar = document.getElementById('save-info-bar');
             
             title.textContent = isResume ? "Select Save to Resume" : "Save Game";
             newSaveGroup.style.display = isResume ? "none" : "flex";
+            if (saveInfoBar) saveInfoBar.style.display = isResume ? 'none' : 'flex';
+            // Show local auto-save status
+            const localSaveEl = document.getElementById('local-save-status');
+            if (localSaveEl) {
+                const localData = localStorage.getItem(LOCAL_AUTOSAVE_KEY);
+                if (localData) {
+                    try {
+                        const d = JSON.parse(localData);
+                        const t = d.updatedAt ? new Date(d.updatedAt).toLocaleTimeString() : 'Unknown';
+                        localSaveEl.textContent = 'Day ' + (d.player ? d.player.day : '?') + ' — ' + t + (d._localOnly ? ' (pending sync)' : ' (synced)');
+                        localSaveEl.style.color = d._localOnly ? 'var(--warning)' : 'var(--success)';
+                    } catch(e) { localSaveEl.textContent = 'Available'; }
+                } else {
+                    localSaveEl.textContent = 'No local save yet';
+                }
+            }
             
             if (Object.keys(saves).length === 0) {
                 list.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:1rem">No saves found</div>';
@@ -1873,8 +2008,25 @@
         }
 
         async function saveToSlot(name) {
-            const user = window.fbAuth.currentUser;
-            if (!user) return;
+            const user = window.fbAuth ? window.fbAuth.currentUser : null;
+            if (!user) {
+                // Offline: save locally only
+                const saveData = {
+                    player: state.player,
+                    stockPrices: state.stockPrices,
+                    cryptoPrices: state.cryptoPrices,
+                    stockHistory: state.stockHistory,
+                    cryptoHistory: state.cryptoHistory,
+                    bannedFromIPO: state.bannedFromIPO || [],
+                    updatedAt: new Date().toISOString(),
+                    _localOnly: true
+                };
+                const localSaves = getSaves();
+                localSaves[name] = saveData;
+                localStorage.setItem('tradelife_saves', JSON.stringify(localSaves));
+                _pendingCloudSync = true;
+                return;
+            }
             
             const saveData = {
                 player: state.player,
@@ -1899,8 +2051,10 @@
                 
                 // Update Leaderboard Data
                 const nw = calcNetWorth();
+                const displayName = user.displayName || user.email.replace('@tradelife.game','') || 'Player';
                 await window.fbMethods.setDoc(userDoc, {
-                    email: user.email || user.displayName || 'Player',
+                    username: displayName,
+                    email: user.email,
                     netWorth: nw,
                     day: state.player.day,
                     lastActive: new Date().toISOString()
@@ -1914,8 +2068,10 @@
             try {
                 const nw = calcNetWorth();
                 const rtdbUserRef = window.fbMethods.rtdbRef(window.fbRtdb, 'users/' + user.uid);
+                const rtdbDisplayName = user.displayName || user.email.replace('@tradelife.game','') || 'Player';
                 await window.fbMethods.rtdbSet(rtdbUserRef, {
-                    email: user.email || user.displayName || 'Player',
+                    username: rtdbDisplayName,
+                    email: user.email,
                     netWorth: nw,
                     day: state.player.day,
                     lastActive: new Date().toISOString()
@@ -2055,15 +2211,22 @@
             const savedTheme = localStorage.getItem('tradelife_theme');
             if (savedTheme === 'light') {
                 document.body.classList.add('light-theme');
-                ['theme-text','theme-text2'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = 'Light'; });
+                ['theme-text','theme-text2','profile-theme-text'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = 'Light'; });
+            }
+            // Apply saved avatar
+            const savedAvatar = localStorage.getItem('tradelife_avatar');
+            if (savedAvatar) {
+                const avatarEl = document.getElementById('profile-avatar-display');
+                if (avatarEl) avatarEl.textContent = savedAvatar;
             }
             // Initialize Firebase Auth Listener
             if (window.fbMethods) {
                 window.fbMethods.onAuthStateChanged(window.fbAuth, (user) => {
                     if (user) {
                         document.getElementById('auth-overlay').classList.add('hidden');
-                        const displayName = user.displayName || user.email;
+                        const displayName = user.displayName || user.email.replace('@tradelife.game','') || 'Player';
                         document.getElementById('user-email').textContent = displayName;
+                        state._currentUsername = displayName;
                         // Load cloud saves after login
                         syncSavesFromCloud();
                     } else {
@@ -2088,26 +2251,89 @@
             }
         }
 
+        function switchAuthTab(tab) {
+            state._authTab = tab;
+            const loginBtn = document.getElementById('tab-login');
+            const signupBtn = document.getElementById('tab-signup');
+            const submitBtn = document.getElementById('auth-submit-btn');
+            const emailGroup = document.getElementById('auth-email-group');
+            if (tab === 'signup') {
+                loginBtn.style.background = 'transparent';
+                loginBtn.style.color = 'var(--text-muted)';
+                signupBtn.style.background = 'var(--brand)';
+                signupBtn.style.color = 'white';
+                submitBtn.textContent = 'Create Account';
+                submitBtn.onclick = () => handleAuth('signup');
+                emailGroup.style.display = 'flex';
+            } else {
+                loginBtn.style.background = 'var(--brand)';
+                loginBtn.style.color = 'white';
+                signupBtn.style.background = 'transparent';
+                signupBtn.style.color = 'var(--text-muted)';
+                submitBtn.textContent = 'Login';
+                submitBtn.onclick = () => handleAuth('login');
+                emailGroup.style.display = 'none';
+            }
+        }
+
         async function handleAuth(type) {
-            const email = document.getElementById('auth-email').value;
+            const username = document.getElementById('auth-username').value.trim();
             const password = document.getElementById('auth-password').value;
-            if (!email || !password) { showToast('Error', 'Enter email and password', 'danger'); return; }
+            if (!username || !password) { showToast('Error', 'Enter username and password', 'danger'); return; }
+            if (username.length < 3) { showToast('Error', 'Username must be at least 3 characters', 'danger'); return; }
+            // Convert username to a fake email for Firebase Auth
+            const fakeEmail = username.toLowerCase().replace(/[^a-z0-9]/g, '') + '@tradelife.game';
             
             document.getElementById('auth-form').classList.add('hidden');
             document.getElementById('auth-loading').classList.remove('hidden');
             
             try {
                 if (type === 'signup') {
-                    await window.fbMethods.createUserWithEmailAndPassword(window.fbAuth, email, password);
-                    showToast('Success', 'Account created!', 'success');
+                    // Check if username is taken by trying to look it up in Firestore
+                    try {
+                        const usernameDoc = window.fbMethods.doc(window.fbDb, 'usernames', username.toLowerCase());
+                        const snap = await window.fbMethods.getDoc(usernameDoc);
+                        if (snap.exists()) {
+                            document.getElementById('auth-form').classList.remove('hidden');
+                            document.getElementById('auth-loading').classList.add('hidden');
+                            showToast('Username Taken', 'Please choose a different username', 'danger');
+                            return;
+                        }
+                    } catch(e) { /* Firestore check failed, proceed */ }
+                    const cred = await window.fbMethods.createUserWithEmailAndPassword(window.fbAuth, fakeEmail, password);
+                    // Store username mapping
+                    try {
+                        await window.fbMethods.updateProfile(cred.user, { displayName: username });
+                        const usernameDoc = window.fbMethods.doc(window.fbDb, 'usernames', username.toLowerCase());
+                        await window.fbMethods.setDoc(usernameDoc, { uid: cred.user.uid, username });
+                    } catch(e) { console.warn('Profile update failed', e); }
+                    showToast('Success', 'Account created! Welcome, ' + username + '!', 'success');
+                    document.getElementById('auth-username').value = '';
+                    document.getElementById('auth-password').value = '';
                 } else {
-                    await window.fbMethods.signInWithEmailAndPassword(window.fbAuth, email, password);
-                    showToast('Success', 'Logged in!', 'success');
+                    // Login: try username-based email first
+                    let emailToUse = fakeEmail;
+                    // Also try looking up username in Firestore to get exact uid mapping
+                    try {
+                        const usernameDoc = window.fbMethods.doc(window.fbDb, 'usernames', username.toLowerCase());
+                        const snap = await window.fbMethods.getDoc(usernameDoc);
+                        if (snap.exists() && snap.data().username) {
+                            emailToUse = snap.data().username.toLowerCase().replace(/[^a-z0-9]/g, '') + '@tradelife.game';
+                        }
+                    } catch(e) { /* use fakeEmail */ }
+                    await window.fbMethods.signInWithEmailAndPassword(window.fbAuth, emailToUse, password);
+                    showToast('Success', 'Welcome back, ' + username + '!', 'success');
+                    document.getElementById('auth-username').value = '';
+                    document.getElementById('auth-password').value = '';
                 }
             } catch (e) {
                 document.getElementById('auth-form').classList.remove('hidden');
                 document.getElementById('auth-loading').classList.add('hidden');
-                showToast('Auth Error', e.message, 'danger');
+                let msg = e.message;
+                if (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') msg = 'Invalid username or password';
+                if (e.code === 'auth/email-already-in-use') msg = 'Username already taken';
+                if (e.code === 'auth/weak-password') msg = 'Password must be at least 6 characters';
+                showToast('Auth Error', msg, 'danger');
             }
         }
 
@@ -2155,12 +2381,17 @@
             document.getElementById('setup-screen').classList.add('hidden');
             document.getElementById('app-layout').classList.remove('hidden');
             state.initialized = true;
+            // Clear any existing timers before starting new ones
+            if (state.dayTimerInterval) { clearInterval(state.dayTimerInterval); state.dayTimerInterval = null; }
+            if (state.eventInterval) { clearInterval(state.eventInterval); state.eventInterval = null; }
             renderAll();
             startDayTimer();
             startEventTimer();
             startPriceTicker();
             updateNewsTicker();
             syncGlobalMarket();
+            // Sync any pending local saves to cloud
+            setTimeout(syncLocalToCloud, 3000);
         }
 
         // ===================== DAY TIMER =====================
@@ -2207,6 +2438,12 @@
             if (pct > 50) fill.style.background = 'var(--brand)';
             else if (pct > 25) fill.style.background = 'var(--warning)';
             else fill.style.background = 'var(--danger)';
+            // Update skip day cost
+            const skipCostEl = document.getElementById('skip-day-cost');
+            if (skipCostEl) {
+                const fee = Math.round(state.player.cash * 0.10);
+                skipCostEl.textContent = '$' + formatNum(fee);
+            }
         }
 
         function _processEndOfDay() {
@@ -2296,7 +2533,11 @@
             tickMarket();
             // Level up check
             checkLevelUp();
-            // Save
+            // Check debt lock
+            checkDebtLock();
+            // Auto-save locally (cloud save only on manual save button)
+            autoSaveLocally();
+            // Also do a cloud save
             saveGame();
             // Restart timers
             startDayTimer();
@@ -2560,6 +2801,7 @@
             else if (state.currentTab === 'achievements') renderAchievements();
             else if (state.currentTab === 'education') renderEducation();
             else if (state.currentTab === 'leaderboard') renderLeaderboard();
+            else if (state.currentTab === 'profile') renderProfile();
         }
 
         function updateUI() {
@@ -2575,6 +2817,12 @@
             const btcPriceEl = document.getElementById('info-btc-price');
             if (btcPriceEl && state.cryptoPrices && state.cryptoPrices['BTC']) {
                 btcPriceEl.textContent = formatPrice(state.cryptoPrices['BTC']);
+            }
+            // Update skip day cost span
+            const skipCostEl = document.getElementById('skip-day-cost');
+            if (skipCostEl) {
+                const fee = Math.round(cash * 0.10);
+                skipCostEl.textContent = '$' + formatNum(fee);
             }
         }
 
@@ -2635,7 +2883,7 @@
             document.querySelectorAll('.nav-item').forEach(n => { if (n.textContent.toLowerCase().includes(tab.toLowerCase().replace('blackmarket','black'))) n.classList.add('active'); });
             document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
             document.getElementById(tab).classList.add('active');
-            const titles = { dashboard:'Dashboard', market:'Stock Market', portfolio:'Portfolio', career:'Career', company:'Company Management', properties:'Real Estate', lifestyle:'Lifestyle', banking:'Banking', blackmarket:'Black Market', crypto:'Cryptocurrency', education:'Education', achievements:'Achievements' };
+            const titles = { dashboard:'Dashboard', market:'Stock Market', portfolio:'Portfolio', career:'Career', company:'Company Management', properties:'Real Estate', lifestyle:'Lifestyle', banking:'Banking', blackmarket:'Black Market', crypto:'Cryptocurrency', education:'Education', achievements:'Achievements', leaderboard:'Leaderboard', profile:'Profile & Settings' };
             document.getElementById('tab-title').textContent = titles[tab] || tab;
             renderAll();
         }
@@ -2643,7 +2891,7 @@
         function toggleTheme() {
             document.body.classList.toggle('light-theme');
             const isLight = document.body.classList.contains('light-theme');
-            ['theme-text', 'theme-text2'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = isLight ? 'Light' : 'Dark'; });
+            ['theme-text', 'theme-text2', 'profile-theme-text'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = isLight ? 'Light' : 'Dark'; });
             localStorage.setItem('tradelife_theme', isLight ? 'light' : 'dark');
         }
 
@@ -3389,56 +3637,49 @@
 
         async function renderLeaderboard() {
             const body = document.getElementById('leaderboard-body');
+            if (!body) return;
             body.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:1rem">Loading...</td></tr>';
             // Try RTDB first (real-time)
             try {
-                const rtdbUsersRef = window.fbMethods.rtdbRef(window.fbRtdb, 'users');
-                const snap = await window.fbMethods.rtdbGet(rtdbUsersRef);
-                if (snap.exists()) {
-                    const usersObj = snap.val();
-                    const users = Object.values(usersObj).sort((a, b) => (b.netWorth || 0) - (a.netWorth || 0)).slice(0, 20);
-                    let html = '';
-                    users.forEach((data, i) => {
-                        const rank = i + 1;
-                        const name = (data.email || 'Player').split('@')[0];
-                        html += `<tr>
-                            <td>${rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank}</td>
-                            <td>${name}</td>
-                            <td style="color:var(--success);font-weight:700">$${formatNum(data.netWorth || 0)}</td>
-                            <td>Day ${data.day || 1}</td>
-                        </tr>`;
-                    });
-                    body.innerHTML = html || '<tr><td colspan="4" style="text-align:center">No players yet</td></tr>';
-                    return;
+                if (window.fbRtdb && window.fbMethods) {
+                    const rtdbUsersRef = window.fbMethods.rtdbRef(window.fbRtdb, 'users');
+                    const snap = await window.fbMethods.rtdbGet(rtdbUsersRef);
+                    if (snap.exists()) {
+                        const usersObj = snap.val();
+                        const users = Object.values(usersObj).sort((a, b) => (b.netWorth || 0) - (a.netWorth || 0)).slice(0, 20);
+                        let html = '';
+                        users.forEach((data, i) => {
+                            const rank = i + 1;
+                            const name = data.username || (data.email || 'Player').replace('@tradelife.game','').split('@')[0];
+                            html += `<tr><td>${rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank}</td><td>${name}</td><td style="color:var(--success);font-weight:700">$${formatNum(data.netWorth || 0)}</td><td>Day ${data.day || 1}</td></tr>`;
+                        });
+                        body.innerHTML = html || '<tr><td colspan="4" style="text-align:center">No players yet</td></tr>';
+                        return;
+                    }
                 }
             } catch (e) {
                 console.error("RTDB leaderboard failed", e);
             }
             // Fallback to Firestore
             try {
-                const q = window.fbMethods.query(
-                    window.fbMethods.collection(window.fbDb, "users"),
-                    window.fbMethods.orderBy("netWorth", "desc"),
-                    window.fbMethods.limit(20)
-                );
-                const snapshot = await window.fbMethods.getDocs(q);
-                let html = '';
-                let rank = 1;
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    const name = (data.email || 'Player').split('@')[0];
-                    html += `<tr>
-                        <td>${rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank}</td>
-                        <td>${name}</td>
-                        <td style="color:var(--success);font-weight:700">$${formatNum(data.netWorth || 0)}</td>
-                        <td>Day ${data.day || 1}</td>
-                    </tr>`;
-                    rank++;
-                });
-                body.innerHTML = html || '<tr><td colspan="4" style="text-align:center">No players yet</td></tr>';
+                if (window.fbDb && window.fbMethods) {
+                    const q = window.fbMethods.query(window.fbMethods.collection(window.fbDb, "users"), window.fbMethods.orderBy("netWorth", "desc"), window.fbMethods.limit(20));
+                    const snapshot = await window.fbMethods.getDocs(q);
+                    let html = '';
+                    let rank = 1;
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        const name = data.username || (data.email || 'Player').replace('@tradelife.game','').split('@')[0];
+                        html += `<tr><td>${rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank}</td><td>${name}</td><td style="color:var(--success);font-weight:700">$${formatNum(data.netWorth || 0)}</td><td>Day ${data.day || 1}</td></tr>`;
+                        rank++;
+                    });
+                    body.innerHTML = html || '<tr><td colspan="4" style="text-align:center">No players yet</td></tr>';
+                    return;
+                }
             } catch (e) {
-                body.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--danger)">Failed to load leaderboard</td></tr>';
+                console.error("Firestore leaderboard failed", e);
             }
+            body.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:1rem;color:var(--text-muted)">Leaderboard not available yet</td></tr>';
         }
 
         async function syncGlobalMarket() {
@@ -3766,9 +4007,10 @@
             if (amt > limit) { showToast('Limit Exceeded', `Max: $${formatNum(limit)}`, 'danger'); return; }
             const rate = calcInterestRate();
             const monthly = Math.round(amt * rate / 12 + amt / 60);
+            const dueIn = Math.max(10, Math.floor(amt / monthly));
             state.player.cash += amt;
             state.player.debt += amt;
-            state.player.loans.push({ amount: amt, rate, remaining: amt, monthly });
+            state.player.loans.push({ amount: amt, rate, remaining: amt, monthly, dueTriggerDay: state.player.day + dueIn });
             state.player.credit = Math.max(300, state.player.credit - 15);
             addActivity(`Day ${state.player.day}`, `Took loan: $${formatNum(amt)}`, 'warning');
             saveGame();
@@ -4038,12 +4280,18 @@
         // ===================== ACHIEVEMENTS =====================
         function renderAchievements() {
             const list = document.getElementById('achievements-list');
+            if (!list) return;
+            checkAchievements();
+            if (!ACHIEVEMENTS || ACHIEVEMENTS.length === 0) {
+                list.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:2rem">No achievements available</div>';
+                return;
+            }
             list.innerHTML = ACHIEVEMENTS.map(a => {
-                const earned = state.player.achievements.includes(a.id);
+                const earned = state.player.achievements && state.player.achievements.includes(a.id);
                 return `<div style="background:var(--bg-surface);border:2px solid ${earned ? 'var(--success)' : 'var(--border)'};border-radius:12px;padding:1.5rem;text-align:center">
                     <div style="font-size:2rem;margin-bottom:0.5rem">${earned ? '🏆' : '🔒'}</div>
-                    <h4 style="margin-bottom:0.5rem;color:${earned ? 'var(--success)' : 'var(--text-muted)'}">${a.name}</h4>
-                    <div style="font-size:0.85rem;color:var(--text-muted)">${a.desc}</div>
+                    <h4 style="margin-bottom:0.5rem;color:${earned ? 'var(--success)' : 'var(--text-muted)'};margin:0">${a.name}</h4>
+                    <div style="font-size:0.85rem;color:var(--text-muted);margin:0.5rem 0 0 0">${a.desc}</div>
                 </div>`;
             }).join('');
         }
@@ -4068,6 +4316,175 @@
                 }
             });
         }
+
+        // ===================== PROFILE =====================
+        function renderProfile() {
+            const userEmail = document.getElementById('profile-user-email');
+            const accountType = document.getElementById('profile-account-type');
+            const user = window.fbAuth ? window.fbAuth.currentUser : null;
+            if (user) {
+                const uname = user.displayName || user.email.replace('@tradelife.game','') || '—';
+                userEmail.textContent = uname;
+                accountType.textContent = user.providerData && user.providerData.length > 0 ? (user.providerData[0].providerId === 'google.com' ? 'Google' : 'Username') : 'Username';
+                // Load saved display name
+                const savedDisplayName = localStorage.getItem('tradelife_displayname');
+                const dnInput = document.getElementById('profile-display-name');
+                if (dnInput) dnInput.value = savedDisplayName || uname;
+            } else {
+                userEmail.textContent = '—';
+                accountType.textContent = 'Not Logged In';
+            }
+            // Load saved avatar
+            const savedAvatar = localStorage.getItem('tradelife_avatar') || '🧑';
+            const avatarEl = document.getElementById('profile-avatar-display');
+            if (avatarEl) avatarEl.textContent = savedAvatar;
+            // Update theme button text
+            const themeText = document.getElementById('profile-theme-text');
+            if (themeText) themeText.textContent = document.body.classList.contains('light-theme') ? 'Light' : 'Dark';
+            // Update stats
+            const el = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val; };
+            el('profile-stat-day', state.player.day);
+            el('profile-stat-level', state.player.level);
+            el('profile-stat-clout', state.player.clout);
+            el('profile-stat-xp', formatNum(state.player.exp));
+        }
+
+        function toggleAvatarPicker() {
+            const picker = document.getElementById('avatar-picker');
+            if (picker) picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function setAvatar(emoji) {
+            localStorage.setItem('tradelife_avatar', emoji);
+            const avatarEl = document.getElementById('profile-avatar-display');
+            if (avatarEl) avatarEl.textContent = emoji;
+            document.getElementById('avatar-picker').style.display = 'none';
+            showToast('Avatar Updated', 'Looking good!', 'success');
+        }
+
+        function saveDisplayName() {
+            const name = document.getElementById('profile-display-name').value.trim();
+            if (!name) { showToast('Error', 'Enter a display name', 'danger'); return; }
+            localStorage.setItem('tradelife_displayname', name);
+            state.player.name = name;
+            // Update Firebase display name
+            if (window.fbAuth && window.fbAuth.currentUser) {
+                window.fbMethods.updateProfile(window.fbAuth.currentUser, { displayName: name }).catch(e => console.warn(e));
+            }
+            showToast('Saved', 'Display name updated!', 'success');
+        }
+
+        // ===================== DEBT LOCK SYSTEM =====================
+        let debtLockInterval = null;
+        let debtLockSeconds = 60;
+
+        function checkDebtLock() {
+            // Trigger lock if player has overdue debt (debt > 0 and day > loan.dueDay)
+            // We define "overdue" as: any loan that has been unpaid for more than (remaining/monthly) days
+            if (!state.player.loans || state.player.loans.length === 0) return;
+            const overdue = state.player.loans.some(loan => {
+                if (!loan.dueTriggerDay) loan.dueTriggerDay = state.player.day + Math.max(5, Math.floor(loan.remaining / (loan.monthly || 1)));
+                return state.player.day > loan.dueTriggerDay && loan.remaining > 0;
+            });
+            if (overdue && !state._debtLocked) {
+                triggerDebtLock();
+            }
+        }
+
+        function triggerDebtLock() {
+            state._debtLocked = true;
+            const totalDebt = state.player.loans.reduce((s, l) => s + l.remaining, 0);
+            debtLockSeconds = 60;
+            const screen = document.getElementById('debt-lock-screen');
+            screen.style.display = 'flex';
+            document.getElementById('debt-lock-amount').textContent = '$' + formatNum(totalDebt);
+            const payBtn = document.getElementById('debt-lock-pay-btn');
+            payBtn.disabled = state.player.cash < totalDebt;
+            payBtn.textContent = state.player.cash >= totalDebt ? '💰 Pay $' + formatNum(totalDebt) + ' & Unlock' : '❌ Not enough cash ($' + formatNum(state.player.cash) + ')';
+            if (debtLockInterval) clearInterval(debtLockInterval);
+            debtLockInterval = setInterval(() => {
+                debtLockSeconds--;
+                const m = Math.floor(debtLockSeconds / 60);
+                const s = debtLockSeconds % 60;
+                document.getElementById('debt-lock-timer').textContent = m + ':' + s.toString().padStart(2,'0');
+                // Update pay button
+                const debt = state.player.loans.reduce((sum, l) => sum + l.remaining, 0);
+                const pb = document.getElementById('debt-lock-pay-btn');
+                pb.disabled = state.player.cash < debt;
+                pb.textContent = state.player.cash >= debt ? '💰 Pay $' + formatNum(debt) + ' & Unlock' : '❌ Not enough cash ($' + formatNum(state.player.cash) + ')';
+                if (debtLockSeconds <= 0) {
+                    clearInterval(debtLockInterval);
+                    // After timer, allow them to pay or stay locked
+                    document.getElementById('debt-lock-timer').textContent = 'OVERDUE';
+                    document.getElementById('debt-lock-timer').style.color = 'var(--danger)';
+                }
+            }, 1000);
+        }
+
+        function payDebtLock() {
+            const totalDebt = state.player.loans.reduce((s, l) => s + l.remaining, 0);
+            if (state.player.cash < totalDebt) { showToast('Insufficient Funds', 'You need $' + formatNum(totalDebt), 'danger'); return; }
+            state.player.cash -= totalDebt;
+            state.player.debt = 0;
+            state.player.loans = [];
+            state.player.credit = Math.min(850, state.player.credit + 30);
+            state._debtLocked = false;
+            clearInterval(debtLockInterval);
+            const screen = document.getElementById('debt-lock-screen');
+            screen.style.display = 'none';
+            addActivity(`Day ${state.player.day}`, `Paid off all debt: $${formatNum(totalDebt)}`, 'success');
+            saveGame();
+            updateUI();
+            renderBanking();
+            showToast('Unlocked!', 'All debt paid. Account restored.', 'success');
+        }
+
+        // ===================== DUAL SAVE SYSTEM =====================
+        // (LOCAL_AUTOSAVE_KEY and _pendingCloudSync are declared at top of script)
+
+        function autoSaveLocally() {
+            // Save current state to localStorage without cloud upload
+            const saveData = {
+                player: state.player,
+                stockPrices: state.stockPrices,
+                cryptoPrices: state.cryptoPrices,
+                stockHistory: state.stockHistory,
+                cryptoHistory: state.cryptoHistory,
+                bannedFromIPO: state.bannedFromIPO || [],
+                updatedAt: new Date().toISOString(),
+                _localOnly: true
+            };
+            localStorage.setItem(LOCAL_AUTOSAVE_KEY, JSON.stringify(saveData));
+            _pendingCloudSync = true;
+        }
+
+        async function syncLocalToCloud() {
+            if (!_pendingCloudSync) return;
+            const user = window.fbAuth ? window.fbAuth.currentUser : null;
+            if (!user) return;
+            const localData = localStorage.getItem(LOCAL_AUTOSAVE_KEY);
+            if (!localData) return;
+            try {
+                const data = JSON.parse(localData);
+                if (data._localOnly) {
+                    delete data._localOnly;
+                    const savesDoc = window.fbMethods.doc(window.fbDb, 'users', user.uid, 'saves', 'AutoSave');
+                    await window.fbMethods.setDoc(savesDoc, data);
+                    // Update leaderboard
+                    const nw = calcNetWorth();
+                    const userDoc = window.fbMethods.doc(window.fbDb, 'users', user.uid);
+                    await window.fbMethods.setDoc(userDoc, { netWorth: nw, day: state.player.day, lastActive: new Date().toISOString() }, { merge: true });
+                    _pendingCloudSync = false;
+                    console.log('Local auto-save synced to cloud');
+                }
+            } catch(e) { console.warn('Cloud sync failed, will retry', e); }
+        }
+
+        // Listen for online event to sync local saves to cloud
+        window.addEventListener('online', () => {
+            showToast('Back Online', 'Syncing local saves to cloud...', 'success');
+            setTimeout(syncLocalToCloud, 2000);
+        });
 
         // ===================== INIT =====================
         // (window.onload is defined above with Firebase auth listener)
