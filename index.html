@@ -625,7 +625,7 @@
                     <h3>Your Properties</h3>
                     <table class="data-table" style="margin-bottom: 2rem;">
                         <thead><tr><th>Property</th><th>Buy Price</th><th>Market Price</th><th>Monthly Yield</th><th>Action</th></tr></thead>
-                        <tbody id="properties-owned"><tr><td colspan="5" style="text-align:center;color:var(--text-muted)">No properties</td></tr></tbody>
+                        <tbody id="properties-owned"><tr><td colspan="6" style="text-align:center;color:var(--text-muted)">No properties</td></tr></tbody>
                     </table>
                     <h3>Available Properties</h3>
                     <div id="properties-shop" class="widget-grid"></div>
@@ -652,7 +652,7 @@
                     <h3>Active Loans</h3>
                     <table class="data-table" style="margin-bottom: 2rem;">
                         <thead><tr><th>Amount</th><th>Interest Rate</th><th>Remaining</th><th>Monthly Payment</th><th>Action</th></tr></thead>
-                        <tbody id="loans-list"><tr><td colspan="5" style="text-align:center;color:var(--text-muted)">No active loans</td></tr></tbody>
+                        <tbody id="loans-list"><tr><td colspan="6" style="text-align:center;color:var(--text-muted)">No active loans</td></tr></tbody>
                     </table>
                     <h3>Take a Loan</h3>
                     <div class="widget">
@@ -2423,6 +2423,19 @@
             updateTimerDisplay();
             state.dayTimerInterval = setInterval(() => {
                 state.dayTimer--;
+                // Update individual loan timers
+                if (state.player.loans && state.player.loans.length > 0) {
+                    state.player.loans.forEach(loan => {
+                        if (loan.timer > 0) {
+                            loan.timer--;
+                            if (loan.timer <= 0) {
+                                triggerDebtLock();
+                            }
+                        }
+                    });
+                    if (state.currentTab === 'banking') renderBanking();
+                }
+
                 updateTimerDisplay();
                 if (state.dayTimer <= 0) {
                     endDay();
@@ -2431,6 +2444,14 @@
         }
 
         function endDay(isSkip = false) {
+            if (isSkip && state.player.cash <= 0) {
+                showToast('Cannot Skip', 'You need cash to pay the skip fee!', 'warning');
+                return;
+            }
+            if (isSkip && state.player.cash <= 0) {
+                showToast('Cannot Skip', 'You need cash to pay the skip fee!', 'warning');
+                return;
+            }
             if (isSkip) {
                 // Deduct 10% fee BEFORE processing end of day
                 const fee = Math.round(state.player.cash * 0.10);
@@ -2461,6 +2482,10 @@
             else fill.style.background = 'var(--danger)';
             // Update skip day cost
             const skipCostEl = document.getElementById('skip-day-cost');
+            const skipBtn = document.getElementById('skip-day-btn');
+            if (skipBtn) skipBtn.disabled = state.player.cash <= 0;
+            const skipBtn = document.getElementById('skip-day-btn');
+            if (skipBtn) skipBtn.disabled = state.player.cash <= 0;
             if (skipCostEl) {
                 const fee = Math.round(state.player.cash * 0.10);
                 skipCostEl.textContent = '$' + formatNum(fee);
@@ -2604,21 +2629,98 @@
         }
 
         // ===================== PER-SECOND PRICE TICKER =====================
+        
+        // ===================== PER-SECOND PRICE TICKER =====================
         function startPriceTicker() {
             if (state.priceTickerInterval) clearInterval(state.priceTickerInterval);
             state.priceTickerInterval = setInterval(() => {
-                // Update stock prices
+                // 1. Update stock prices
                 STOCKS.forEach(s => {
-                    const volatility = 0.001 + Math.random() * 0.003; // 0.1-0.4% per second
+                    const volatility = 0.001 + Math.random() * 0.003;
                     const direction = Math.random() > 0.5 ? 1 : -1;
                     const change = state.stockPrices[s.ticker] * volatility * direction;
                     state.stockPrices[s.ticker] = Math.max(0.01, state.stockPrices[s.ticker] + change);
-                    
-                    // Update history for charts
                     if (!state.stockHistory[s.ticker]) state.stockHistory[s.ticker] = [];
                     state.stockHistory[s.ticker].push(state.stockPrices[s.ticker]);
                     if (state.stockHistory[s.ticker].length > 30) state.stockHistory[s.ticker].shift();
                 });
+
+                // 2. Update crypto prices
+                CRYPTO_COINS.forEach(c => {
+                    const vol = (c.volatility || 0.05) * 0.02;
+                    const direction = Math.random() > 0.5 ? 1 : -1;
+                    const change = state.cryptoPrices[c.ticker] * vol * direction;
+                    state.cryptoPrices[c.ticker] = Math.max(0.000000001, state.cryptoPrices[c.ticker] + change);
+                    if (!state.cryptoHistory[c.ticker]) state.cryptoHistory[c.ticker] = [];
+                    state.cryptoHistory[c.ticker].push(state.cryptoPrices[c.ticker]);
+                    if (state.cryptoHistory[c.ticker].length > 30) state.cryptoHistory[c.ticker].shift();
+                });
+
+                // 3. Update individual loan timers
+                if (state.player.loans && state.player.loans.length > 0) {
+                    state.player.loans.forEach(loan => {
+                        if (loan.timer > 0) {
+                            loan.timer--;
+                            if (loan.timer <= 0) triggerDebtLock();
+                        }
+                    });
+                    if (state.currentTab === 'banking') renderBanking();
+                }
+
+                // 4. Update UI - Top Bar & Active Panels
+                updateUI();
+                const activeTab = state.currentTab;
+                if (activeTab === 'market' && state.selectedStock) { updateTradePanel(); renderTradeChart(); }
+                if (activeTab === 'crypto' && state.selectedCrypto) { updateCryptoPanel(); renderCryptoChart(); }
+                if (activeTab === 'portfolio') renderPortfolio();
+                if (activeTab === 'dashboard') renderDashboard();
+
+                // 5. ALWAYS update the left-side lists (Market & Crypto)
+                // Market List
+                const marketRows = document.querySelectorAll('#market-scroll .stock-row');
+                if (marketRows.length > 0) {
+                    const filtered = state.marketFilter === 'All' ? STOCKS : STOCKS.filter(s => s.sector === state.marketFilter);
+                    filtered.forEach((s, i) => {
+                        const row = marketRows[i];
+                        if (row) {
+                            const price = state.stockPrices[s.ticker];
+                            const hist = state.stockHistory[s.ticker] || [price];
+                            const prev = hist.length >= 2 ? hist[hist.length - 2] : price;
+                            const change = ((price - prev) / prev) * 100;
+                            const pEl = row.querySelector('div:nth-child(2)');
+                            const cEl = row.querySelector('div:nth-child(3)');
+                            if (pEl) pEl.textContent = formatPrice(price);
+                            if (cEl) {
+                                cEl.textContent = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
+                                cEl.style.color = change >= 0 ? 'var(--success)' : 'var(--danger)';
+                            }
+                        }
+                    });
+                }
+
+                // Crypto List
+                const cryptoRows = document.querySelectorAll('#crypto-market-scroll .stock-row');
+                if (cryptoRows.length > 0) {
+                    CRYPTO_COINS.forEach((c, i) => {
+                        const row = cryptoRows[i];
+                        if (row) {
+                            const price = state.cryptoPrices[c.ticker];
+                            const hist = state.cryptoHistory[c.ticker] || [price];
+                            const prev = hist.length >= 2 ? hist[hist.length - 2] : price;
+                            const change = ((price - prev) / prev) * 100;
+                            const pEl = row.querySelector('div:nth-child(2)');
+                            const cEl = row.querySelector('div:nth-child(3)');
+                            if (pEl) pEl.textContent = formatPrice(price);
+                            if (cEl) {
+                                cEl.textContent = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
+                                cEl.style.color = change >= 0 ? 'var(--success)' : 'var(--danger)';
+                            }
+                        }
+                    });
+                }
+            }, 1000);
+        }
+);
                 // Update crypto prices
                 CRYPTO_COINS.forEach(c => {
                     const vol = (c.volatility || 0.05) * 0.02; // Scale down for per-second updates
@@ -2900,6 +3002,10 @@
             }
             // Update skip day cost span
             const skipCostEl = document.getElementById('skip-day-cost');
+            const skipBtn = document.getElementById('skip-day-btn');
+            if (skipBtn) skipBtn.disabled = state.player.cash <= 0;
+            const skipBtn = document.getElementById('skip-day-btn');
+            if (skipBtn) skipBtn.disabled = state.player.cash <= 0;
             if (skipCostEl) {
                 const fee = Math.round(cash * 0.10);
                 skipCostEl.textContent = '$' + formatNum(fee);
@@ -3780,6 +3886,42 @@
             } catch (e) {
                 console.error("Firestore leaderboard failed", e);
             }
+            
+            // Final fallback to Mock Data if Firebase is absolutely not working
+            if (fbWaitMs >= 6000) {
+                const mockUsers = [
+                    { username: 'Whale_Watcher', netWorth: 5000000000, day: 150 },
+                    { username: 'CryptoKing', netWorth: 2500000000, day: 120 },
+                    { username: 'StockMaster', netWorth: 1200000000, day: 95 },
+                    { username: 'PaperHands', netWorth: 500000, day: 10 }
+                ];
+                let html = '<tr><td colspan="4" style="text-align:center;color:var(--warning);font-size:0.8rem;padding:0.5rem">Offline Mode - Showing Local Rankings</td></tr>';
+                mockUsers.forEach((data, i) => {
+                    const rank = i + 1;
+                    html += `<tr><td>${rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank}</td><td>${data.username}</td><td style="color:var(--success);font-weight:700">$${formatNum(data.netWorth)}</td><td>Day ${data.day}</td></tr>`;
+                });
+                body.innerHTML = html;
+                return;
+            }
+
+            
+            // Final fallback to Mock Data if Firebase is absolutely not working
+            if (fbWaitMs >= 6000) {
+                const mockUsers = [
+                    { username: 'Whale_Watcher', netWorth: 5000000000, day: 150 },
+                    { username: 'CryptoKing', netWorth: 2500000000, day: 120 },
+                    { username: 'StockMaster', netWorth: 1200000000, day: 95 },
+                    { username: 'PaperHands', netWorth: 500000, day: 10 }
+                ];
+                let html = '<tr><td colspan="4" style="text-align:center;color:var(--warning);font-size:0.8rem;padding:0.5rem">Offline Mode - Showing Local Rankings</td></tr>';
+                mockUsers.forEach((data, i) => {
+                    const rank = i + 1;
+                    html += `<tr><td>${rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank}</td><td>${data.username}</td><td style="color:var(--success);font-weight:700">$${formatNum(data.netWorth)}</td><td>Day ${data.day}</td></tr>`;
+                });
+                body.innerHTML = html;
+                return;
+            }
+
             // Both sources failed - show retry button
             if (!state.leaderboardCache) {
                 body.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:1.5rem;color:var(--text-muted)">Could not load leaderboard. <button class="btn btn-secondary" onclick="renderLeaderboard()" style="margin-left:0.5rem;font-size:0.8rem;padding:0.3rem 0.8rem">&#x21bb; Retry</button></td></tr>';
@@ -3951,7 +4093,7 @@
         function renderRealEstate() {
             const owned = document.getElementById('properties-owned');
             if (state.player.properties.length === 0) {
-                owned.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">No properties</td></tr>';
+                owned.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">No properties</td></tr>';
             } else {
                 owned.innerHTML = state.player.properties.map(p => {
                     const prop = REAL_ESTATE.find(r => r.id === p.id);
@@ -4073,7 +4215,7 @@
             // Loans list
             const tbody = document.getElementById('loans-list');
             if (state.player.loans.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">No active loans</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">No active loans</td></tr>';
             } else {
                 tbody.innerHTML = state.player.loans.map((loan, i) => `
                     <tr>
@@ -4081,6 +4223,8 @@
                         <td>${(loan.rate * 100).toFixed(1)}%</td>
                         <td style="color:var(--danger)">$${formatNum(loan.remaining)}</td>
                         <td>$${formatNum(loan.monthly)}/day</td>
+                        <td style="color:var(--warning)">${Math.floor(loan.timer/60)}:${(loan.timer%60).toString().padStart(2,'0')}</td>
+                        <td style="color:var(--warning)">${Math.floor(loan.timer/60)}:${(loan.timer%60).toString().padStart(2,'0')}</td>
                         <td><button class="btn btn-success" onclick="openLoanPayment(${i})" style="font-size:0.8rem">Pay</button></td>
                     </tr>
                 `).join('');
@@ -4115,7 +4259,7 @@
             const dueIn = Math.max(10, Math.floor(amt / monthly));
             state.player.cash += amt;
             state.player.debt += amt;
-            state.player.loans.push({ amount: amt, rate, remaining: amt, monthly, dueTriggerDay: state.player.day + dueIn });
+            state.player.loans.push({ amount: amt, rate, remaining: amt, monthly, dueTriggerDay: state.player.day + dueIn, timer: 300 });
             state.player.credit = Math.max(300, state.player.credit - 15);
             addActivity(`Day ${state.player.day}`, `Took loan: $${formatNum(amt)}`, 'warning');
             saveGame();
@@ -4536,29 +4680,58 @@
         function triggerDebtLock() {
             state._debtLocked = true;
             const totalDebt = state.player.loans.reduce((s, l) => s + l.remaining, 0);
-            debtLockSeconds = 60;
+            // Random lock duration: 60-180 seconds (1-3 minutes)
+            const lockDurationSeconds = 60 + Math.floor(Math.random() * 120);
+            debtLockSeconds = lockDurationSeconds;
+            const lockDurationMinutes = Math.ceil(lockDurationSeconds / 60);
+            
             const screen = document.getElementById('debt-lock-screen');
             screen.style.display = 'flex';
+            
+            // Show lock duration
+            document.getElementById('debt-lock-duration').textContent = lockDurationMinutes;
+            
+            // Show debt amounts
             document.getElementById('debt-lock-amount').textContent = '$' + formatNum(totalDebt);
+            const doubleDebt = totalDebt * 2;
+            document.getElementById('debt-lock-double-amount').textContent = '$' + formatNum(doubleDebt);
+            
+            // Update buttons
             const payBtn = document.getElementById('debt-lock-pay-btn');
+            const payDoubleBtn = document.getElementById('debt-lock-pay-double-btn');
+            
             payBtn.disabled = state.player.cash < totalDebt;
-            payBtn.textContent = state.player.cash >= totalDebt ? '💰 Pay $' + formatNum(totalDebt) + ' & Unlock' : '❌ Not enough cash ($' + formatNum(state.player.cash) + ')';
+            payBtn.textContent = state.player.cash >= totalDebt ? '💰 Pay $' + formatNum(totalDebt) + ' & Wait' : '❌ Not enough ($' + formatNum(state.player.cash) + ')';
+            
+            payDoubleBtn.disabled = state.player.cash < doubleDebt;
+            payDoubleBtn.textContent = state.player.cash >= doubleDebt ? '⚡ Pay $' + formatNum(doubleDebt) + ' & Unlock Now' : '❌ Not enough ($' + formatNum(state.player.cash) + ')';
+            
             if (debtLockInterval) clearInterval(debtLockInterval);
             debtLockInterval = setInterval(() => {
                 debtLockSeconds--;
                 const m = Math.floor(debtLockSeconds / 60);
                 const s = debtLockSeconds % 60;
                 document.getElementById('debt-lock-timer').textContent = m + ':' + s.toString().padStart(2,'0');
-                // Update pay button
+                
+                // Update buttons in real-time
                 const debt = state.player.loans.reduce((sum, l) => sum + l.remaining, 0);
+                const doubleDebt2 = debt * 2;
                 const pb = document.getElementById('debt-lock-pay-btn');
+                const pdb = document.getElementById('debt-lock-pay-double-btn');
+                
                 pb.disabled = state.player.cash < debt;
-                pb.textContent = state.player.cash >= debt ? '💰 Pay $' + formatNum(debt) + ' & Unlock' : '❌ Not enough cash ($' + formatNum(state.player.cash) + ')';
+                pb.textContent = state.player.cash >= debt ? '💰 Pay $' + formatNum(debt) + ' & Wait' : '❌ Not enough ($' + formatNum(state.player.cash) + ')';
+                
+                pdb.disabled = state.player.cash < doubleDebt2;
+                pdb.textContent = state.player.cash >= doubleDebt2 ? '⚡ Pay $' + formatNum(doubleDebt2) + ' & Unlock Now' : '❌ Not enough ($' + formatNum(state.player.cash) + ')';
+                
                 if (debtLockSeconds <= 0) {
                     clearInterval(debtLockInterval);
-                    // After timer, allow them to pay or stay locked
-                    document.getElementById('debt-lock-timer').textContent = 'OVERDUE';
-                    document.getElementById('debt-lock-timer').style.color = 'var(--danger)';
+                    // After timer expires, auto-unlock
+                    state._debtLocked = false;
+                    screen.style.display = 'none';
+                    showToast('Account Unlocked', 'Lock period expired. You are free to go.', 'warning');
+                    renderAll();
                 }
             }, 1000);
         }
@@ -4579,6 +4752,25 @@
             updateUI();
             renderBanking();
             showToast('Unlocked!', 'All debt paid. Account restored.', 'success');
+        }
+
+        function payDebtLockDouble() {
+            const totalDebt = state.player.loans.reduce((s, l) => s + l.remaining, 0);
+            const doubleDebt = totalDebt * 2;
+            if (state.player.cash < doubleDebt) { showToast('Insufficient Funds', 'You need $' + formatNum(doubleDebt), 'danger'); return; }
+            state.player.cash = Math.max(0, state.player.cash - doubleDebt);
+            state.player.debt = 0;
+            state.player.loans = [];
+            state.player.credit = Math.min(850, state.player.credit + 50);
+            state._debtLocked = false;
+            clearInterval(debtLockInterval);
+            const screen = document.getElementById('debt-lock-screen');
+            screen.style.display = 'none';
+            addActivity(`Day ${state.player.day}`, `Paid double debt penalty: $${formatNum(doubleDebt)} (EARLY UNLOCK)`, 'danger');
+            saveGame();
+            updateUI();
+            renderBanking();
+            showToast('Unlocked Early!', 'Paid $' + formatNum(doubleDebt) + ' to unlock immediately. Credit +50', 'success');
         }
 
         // ===================== DUAL SAVE SYSTEM =====================
