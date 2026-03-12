@@ -514,10 +514,7 @@
                 <div class="top-bar-right">
                     <button class="btn btn-secondary" onclick="endDay(true)" id="skip-day-btn" style="font-size:0.8rem;background:var(--warning);color:#000;border:none;">⏭ Skip Day (10%) — 💵 <span id="skip-day-cost">$0</span></button>
                     <button class="btn btn-success" onclick="openSaveModal()" style="font-size: 0.8rem;">Save Game</button>
-                    <button class="btn btn-secondary" id="theme-btn2" onclick="toggleTheme()" style="font-size: 0.8rem;">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-                        <span id="theme-text2">Dark</span>
-                    </button>
+
                     <div class="info-item"><span class="info-label">BTC</span><span class="info-value" id="info-btc-price">—</span></div>
                     <div class="info-item"><span class="info-label">Role</span><span class="info-value" id="info-role">—</span></div>
                     <div class="info-item"><span class="info-label">Level</span><span class="info-value" id="info-level">1</span></div>
@@ -731,7 +728,8 @@
                     <div id="education-list" class="widget-grid"></div>
                 </div>
 
-                <!-- Achievements T            <div id="achievements" class="tab-panel">
+                <!-- Achievements Tab -->
+                <div id="achievements" class="tab-panel">
                 <h3 style="margin-bottom:1.5rem">Achievements</h3>
                 <div id="achievements-list" class="widget-grid"></div>
             </div>
@@ -764,8 +762,15 @@
                         <h3 style="margin-bottom:1.5rem">Your Profile</h3>
                         <!-- Avatar -->
                         <div style="text-align:center;margin-bottom:1.5rem">
-                            <div id="profile-avatar-display" style="font-size:4rem;margin-bottom:0.75rem;cursor:pointer" onclick="toggleAvatarPicker()">🧑</div>
-                            <div style="color:var(--text-muted);font-size:0.8rem">Click to change avatar</div>
+                            <div id="profile-avatar-display" style="font-size:4rem;margin-bottom:0.75rem;cursor:pointer;width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 0.75rem;overflow:hidden;background:var(--bg-panel);border:2px solid var(--border)" onclick="toggleAvatarPicker()">🧑</div>
+                            <div style="display:flex;gap:0.5rem;justify-content:center;margin-bottom:0.25rem">
+                                <button class="btn btn-secondary" onclick="toggleAvatarPicker()" style="font-size:0.75rem;padding:0.3rem 0.7rem">Choose Emoji</button>
+                                <label class="btn btn-secondary" style="font-size:0.75rem;padding:0.3rem 0.7rem;cursor:pointer;margin:0">
+                                    📷 Upload Photo
+                                    <input type="file" id="avatar-upload-input" accept="image/*" style="display:none" onchange="handleAvatarUpload(event)">
+                                </label>
+                            </div>
+                            <div style="color:var(--text-muted);font-size:0.75rem">Click emoji or upload your own photo</div>
                         </div>
                         <!-- Avatar Picker -->
                         <div id="avatar-picker" style="display:none;background:var(--bg-panel);border-radius:8px;padding:1rem;margin-bottom:1rem;border:1px solid var(--border)">
@@ -1838,6 +1843,7 @@
             dayTimer: 300,      // 5 minutes in seconds
             dayTimerInterval: null,
             eventInterval: null,
+            priceTickerInterval: null,
             player: {
                 name: 'Player',
                 character: null,
@@ -2211,13 +2217,21 @@
             const savedTheme = localStorage.getItem('tradelife_theme');
             if (savedTheme === 'light') {
                 document.body.classList.add('light-theme');
-                ['theme-text','theme-text2','profile-theme-text'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = 'Light'; });
+                ['theme-text','profile-theme-text'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = 'Light'; });
             }
-            // Apply saved avatar
-            const savedAvatar = localStorage.getItem('tradelife_avatar');
-            if (savedAvatar) {
-                const avatarEl = document.getElementById('profile-avatar-display');
-                if (avatarEl) avatarEl.textContent = savedAvatar;
+            // Apply saved avatar (image or emoji)
+            const savedAvatarImgOnLoad = localStorage.getItem('tradelife_avatar_img');
+            const savedAvatarOnLoad = localStorage.getItem('tradelife_avatar');
+            const avatarElOnLoad = document.getElementById('profile-avatar-display');
+            if (avatarElOnLoad) {
+                if (savedAvatarImgOnLoad) {
+                    avatarElOnLoad.textContent = '';
+                    avatarElOnLoad.style.fontSize = '0';
+                    avatarElOnLoad.innerHTML = `<img src="${savedAvatarImgOnLoad}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+                } else if (savedAvatarOnLoad) {
+                    avatarElOnLoad.style.fontSize = '4rem';
+                    avatarElOnLoad.textContent = savedAvatarOnLoad;
+                }
             }
             // Initialize Firebase Auth Listener
             if (window.fbMethods) {
@@ -2410,17 +2424,16 @@
 
         function endDay(isSkip = false) {
             if (isSkip) {
+                // Deduct 10% fee BEFORE processing end of day
                 const fee = Math.round(state.player.cash * 0.10);
                 if (fee > 0) {
                     state.player.cash -= fee;
                     addActivity(`Day ${state.player.day}`, `Skipped day fee: -$${fee.toLocaleString()}`, 'danger');
-                    showToast('Day Skipped', `Paid $${fee.toLocaleString()} (10%) to skip.`, 'warning');
                 }
-                clearInterval(state.dayTimerInterval);
-                state.player.day++;
-                startDayTimer();
-                startPriceTicker();
-                renderAll();
+                // Process full end-of-day (salary, property income, projects, etc.)
+                state._isSkipDay = true;
+                _processEndOfDay();
+                state._isSkipDay = false;
                 return;
             }
             // Normal end-of-day (timer ran out)
@@ -2478,12 +2491,12 @@
                 const failedProjects = [];
                 co.projects.forEach(proj => {
                     if (proj.completed || proj.failed) return;
-                    // Project failure risk: 60% base chance per day (High Stakes!)
-                    const failChance = 0.60;
+                    // Project failure risk: 5% base chance per day
+                    const failChance = 0.05;
                     if (Math.random() < failChance) {
                         proj.failed = true;
                         const projType = PROJECT_TYPES.find(pt => pt.name === proj.name);
-                        const lossPct = 0.3 + Math.random() * 0.5; // Lose 30-80% of invested cost
+                        const lossPct = 0.2 + Math.random() * 0.3; // Lose 20-50% of invested cost
                         const loss = Math.round((proj.invested || (projType ? projType.cost : 10000)) * lossPct);
                         co.cash -= loss;
                         addActivity(`Day ${state.player.day}`, `${co.name}: ${proj.name} FAILED! -$${loss.toLocaleString()} lost`, 'danger');
@@ -2497,7 +2510,15 @@
                     if (proj.progress >= 100 && !proj.completed) {
                         proj.completed = true;
                         const projType = PROJECT_TYPES.find(pt => pt.name === proj.name);
-                        const revenue = projType ? projType.potential * (0.5 + Math.random() * 0.8) : 100000;
+                        // Support custom projects with customPotential
+                        let revenue;
+                        if (proj.customPotential) {
+                            revenue = proj.customPotential * (0.5 + Math.random() * 0.5);
+                        } else if (projType) {
+                            revenue = projType.potential * (0.5 + Math.random() * 0.8);
+                        } else {
+                            revenue = (proj.invested || 10000) * (5 + Math.random() * 10);
+                        }
                         co.cash += revenue;
                         addActivity(`Day ${state.player.day}`, `${co.name}: ${proj.name} completed! +$${Math.round(revenue).toLocaleString()}`, 'success');
                         showToast('Project Complete!', `${proj.name} finished! Revenue: $${Math.round(revenue).toLocaleString()}`, 'success');
@@ -2543,7 +2564,12 @@
             startDayTimer();
             startPriceTicker();
             renderAll();
-            showToast('New Day!', `Day ${state.player.day} begins. Salary: $${state.player.salary.toLocaleString()}`, 'success');
+            if (state._isSkipDay) {
+                const skipFeeDisplay = Math.round(state.player.cash * 0.10);
+                showToast('Day Skipped!', `Day ${state.player.day} begins. Salary +$${state.player.salary.toLocaleString()} collected.`, 'warning');
+            } else {
+                showToast('New Day!', `Day ${state.player.day} begins. Salary: $${state.player.salary.toLocaleString()}`, 'success');
+            }
         }
 
         // ===================== MARKET TICK =====================
@@ -2798,6 +2824,7 @@
             else if (state.currentTab === 'lifestyle') renderLifestyle();
             else if (state.currentTab === 'banking') renderBanking();
             else if (state.currentTab === 'blackmarket') renderBlackMarket();
+            else if (state.currentTab === 'crypto') renderCrypto();
             else if (state.currentTab === 'achievements') renderAchievements();
             else if (state.currentTab === 'education') renderEducation();
             else if (state.currentTab === 'leaderboard') renderLeaderboard();
@@ -2891,7 +2918,7 @@
         function toggleTheme() {
             document.body.classList.toggle('light-theme');
             const isLight = document.body.classList.contains('light-theme');
-            ['theme-text', 'theme-text2', 'profile-theme-text'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = isLight ? 'Light' : 'Dark'; });
+            ['theme-text', 'profile-theme-text'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = isLight ? 'Light' : 'Dark'; });
             localStorage.setItem('tradelife_theme', isLight ? 'light' : 'dark');
         }
 
@@ -3702,7 +3729,8 @@
             }
         }        function showJobApplications(coId) {
             const co = state.player.companies.find(c => c.id === coId);
-            const applicants = JOB_APPLICANTS.slice(0, 8).sort(() => Math.random() - 0.5).slice(0, 5);
+            // Show all applicants
+            const applicants = JOB_APPLICANTS;
             const content = document.getElementById('job-modal-content');
             content.innerHTML = applicants.map(app => `
                 <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;margin-bottom:1rem;border:1px solid var(--border)">
@@ -3803,7 +3831,7 @@
                                 <div style="height:8px;background:var(--bg-base);border-radius:4px;overflow:hidden">
                                     <div style="height:100%;background:${proj.completed ? 'var(--success)' : 'var(--brand)'};width:${proj.progress}%;transition:width 0.3s"></div>
                                 </div>
-                                <div style="font-size:0.75rem;color:var(--danger);margin-top:0.4rem;font-weight:700">⚠ 60% daily failure risk (High Stakes!)</div>
+                                <div style="font-size:0.75rem;color:var(--warning);margin-top:0.4rem;font-weight:700">⚠ 5% daily failure risk</div>
                             </div>
                         `).join('')
                     }
@@ -4334,10 +4362,21 @@
                 userEmail.textContent = '—';
                 accountType.textContent = 'Not Logged In';
             }
-            // Load saved avatar
+            // Load saved avatar (image or emoji)
+            const savedAvatarImg = localStorage.getItem('tradelife_avatar_img');
             const savedAvatar = localStorage.getItem('tradelife_avatar') || '🧑';
             const avatarEl = document.getElementById('profile-avatar-display');
-            if (avatarEl) avatarEl.textContent = savedAvatar;
+            if (avatarEl) {
+                if (savedAvatarImg) {
+                    avatarEl.textContent = '';
+                    avatarEl.style.fontSize = '0';
+                    avatarEl.innerHTML = `<img src="${savedAvatarImg}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+                } else {
+                    avatarEl.innerHTML = '';
+                    avatarEl.style.fontSize = '4rem';
+                    avatarEl.textContent = savedAvatar;
+                }
+            }
             // Update theme button text
             const themeText = document.getElementById('profile-theme-text');
             if (themeText) themeText.textContent = document.body.classList.contains('light-theme') ? 'Light' : 'Dark';
@@ -4356,10 +4395,36 @@
 
         function setAvatar(emoji) {
             localStorage.setItem('tradelife_avatar', emoji);
+            localStorage.removeItem('tradelife_avatar_img');
             const avatarEl = document.getElementById('profile-avatar-display');
-            if (avatarEl) avatarEl.textContent = emoji;
+            if (avatarEl) {
+                avatarEl.innerHTML = '';
+                avatarEl.textContent = emoji;
+                avatarEl.style.fontSize = '4rem';
+            }
             document.getElementById('avatar-picker').style.display = 'none';
             showToast('Avatar Updated', 'Looking good!', 'success');
+        }
+
+        function handleAvatarUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) { showToast('Error', 'Please select an image file', 'danger'); return; }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const dataUrl = e.target.result;
+                localStorage.setItem('tradelife_avatar_img', dataUrl);
+                localStorage.removeItem('tradelife_avatar');
+                const avatarEl = document.getElementById('profile-avatar-display');
+                if (avatarEl) {
+                    avatarEl.textContent = '';
+                    avatarEl.style.fontSize = '0';
+                    avatarEl.innerHTML = `<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+                }
+                document.getElementById('avatar-picker').style.display = 'none';
+                showToast('Profile Photo Updated', 'Looking great!', 'success');
+            };
+            reader.readAsDataURL(file);
         }
 
         function saveDisplayName() {
