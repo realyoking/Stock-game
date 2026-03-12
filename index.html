@@ -300,7 +300,7 @@
                     <div class="input-group" id="auth-email-group" style="margin-bottom:1rem;display:none"><input type="email" id="auth-email-field" placeholder="Email (for sign up)" style="text-align:left" autocomplete="email"></div>
                     <div class="input-group" style="margin-bottom:1.5rem"><input type="password" id="auth-password" placeholder="Password" style="text-align:left" autocomplete="current-password"></div>
                     <div class="button-group" style="flex-direction:column;gap:0.75rem">
-                        <button class="btn btn-primary" id="auth-submit-btn" onclick="handleAuth(state._authTab||'login')" style="width:100%">Login</button>
+                        <button class="btn btn-primary" id="auth-submit-btn" onclick="handleAuth()" style="width:100%">Login</button>
                         <div style="display:flex;align-items:center;gap:0.75rem;margin:0.25rem 0">
                             <div style="flex:1;height:1px;background:var(--border)"></div>
                             <span style="color:var(--text-muted);font-size:0.85rem">or</span>
@@ -2273,21 +2273,34 @@
             }
         }
 
+        
         function switchAuthTab(tab) {
             state._authTab = tab;
             const loginBtn = document.getElementById('tab-login');
             const signupBtn = document.getElementById('tab-signup');
             const submitBtn = document.getElementById('auth-submit-btn');
             const emailGroup = document.getElementById('auth-email-group');
+            
             if (tab === 'signup') {
                 loginBtn.style.background = 'transparent';
                 loginBtn.style.color = 'var(--text-muted)';
                 signupBtn.style.background = 'var(--brand)';
                 signupBtn.style.color = 'white';
                 submitBtn.textContent = 'Create Account';
-                submitBtn.onclick = () => handleAuth('signup');
+                // Use a more robust way to set the click handler
+                submitBtn.setAttribute('onclick', "handleAuth('signup')");
                 emailGroup.style.display = 'flex';
             } else {
+                loginBtn.style.background = 'var(--brand)';
+                loginBtn.style.color = 'white';
+                signupBtn.style.background = 'transparent';
+                signupBtn.style.color = 'var(--text-muted)';
+                submitBtn.textContent = 'Login';
+                submitBtn.setAttribute('onclick', "handleAuth('login')");
+                emailGroup.style.display = 'none';
+            }
+        }
+ else {
                 loginBtn.style.background = 'var(--brand)';
                 loginBtn.style.color = 'white';
                 signupBtn.style.background = 'transparent';
@@ -2298,9 +2311,17 @@
             }
         }
 
+        
         async function handleAuth(type) {
+            if (!type) type = state._authTab || 'login';
             const username = document.getElementById('auth-username').value.trim();
+
             const password = document.getElementById('auth-password').value;
+            if (!window.fbMethods) {
+                showToast('Error', 'Firebase is still loading. Please wait a moment...', 'warning');
+                return;
+            }
+
             if (!username || !password) { showToast('Error', 'Enter username and password', 'danger'); return; }
             if (username.length < 3) { showToast('Error', 'Username must be at least 3 characters', 'danger'); return; }
             // Convert username to a fake email for Firebase Auth
