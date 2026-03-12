@@ -372,6 +372,21 @@
         </div>
     </div>
 
+    <!-- Save Management Modal -->
+    <div id="save-modal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width:450px">
+            <div class="modal-header" id="save-modal-title">Save Game</div>
+            <div id="save-modal-list" style="margin-bottom:1.5rem;max-height:300px;overflow-y:auto"></div>
+            <div class="input-group" id="new-save-group">
+                <input type="text" id="new-save-name" placeholder="New Save Name">
+                <button class="btn btn-primary" onclick="createNewSave()" style="border-radius:0">Create</button>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="document.getElementById('save-modal').classList.add('hidden')">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Main App -->
     <div id="app-layout" class="hidden">
         <!-- Sidebar -->
@@ -404,7 +419,8 @@
             <div class="top-bar">
                 <h2 class="top-bar-title" id="tab-title">Dashboard</h2>
                 <div class="top-bar-right">
-                    <button class="btn btn-secondary" onclick="endDay()" style="font-size:0.8rem;background:var(--warning);color:#000;border:none;">End Day</button>
+                    <button class="btn btn-secondary" onclick="endDay(true)" style="font-size:0.8rem;background:var(--warning);color:#000;border:none;">Skip Day (10%)</button>
+                    <button class="btn btn-success" onclick="openSaveModal()" style="font-size: 0.8rem;">Save Game</button>
                     <button class="btn btn-secondary" id="theme-btn2" onclick="toggleTheme()" style="font-size: 0.8rem;">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
                         <span id="theme-text2">Dark</span>
@@ -1023,7 +1039,21 @@
             { id: 'ls105', name: 'Falcon', price: 80000, clout: 350 },
             { id: 'ls106', name: 'Peacock', price: 5000, clout: 25 },
             { id: 'ls107', name: 'Rare Koi Fish', price: 20000, clout: 80 },
-            { id: 'ls108', name: 'Bonsai Collection', price: 15000, clout: 60 }
+            { id: 'ls108', name: 'Bonsai Collection', price: 15000, clout: 60 },
+            // Ultra-Rich Tier (For 4B+ players)
+            { id: 'ls109', name: 'Golden Superyacht', price: 500000000, clout: 150000 },
+            { id: 'ls110', name: 'Private Space Station', price: 2000000000, clout: 500000 },
+            { id: 'ls111', name: 'Moon Colony Alpha', price: 5000000000, clout: 1200000 },
+            { id: 'ls112', name: 'Mars Research Base', price: 15000000000, clout: 3500000 },
+            { id: 'ls113', name: 'Asteroid Mining Fleet', price: 50000000000, clout: 10000000 },
+            { id: 'ls114', name: 'Dyson Swarm Project', price: 250000000000, clout: 50000000 },
+            { id: 'ls115', name: 'Interstellar Ark', price: 1000000000000, clout: 250000000 },
+            { id: 'ls116', name: 'Galaxy-Wide Network', price: 10000000000000, clout: 1000000000 },
+            { id: 'ls117', name: 'Time Travel Research', price: 500000000000, clout: 100000000 },
+            { id: 'ls118', name: 'Anti-Gravity Mansion', price: 100000000, clout: 25000 },
+            { id: 'ls119', name: 'Personal Army (Elite)', price: 300000000, clout: 80000 },
+            { id: 'ls120', name: 'Global News Monopoly', price: 1200000000, clout: 300000 },
+            { id: 'ls121', name: 'Country Acquisition', price: 80000000000, clout: 20000000 }
         ];
 
         const CAREERS = [
@@ -1623,7 +1653,8 @@
             stockPrices: {},
             cryptoPrices: {},
             stockHistory: {},
-            cryptoHistory: {}
+            cryptoHistory: {},
+            bannedFromIPO: []
         };
 
         const CHARS_PER_PAGE = 6;
@@ -1702,9 +1733,39 @@
                 if (!state.player.achievements) state.player.achievements = [];
                 if (!state.player.completedTasks) state.player.completedTasks = [];
                 if (!state.player.certifications) state.player.certifications = [];
-                // Fill any missing prices
-                STOCKS.forEach(s => { if (!state.stockPrices[s.ticker]) state.stockPrices[s.ticker] = s.basePrice; });
-                CRYPTO_COINS.forEach(c => { if (!state.cryptoPrices[c.ticker]) state.cryptoPrices[c.ticker] = c.basePrice; });
+                // Fill any missing prices and history
+                STOCKS.forEach(s => {
+                    if (!state.stockPrices[s.ticker]) state.stockPrices[s.ticker] = s.basePrice;
+                    if (!state.stockHistory[s.ticker] || state.stockHistory[s.ticker].length < 3) {
+                        const p = state.stockPrices[s.ticker];
+                        const hist = [];
+                        let hp = p * (0.90 + Math.random() * 0.10);
+                        for (let i = 0; i < 20; i++) {
+                            const v = 0.005 + Math.random() * 0.015;
+                            const d = Math.random() > 0.5 ? 1 : -1;
+                            hp = Math.max(0.01, hp + hp * v * d);
+                            hist.push(hp);
+                        }
+                        hist.push(p);
+                        state.stockHistory[s.ticker] = hist;
+                    }
+                });
+                CRYPTO_COINS.forEach(c => {
+                    if (!state.cryptoPrices[c.ticker]) state.cryptoPrices[c.ticker] = c.basePrice;
+                    if (!state.cryptoHistory[c.ticker] || state.cryptoHistory[c.ticker].length < 3) {
+                        const p = state.cryptoPrices[c.ticker];
+                        const hist = [];
+                        let hp = p * (0.85 + Math.random() * 0.15);
+                        for (let i = 0; i < 20; i++) {
+                            const v = (c.volatility || 0.05) * 0.3;
+                            const d = Math.random() > 0.5 ? 1 : -1;
+                            hp = Math.max(0.000000001, hp + hp * v * d);
+                            hist.push(hp);
+                        }
+                        hist.push(p);
+                        state.cryptoHistory[c.ticker] = hist;
+                    }
+                });
                 launchApp();
                 showToast('Game Loaded', 'Welcome back!', 'success');
             } catch(e) {
@@ -1778,9 +1839,17 @@
         }
 
         // ===================== DAY TIMER =====================
-        function startDayTimer() {
+        function endDay(isSkip = false) {
+            if (isSkip) {
+                const fee = Math.round(state.player.cash * 0.10);
+                if (fee > 0) {
+                    state.player.cash -= fee;
+                    addActivity(`Day ${state.player.day}`, `Skipped day fee: -$${fee.toLocaleString()}`, 'danger');
+                    showToast('Day Skipped', `Paid $${fee.toLocaleString()} (10%) to skip.`, 'warning');
+                }
+            }
             if (state.dayTimerInterval) clearInterval(state.dayTimerInterval);
-            state.dayTimer = 300; // 5 minutes
+            state.player.day++;er = 300; // 5 minutes
             updateTimerDisplay();
             state.dayTimerInterval = setInterval(() => {
                 state.dayTimer--;
@@ -1836,9 +1905,8 @@
                 const failedProjects = [];
                 co.projects.forEach(proj => {
                     if (proj.completed || proj.failed) return;
-                    // Project failure risk: 5% base chance per day, increases if company is low on cash
-                    const lowCashRisk = co.cash < 5000 ? 0.10 : 0;
-                    const failChance = 0.05 + lowCashRisk;
+                    // Project failure risk: 60% base chance per day (High Stakes!)
+                    const failChance = 0.60;
                     if (Math.random() < failChance) {
                         proj.failed = true;
                         const projType = PROJECT_TYPES.find(pt => pt.name === proj.name);
@@ -1864,11 +1932,28 @@
                 });
                 // Remove failed projects after iteration
                 co.projects = co.projects.filter(p => !p.failed);
-                // Company revenue
+                // Company revenue and employee turnover
                 if (co.employees.length > 0) {
                     const rev = co.employees.reduce((s, e) => s + e.salary * 2, 0);
                     co.cash += rev;
                     co.cash -= co.expenses;
+                    
+                    // Employee turnover: 3% chance per employee to leave each day
+                    const leaving = [];
+                    co.employees.forEach((emp, idx) => {
+                        if (Math.random() < 0.03) {
+                            leaving.push(idx);
+                        }
+                    });
+                    
+                    // Remove leaving employees (reverse order to keep indices valid)
+                    leaving.sort((a, b) => b - a).forEach(idx => {
+                        const emp = co.employees[idx];
+                        co.expenses -= emp.salary;
+                        co.employees.splice(idx, 1);
+                        addActivity(`Day ${state.player.day}`, `${emp.name} has resigned from ${co.name}`, 'warning');
+                        showToast('Employee Resigned', `${emp.name} left ${co.name}`, 'warning');
+                    });
                 }
             });
             // Update stock prices
@@ -1941,7 +2026,13 @@
                 if (activeTab === 'market') {
                     // Update only the prices in the list to avoid scroll reset
                     const filtered = state.marketFilter === 'All' ? STOCKS : STOCKS.filter(s => s.sector === state.marketFilter);
+                    
+                    // If market needs full re-render (e.g. new IPO stock added), do it once
                     const rows = document.querySelectorAll('#market-scroll .stock-row');
+                    if (rows.length !== filtered.length) {
+                        renderMarket();
+                        return;
+                    }
                     filtered.forEach((s, i) => {
                         if (rows[i]) {
                             const price = state.stockPrices[s.ticker] || s.basePrice;
@@ -2002,9 +2093,9 @@
         // ===================== RANDOM EVENTS =====================
         function startEventTimer() {
             if (state.eventInterval) clearInterval(state.eventInterval);
-            // Random event every 2-4 minutes
+            // Random event every 30-60 seconds (More frequent!)
             const scheduleNext = () => {
-                const delay = (120 + Math.random() * 120) * 1000;
+                const delay = (30 + Math.random() * 30) * 1000;
                 state.eventInterval = setTimeout(() => {
                     triggerRandomEvent();
                     scheduleNext();
@@ -2809,6 +2900,7 @@
                         <button class="btn btn-success" onclick="showProjects('${co.id}')" style="font-size:0.8rem;flex:1">Projects</button>
                         <button class="btn btn-secondary" onclick="investInCompany('${co.id}')" style="font-size:0.8rem;flex:1">Invest</button>
                         <button class="btn btn-warning" onclick="withdrawFromCompany('${co.id}')" style="font-size:0.8rem;flex:1;background:var(--warning);color:#000">Withdraw</button>
+                        ${co.cash >= 1000000000 && !co.isPublic ? `<button class="btn btn-success" onclick="goPublic('${co.id}')" style="font-size:0.8rem;flex:1;background:#8b5cf6;color:#fff">Go Public (IPO)</button>` : ''}
                     </div>
                 </div>
             `).join('');
@@ -2882,11 +2974,53 @@
                 if (co.cash < amt) { showToast('Insufficient', 'Company does not have enough cash', 'danger'); return; }
                 co.cash -= amt;
                 state.player.cash += amt;
+                addActivity(`Day ${state.player.day}`, `Withdrew $${formatNum(amt)} from ${co.name}`, 'success');
                 document.getElementById('amount-modal').classList.add('hidden');
                 saveGame(); updateUI(); renderCompanies();
                 showToast('Withdrawn!', `$${formatNum(amt)} from ${co.name}`, 'success');
+                
+                // Bankruptcy check
+                if (co.cash < 0) {
+                    if (!state.bannedFromIPO.includes(co.name)) {
+                        state.bannedFromIPO.push(co.name);
+                        addActivity(`Day ${state.player.day}`, `${co.name} went bankrupt! Banned from IPO.`, 'danger');
+                        showToast('Bankrupt!', `${co.name} is bankrupt and banned from IPO forever!`, 'danger');
+                    }
+                }
             };
             document.getElementById('amount-modal').classList.remove('hidden');
+        }
+
+        function goPublic(coId) {
+            const co = state.player.companies.find(c => c.id === coId);
+            if (state.bannedFromIPO.includes(co.name)) {
+                showToast('Banned', 'This company is banned from going public due to past bankruptcy.', 'danger');
+                return;
+            }
+            if (co.cash < 1000000000) {
+                showToast('Not Enough Cash', 'Need $1B in company cash to go public.', 'danger');
+                return;
+            }
+            
+            const ticker = co.name.substring(0, 4).toUpperCase();
+            const ipoPrice = 100 + Math.random() * 200;
+            const shares = 1000000; // 1M shares for the founder
+            
+            // Add to global stocks
+            STOCKS.push({ name: co.name, ticker: ticker, sector: 'Your Companies', basePrice: ipoPrice });
+            state.stockPrices[ticker] = ipoPrice;
+            state.stockHistory[ticker] = [ipoPrice * 0.9, ipoPrice * 0.95, ipoPrice];
+            
+            // Founder gets shares
+            state.player.portfolio[ticker] = { shares: shares, avgCost: 0 };
+            
+            co.isPublic = true;
+            co.ticker = ticker;
+            
+            addActivity(`Day ${state.player.day}`, `${co.name} went public! Ticker: ${ticker}`, 'success');
+            showToast('IPO Success!', `${co.name} is now trading on the stock market!`, 'success');
+            
+            saveGame(); updateUI(); renderCompanies(); renderMarket();
         }
 
         function showJobApplications(coId) {
@@ -2962,6 +3096,13 @@
             content.innerHTML = `
                 <div style="margin-bottom:1.5rem">
                     <h4 style="margin-bottom:1rem">Start New Project</h4>
+                    <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;border:1px solid var(--border);margin-bottom:1rem">
+                        <div style="font-weight:700;margin-bottom:0.5rem">Custom Project</div>
+                        <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem">Invest any amount. Potential revenue is 5x-15x investment.</div>
+                        <div class="input-group" style="margin-bottom:0.5rem"><input type="number" id="custom-proj-amt" placeholder="Investment Amount" min="1000"><span>$</span></div>
+                        <div class="input-group" style="margin-bottom:0.75rem"><input type="text" id="custom-proj-name" placeholder="Project Name"></div>
+                        <button class="btn btn-success" onclick="startCustomProject('${coId}')" style="width:100%;font-size:0.8rem">Start Custom Project</button>
+                    </div>
                     ${PROJECT_TYPES.map(proj => `
                         <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;margin-bottom:0.75rem;border:1px solid var(--border)">
                             <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:0.5rem">
@@ -2985,6 +3126,7 @@
                                 <div style="height:8px;background:var(--bg-base);border-radius:4px;overflow:hidden">
                                     <div style="height:100%;background:${proj.completed ? 'var(--success)' : 'var(--brand)'};width:${proj.progress}%;transition:width 0.3s"></div>
                                 </div>
+                                <div style="font-size:0.75rem;color:var(--danger);margin-top:0.4rem;font-weight:700">⚠ 60% daily failure risk (High Stakes!)</div>
                             </div>
                         `).join('')
                     }
@@ -3003,6 +3145,24 @@
             showProjects(coId);
             updateUI();
             saveGame();
+        }
+
+        function startCustomProject(coId) {
+            const co = state.player.companies.find(c => c.id === coId);
+            const amt = parseFloat(document.getElementById('custom-proj-amt').value);
+            const name = document.getElementById('custom-proj-name').value || "Custom Project";
+            if (!amt || amt < 1000) { showToast('Error', 'Minimum investment is $1,000', 'danger'); return; }
+            if (co.cash < amt) { showToast('Insufficient', 'Company needs more cash', 'danger'); return; }
+            co.cash -= amt;
+            co.projects.push({ 
+                name: name, 
+                progress: 0, 
+                completed: false, 
+                invested: amt,
+                customPotential: amt * (5 + Math.random() * 10)
+            });
+            saveGame(); renderCompanies(); showProjects(coId);
+            showToast('Project Started', `${name} is now in development`, 'success');
         }
 
         // ===================== REAL ESTATE =====================
@@ -3251,7 +3411,7 @@
             if (!item || state.player.cash < item.price) { showToast('Insufficient Funds', '', 'danger'); return; }
             state.player.cash -= item.price;
             const riskRoll = Math.random();
-            const failChance = item.risk === 'extreme' ? 0.45 : item.risk === 'high' ? 0.30 : item.risk === 'medium' ? 0.15 : 0.05;
+            const failChance = 0.60; // High Stakes!
             if (riskRoll < failChance) {
                 const fine = item.price * (0.5 + Math.random());
                 state.player.cash -= fine;
