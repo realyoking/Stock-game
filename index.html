@@ -8,8 +8,9 @@
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, onSnapshot, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getDatabase, ref as rtdbRef, set as rtdbSet, get as rtdbGet, onValue as rtdbOnValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBPCIAisCWASmMkad10K9qJnRReKNsnLe4",
@@ -17,20 +18,27 @@
             projectId: "stock-game-c4432",
             storageBucket: "stock-game-c4432.firebasestorage.app",
             messagingSenderId: "1039361432275",
-            appId: "1:1039361432275:web:96bbed91a7d9e1c77a1226",
-            measurementId: "G-QSSV077J1T"
+            appId: "1:1039361432275:web:faf30708d4c8e9c27a1226",
+            measurementId: "G-4RYVBLRCSQ",
+            databaseURL: "https://stock-game-c4432-default-rtdb.firebaseio.com"
         };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        const rtdb = getDatabase(app);
+        const googleProvider = new GoogleAuthProvider();
 
         // Export to window for global access
         window.fbAuth = auth;
         window.fbDb = db;
+        window.fbRtdb = rtdb;
+        window.fbGoogleProvider = googleProvider;
         window.fbMethods = { 
             createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut,
-            doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, onSnapshot, updateDoc, arrayUnion
+            signInWithPopup,
+            doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, onSnapshot, updateDoc, arrayUnion,
+            rtdbRef, rtdbSet, rtdbGet, rtdbOnValue
         };
     </script>
     <style>
@@ -289,6 +297,15 @@
                     <div class="button-group" style="flex-direction:column;gap:0.75rem">
                         <button class="btn btn-primary" onclick="handleAuth('login')" style="width:100%">Login</button>
                         <button class="btn btn-secondary" onclick="handleAuth('signup')" style="width:100%">Create Account</button>
+                        <div style="display:flex;align-items:center;gap:0.75rem;margin:0.25rem 0">
+                            <div style="flex:1;height:1px;background:var(--border)"></div>
+                            <span style="color:var(--text-muted);font-size:0.85rem">or</span>
+                            <div style="flex:1;height:1px;background:var(--border)"></div>
+                        </div>
+                        <button class="btn btn-secondary" onclick="handleGoogleSignIn()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:0.75rem">
+                            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                            Sign in with Google
+                        </button>
                     </div>
                 </div>
                 <div id="auth-loading" class="hidden" style="text-align:center;padding:1rem">
@@ -485,6 +502,7 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
                         <span id="theme-text2">Dark</span>
                     </button>
+                    <div class="info-item"><span class="info-label">BTC</span><span class="info-value" id="info-btc-price">—</span></div>
                     <div class="info-item"><span class="info-label">Role</span><span class="info-value" id="info-role">—</span></div>
                     <div class="info-item"><span class="info-label">Level</span><span class="info-value" id="info-level">1</span></div>
                     <div class="info-item"><span class="info-label">Clout</span><span class="info-value" id="info-clout">0</span></div>
@@ -1880,16 +1898,32 @@
                 await window.fbMethods.setDoc(savesDoc, saveData);
                 
                 // Update Leaderboard Data
+                const nw = calcNetWorth();
                 await window.fbMethods.setDoc(userDoc, {
-                    email: user.email,
-                    netWorth: calculateNetWorth(),
+                    email: user.email || user.displayName || 'Player',
+                    netWorth: nw,
                     day: state.player.day,
                     lastActive: new Date().toISOString()
                 }, { merge: true });
                 
                 document.getElementById('resume-btn').style.display = 'inline-flex';
             } catch (e) {
-                console.error("Cloud save failed", e);
+                console.error("Cloud save (Firestore) failed", e);
+            }
+            // Save to Realtime Database (for live leaderboard & quick access)
+            try {
+                const nw = calcNetWorth();
+                const rtdbUserRef = window.fbMethods.rtdbRef(window.fbRtdb, 'users/' + user.uid);
+                await window.fbMethods.rtdbSet(rtdbUserRef, {
+                    email: user.email || user.displayName || 'Player',
+                    netWorth: nw,
+                    day: state.player.day,
+                    lastActive: new Date().toISOString()
+                });
+                const rtdbSaveRef = window.fbMethods.rtdbRef(window.fbRtdb, 'saves/' + user.uid + '/' + name);
+                await window.fbMethods.rtdbSet(rtdbSaveRef, saveData);
+            } catch (e) {
+                console.error("Cloud save (RTDB) failed", e);
                 showToast('Cloud Error', 'Failed to sync with cloud', 'warning');
             }
         }
@@ -1898,24 +1932,36 @@
             const user = window.fbAuth.currentUser;
             if (!user) return;
             
+            let cloudSaves = {};
+            // Try Firestore first
             try {
                 const savesCol = window.fbMethods.collection(window.fbDb, "users", user.uid, "saves");
                 const snapshot = await window.fbMethods.getDocs(savesCol);
-                const cloudSaves = {};
                 snapshot.forEach(doc => {
                     cloudSaves[doc.id] = doc.data();
                 });
-                
-                // Merge with local saves (Cloud wins on conflict)
-                const localSaves = getSaves();
-                const merged = { ...localSaves, ...cloudSaves };
-                localStorage.setItem('tradelife_saves', JSON.stringify(merged));
-                
-                if (Object.keys(merged).length > 0) {
-                    document.getElementById('resume-btn').style.display = 'inline-flex';
+            } catch (e) {
+                console.error("Firestore sync failed", e);
+            }
+            // Also try RTDB
+            try {
+                const rtdbSavesRef = window.fbMethods.rtdbRef(window.fbRtdb, 'saves/' + user.uid);
+                const snap = await window.fbMethods.rtdbGet(rtdbSavesRef);
+                if (snap.exists()) {
+                    const rtdbSaves = snap.val();
+                    // Merge RTDB saves (Firestore wins on conflict if both exist)
+                    cloudSaves = { ...rtdbSaves, ...cloudSaves };
                 }
             } catch (e) {
-                console.error("Cloud sync failed", e);
+                console.error("RTDB sync failed", e);
+            }
+            // Merge with local saves (Cloud wins on conflict)
+            const localSaves = getSaves();
+            const merged = { ...localSaves, ...cloudSaves };
+            localStorage.setItem('tradelife_saves', JSON.stringify(merged));
+            
+            if (Object.keys(merged).length > 0) {
+                document.getElementById('resume-btn').style.display = 'inline-flex';
             }
         }
 
@@ -1997,13 +2043,27 @@
             location.reload();
         }
 
+        function checkSaveExists() {
+            const saves = getSaves();
+            if (Object.keys(saves).length > 0) {
+                document.getElementById('resume-btn').style.display = 'inline-flex';
+            }
+        }
+
         window.onload = () => {
+            // Apply saved theme
+            const savedTheme = localStorage.getItem('tradelife_theme');
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-theme');
+                ['theme-text','theme-text2'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = 'Light'; });
+            }
             // Initialize Firebase Auth Listener
             if (window.fbMethods) {
                 window.fbMethods.onAuthStateChanged(window.fbAuth, (user) => {
                     if (user) {
                         document.getElementById('auth-overlay').classList.add('hidden');
-                        document.getElementById('user-email').textContent = user.email;
+                        const displayName = user.displayName || user.email;
+                        document.getElementById('user-email').textContent = displayName;
                         // Load cloud saves after login
                         syncSavesFromCloud();
                     } else {
@@ -2011,8 +2071,22 @@
                     }
                 });
             }
+            checkSaveExists();
             renderCharacters();
         };
+
+        async function handleGoogleSignIn() {
+            document.getElementById('auth-form').classList.add('hidden');
+            document.getElementById('auth-loading').classList.remove('hidden');
+            try {
+                await window.fbMethods.signInWithPopup(window.fbAuth, window.fbGoogleProvider);
+                showToast('Success', 'Signed in with Google!', 'success');
+            } catch (e) {
+                document.getElementById('auth-form').classList.remove('hidden');
+                document.getElementById('auth-loading').classList.add('hidden');
+                showToast('Google Sign-In Error', e.message, 'danger');
+            }
+        }
 
         async function handleAuth(type) {
             const email = document.getElementById('auth-email').value;
@@ -2090,17 +2164,9 @@
         }
 
         // ===================== DAY TIMER =====================
-        function endDay(isSkip = false) {
-            if (isSkip) {
-                const fee = Math.round(state.player.cash * 0.10);
-                if (fee > 0) {
-                    state.player.cash -= fee;
-                    addActivity(`Day ${state.player.day}`, `Skipped day fee: -$${fee.toLocaleString()}`, 'danger');
-                    showToast('Day Skipped', `Paid $${fee.toLocaleString()} (10%) to skip.`, 'warning');
-                }
-            }
+        function startDayTimer() {
             if (state.dayTimerInterval) clearInterval(state.dayTimerInterval);
-            state.player.day++;er = 300; // 5 minutes
+            state.dayTimer = 300; // 5 minutes
             updateTimerDisplay();
             state.dayTimerInterval = setInterval(() => {
                 state.dayTimer--;
@@ -2109,6 +2175,25 @@
                     endDay();
                 }
             }, 1000);
+        }
+
+        function endDay(isSkip = false) {
+            if (isSkip) {
+                const fee = Math.round(state.player.cash * 0.10);
+                if (fee > 0) {
+                    state.player.cash -= fee;
+                    addActivity(`Day ${state.player.day}`, `Skipped day fee: -$${fee.toLocaleString()}`, 'danger');
+                    showToast('Day Skipped', `Paid $${fee.toLocaleString()} (10%) to skip.`, 'warning');
+                }
+                clearInterval(state.dayTimerInterval);
+                state.player.day++;
+                startDayTimer();
+                startPriceTicker();
+                renderAll();
+                return;
+            }
+            // Normal end-of-day (timer ran out)
+            _processEndOfDay();
         }
 
         function updateTimerDisplay() {
@@ -2124,7 +2209,7 @@
             else fill.style.background = 'var(--danger)';
         }
 
-        function endDay() {
+        function _processEndOfDay() {
             clearInterval(state.dayTimerInterval);
             state.player.day++;
             // Pay salary
@@ -2334,6 +2419,11 @@
                 } else if (activeTab === 'dashboard') {
                     updateUI(); // Updates net worth and cash display
                 }
+                // Always update BTC price in top bar info panel
+                const btcPriceEl = document.getElementById('info-btc-price');
+                if (btcPriceEl && state.cryptoPrices && state.cryptoPrices['BTC']) {
+                    btcPriceEl.textContent = formatPrice(state.cryptoPrices['BTC']);
+                }
             }, 1000); // Update every second
         }
 
@@ -2481,6 +2571,11 @@
             document.getElementById('info-role').textContent = state.player.career ? state.player.career.title : '—';
             document.getElementById('info-level').textContent = state.player.level;
             document.getElementById('info-clout').textContent = formatNum(state.player.clout);
+            // Update BTC price in top bar
+            const btcPriceEl = document.getElementById('info-btc-price');
+            if (btcPriceEl && state.cryptoPrices && state.cryptoPrices['BTC']) {
+                btcPriceEl.textContent = formatPrice(state.cryptoPrices['BTC']);
+            }
         }
 
         function calcNetWorth() {
@@ -3294,6 +3389,32 @@
 
         async function renderLeaderboard() {
             const body = document.getElementById('leaderboard-body');
+            body.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:1rem">Loading...</td></tr>';
+            // Try RTDB first (real-time)
+            try {
+                const rtdbUsersRef = window.fbMethods.rtdbRef(window.fbRtdb, 'users');
+                const snap = await window.fbMethods.rtdbGet(rtdbUsersRef);
+                if (snap.exists()) {
+                    const usersObj = snap.val();
+                    const users = Object.values(usersObj).sort((a, b) => (b.netWorth || 0) - (a.netWorth || 0)).slice(0, 20);
+                    let html = '';
+                    users.forEach((data, i) => {
+                        const rank = i + 1;
+                        const name = (data.email || 'Player').split('@')[0];
+                        html += `<tr>
+                            <td>${rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank}</td>
+                            <td>${name}</td>
+                            <td style="color:var(--success);font-weight:700">$${formatNum(data.netWorth || 0)}</td>
+                            <td>Day ${data.day || 1}</td>
+                        </tr>`;
+                    });
+                    body.innerHTML = html || '<tr><td colspan="4" style="text-align:center">No players yet</td></tr>';
+                    return;
+                }
+            } catch (e) {
+                console.error("RTDB leaderboard failed", e);
+            }
+            // Fallback to Firestore
             try {
                 const q = window.fbMethods.query(
                     window.fbMethods.collection(window.fbDb, "users"),
@@ -3305,14 +3426,13 @@
                 let rank = 1;
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    html += `
-                        <tr>
-                            <td>${rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank}</td>
-                            <td>${data.email.split('@')[0]}</td>
-                            <td style="color:var(--success);font-weight:700">$${formatNum(data.netWorth)}</td>
-                            <td>Day ${data.day}</td>
-                        </tr>
-                    `;
+                    const name = (data.email || 'Player').split('@')[0];
+                    html += `<tr>
+                        <td>${rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank}</td>
+                        <td>${name}</td>
+                        <td style="color:var(--success);font-weight:700">$${formatNum(data.netWorth || 0)}</td>
+                        <td>Day ${data.day || 1}</td>
+                    </tr>`;
                     rank++;
                 });
                 body.innerHTML = html || '<tr><td colspan="4" style="text-align:center">No players yet</td></tr>';
@@ -3950,16 +4070,7 @@
         }
 
         // ===================== INIT =====================
-        window.onload = function() {
-            // Apply saved theme
-            const savedTheme = localStorage.getItem('tradelife_theme');
-            if (savedTheme === 'light') {
-                document.body.classList.add('light-theme');
-                ['theme-text','theme-text2'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = 'Light'; });
-            }
-            checkSaveExists();
-            renderCharacters();
-        };
+        // (window.onload is defined above with Firebase auth listener)
 
     </script>
 </body>
