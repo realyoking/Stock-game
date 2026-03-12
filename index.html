@@ -453,6 +453,7 @@
                                     <div style="height:160px;background:#000;border-radius:8px;margin-bottom:1rem;padding:0.5rem"><canvas id="trading-chart"></canvas></div>
                                     <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;margin-bottom:1rem;border:1px solid var(--border)">
                                         <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;font-size:0.9rem"><span style="color:var(--text-muted)">Current Price</span><span style="font-weight:700;color:var(--brand)" id="trade-price">$0.00</span></div>
+                                        <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;font-size:0.9rem"><span style="color:var(--text-muted)">Change</span><span style="font-weight:700" id="trade-change">0.00%</span></div>
                                         <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;font-size:0.9rem"><span style="color:var(--text-muted)">Holdings</span><span style="font-weight:700;color:var(--brand)" id="trade-holdings">0</span></div>
                                         <div style="display:flex;justify-content:space-between;font-size:0.9rem"><span style="color:var(--text-muted)">Unrealized P/L</span><span style="font-weight:700" id="trade-pl">$0.00</span></div>
                                     </div>
@@ -1737,11 +1738,31 @@
         function initPrices() {
             STOCKS.forEach(s => {
                 state.stockPrices[s.ticker] = s.basePrice;
-                state.stockHistory[s.ticker] = [s.basePrice];
+                // Generate 20 data points of realistic history so chart shows from Day 1
+                const hist = [];
+                let p = s.basePrice * (0.90 + Math.random() * 0.10);
+                for (let i = 0; i < 20; i++) {
+                    const v = 0.005 + Math.random() * 0.015;
+                    const d = Math.random() > 0.5 ? 1 : -1;
+                    p = Math.max(0.01, p + p * v * d);
+                    hist.push(p);
+                }
+                hist.push(s.basePrice);
+                state.stockHistory[s.ticker] = hist;
             });
             CRYPTO_COINS.forEach(c => {
                 state.cryptoPrices[c.ticker] = c.basePrice;
-                state.cryptoHistory[c.ticker] = [c.basePrice];
+                // Generate 20 data points of realistic history so chart shows from Day 1
+                const hist = [];
+                let p = c.basePrice * (0.85 + Math.random() * 0.15);
+                for (let i = 0; i < 20; i++) {
+                    const v = (c.volatility || 0.05) * 0.3;
+                    const d = Math.random() > 0.5 ? 1 : -1;
+                    p = Math.max(0.000000001, p + p * v * d);
+                    hist.push(p);
+                }
+                hist.push(c.basePrice);
+                state.cryptoHistory[c.ticker] = hist;
             });
         }
 
@@ -1811,7 +1832,24 @@
             state.player.loans = state.player.loans.filter(l => l.remaining > 0);
             // Company projects progress
             state.player.companies.forEach(co => {
+                // Process projects - check for failure first, then progress
+                const failedProjects = [];
                 co.projects.forEach(proj => {
+                    if (proj.completed || proj.failed) return;
+                    // Project failure risk: 5% base chance per day, increases if company is low on cash
+                    const lowCashRisk = co.cash < 5000 ? 0.10 : 0;
+                    const failChance = 0.05 + lowCashRisk;
+                    if (Math.random() < failChance) {
+                        proj.failed = true;
+                        const projType = PROJECT_TYPES.find(pt => pt.name === proj.name);
+                        const lossPct = 0.3 + Math.random() * 0.5; // Lose 30-80% of invested cost
+                        const loss = Math.round((proj.invested || (projType ? projType.cost : 10000)) * lossPct);
+                        co.cash -= loss;
+                        addActivity(`Day ${state.player.day}`, `${co.name}: ${proj.name} FAILED! -$${loss.toLocaleString()} lost`, 'danger');
+                        showToast('Project Failed!', `${proj.name} failed! Lost $${loss.toLocaleString()}`, 'danger');
+                        failedProjects.push(proj);
+                        return;
+                    }
                     const empBonus = co.employees.length * 2;
                     const gain = 5 + empBonus + Math.random() * 8;
                     proj.progress = Math.min(100, proj.progress + gain);
@@ -1824,6 +1862,8 @@
                         showToast('Project Complete!', `${proj.name} finished! Revenue: $${Math.round(revenue).toLocaleString()}`, 'success');
                     }
                 });
+                // Remove failed projects after iteration
+                co.projects = co.projects.filter(p => !p.failed);
                 // Company revenue
                 if (co.employees.length > 0) {
                     const rev = co.employees.reduce((s, e) => s + e.salary * 2, 0);
@@ -1877,6 +1917,11 @@
                     const direction = Math.random() > 0.5 ? 1 : -1;
                     const change = state.stockPrices[s.ticker] * volatility * direction;
                     state.stockPrices[s.ticker] = Math.max(0.01, state.stockPrices[s.ticker] + change);
+                    
+                    // Update history for charts
+                    if (!state.stockHistory[s.ticker]) state.stockHistory[s.ticker] = [];
+                    state.stockHistory[s.ticker].push(state.stockPrices[s.ticker]);
+                    if (state.stockHistory[s.ticker].length > 30) state.stockHistory[s.ticker].shift();
                 });
                 // Update crypto prices
                 CRYPTO_COINS.forEach(c => {
@@ -1884,16 +1929,68 @@
                     const direction = Math.random() > 0.5 ? 1 : -1;
                     const change = state.cryptoPrices[c.ticker] * vol * direction;
                     state.cryptoPrices[c.ticker] = Math.max(0.000000001, state.cryptoPrices[c.ticker] + change);
+                    
+                    // Update history for charts
+                    if (!state.cryptoHistory[c.ticker]) state.cryptoHistory[c.ticker] = [];
+                    state.cryptoHistory[c.ticker].push(state.cryptoPrices[c.ticker]);
+                    if (state.cryptoHistory[c.ticker].length > 30) state.cryptoHistory[c.ticker].shift();
                 });
-                // Update UI if on market or crypto tab
-                const marketTab = document.getElementById('market-tab');
-                const cryptoTab = document.getElementById('crypto-tab');
-                if (marketTab && !marketTab.classList.contains('hidden')) {
-                    renderMarket();
-                    updateTradePanel();
-                }
-                if (cryptoTab && !cryptoTab.classList.contains('hidden')) {
-                    renderCrypto();
+                
+                // Update UI based on active tab
+                const activeTab = state.currentTab;
+                if (activeTab === 'market') {
+                    // Update only the prices in the list to avoid scroll reset
+                    const filtered = state.marketFilter === 'All' ? STOCKS : STOCKS.filter(s => s.sector === state.marketFilter);
+                    const rows = document.querySelectorAll('#market-scroll .stock-row');
+                    filtered.forEach((s, i) => {
+                        if (rows[i]) {
+                            const price = state.stockPrices[s.ticker] || s.basePrice;
+                            const prev = (state.stockHistory[s.ticker] || [s.basePrice])[Math.max(0, (state.stockHistory[s.ticker]||[]).length - 2)] || s.basePrice;
+                            const change = ((price - prev) / prev) * 100;
+                            
+                            const priceEl = rows[i].querySelector('div:nth-child(2)');
+                            const changeEl = rows[i].querySelector('div:nth-child(3)');
+                            
+                            if (priceEl) priceEl.textContent = formatPrice(price);
+                            if (changeEl) {
+                                changeEl.textContent = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
+                                changeEl.style.color = change >= 0 ? 'var(--success)' : 'var(--danger)';
+                            }
+                        }
+                    });
+
+                    if (state.selectedStock) {
+                        updateTradePanel();
+                        renderTradeChart();
+                    }
+                } else if (activeTab === 'crypto') {
+                    // Update only the prices in the list to avoid scroll reset
+                    const rows = document.querySelectorAll('#crypto-market-scroll .stock-row');
+                    CRYPTO_COINS.forEach((c, i) => {
+                        if (rows[i]) {
+                            const price = state.cryptoPrices[c.ticker] || c.basePrice;
+                            const prev = (state.cryptoHistory[c.ticker] || [c.basePrice])[Math.max(0, (state.cryptoHistory[c.ticker]||[]).length - 2)] || c.basePrice;
+                            const change = ((price - prev) / prev) * 100;
+                            
+                            const priceEl = rows[i].querySelector('div:nth-child(2)');
+                            const changeEl = rows[i].querySelector('div:nth-child(3)');
+                            
+                            if (priceEl) priceEl.textContent = formatPrice(price);
+                            if (changeEl) {
+                                changeEl.textContent = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
+                                changeEl.style.color = change >= 0 ? 'var(--success)' : 'var(--danger)';
+                            }
+                        }
+                    });
+
+                    if (state.selectedCrypto) {
+                        updateCryptoPanel();
+                        renderCryptoChart();
+                    }
+                } else if (activeTab === 'portfolio') {
+                    renderPortfolio();
+                } else if (activeTab === 'dashboard') {
+                    updateUI(); // Updates net worth and cash display
                 }
             }, 1000); // Update every second
         }
@@ -2193,6 +2290,8 @@
         }
 
         function selectStock(ticker) {
+            // Destroy old chart instance when switching stocks
+            if (state.chartInstance) { state.chartInstance.destroy(); state.chartInstance = null; }
             state.selectedStock = ticker;
             const stock = STOCKS.find(s => s.ticker === ticker);
             document.getElementById('trading-section').style.display = 'block';
@@ -2207,11 +2306,19 @@
         function updateTradePanel() {
             if (!state.selectedStock) return;
             const price = state.stockPrices[state.selectedStock] || 0;
+            const hist = state.stockHistory[state.selectedStock] || [];
+            const prev = hist.length >= 2 ? hist[hist.length - 2] : price;
+            const changePct = prev > 0 ? ((price - prev) / prev) * 100 : 0;
             const holding = state.player.portfolio[state.selectedStock];
             const shares = holding ? holding.shares : 0;
             const avgCost = holding ? holding.avgCost : 0;
             const pl = shares * (price - avgCost);
             document.getElementById('trade-price').textContent = formatPrice(price);
+            const changeEl = document.getElementById('trade-change');
+            if (changeEl) {
+                changeEl.textContent = (changePct >= 0 ? '+' : '') + changePct.toFixed(2) + '%';
+                changeEl.style.color = changePct >= 0 ? 'var(--success)' : 'var(--danger)';
+            }
             document.getElementById('trade-holdings').textContent = shares + ' shares';
             document.getElementById('trade-pl').textContent = (pl >= 0 ? '+' : '') + '$' + formatNum(pl);
             document.getElementById('trade-pl').style.color = pl >= 0 ? 'var(--success)' : 'var(--danger)';
@@ -2219,17 +2326,24 @@
 
         function renderTradeChart() {
             const ctx = document.getElementById('trading-chart').getContext('2d');
-            if (state.chartInstance) state.chartInstance.destroy();
             const history = state.stockHistory[state.selectedStock] || [state.stockPrices[state.selectedStock]];
             const color = history[history.length-1] >= history[0] ? '#10b981' : '#ef4444';
-            state.chartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: history.map((_, i) => i),
-                    datasets: [{ data: history, borderColor: color, borderWidth: 2, fill: false, pointRadius: 0, tension: 0.3 }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
-            });
+            if (state.chartInstance) {
+                // Update data in-place for smooth live updates
+                state.chartInstance.data.labels = history.map((_, i) => i);
+                state.chartInstance.data.datasets[0].data = history;
+                state.chartInstance.data.datasets[0].borderColor = color;
+                state.chartInstance.update('none');
+            } else {
+                state.chartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: history.map((_, i) => i),
+                        datasets: [{ data: history, borderColor: color, borderWidth: 2, fill: false, pointRadius: 0, tension: 0.3 }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
+                });
+            }
         }
 
         function buyStock() {
@@ -2694,6 +2808,7 @@
                         <button class="btn btn-secondary" onclick="showEmployees('${co.id}')" style="font-size:0.8rem;flex:1">Team</button>
                         <button class="btn btn-success" onclick="showProjects('${co.id}')" style="font-size:0.8rem;flex:1">Projects</button>
                         <button class="btn btn-secondary" onclick="investInCompany('${co.id}')" style="font-size:0.8rem;flex:1">Invest</button>
+                        <button class="btn btn-warning" onclick="withdrawFromCompany('${co.id}')" style="font-size:0.8rem;flex:1;background:var(--warning);color:#000">Withdraw</button>
                     </div>
                 </div>
             `).join('');
@@ -3179,6 +3294,8 @@
         }
 
         function selectCrypto(ticker) {
+            // Destroy old chart instance when switching coins
+            if (state.cryptoChartInstance) { state.cryptoChartInstance.destroy(); state.cryptoChartInstance = null; }
             state.selectedCrypto = ticker;
             const coin = CRYPTO_COINS.find(c => c.ticker === ticker);
             document.getElementById('crypto-trading-section').style.display = 'block';
@@ -3214,17 +3331,24 @@
 
         function renderCryptoChart() {
             const ctx = document.getElementById('crypto-trading-chart').getContext('2d');
-            if (state.cryptoChartInstance) state.cryptoChartInstance.destroy();
             const history = state.cryptoHistory[state.selectedCrypto] || [state.cryptoPrices[state.selectedCrypto]];
             const color = history[history.length-1] >= history[0] ? '#10b981' : '#ef4444';
-            state.cryptoChartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: history.map((_, i) => i),
-                    datasets: [{ data: history, borderColor: color, borderWidth: 2, fill: false, pointRadius: 0, tension: 0.3 }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
-            });
+            if (state.cryptoChartInstance) {
+                // Update data in-place for smooth live updates
+                state.cryptoChartInstance.data.labels = history.map((_, i) => i);
+                state.cryptoChartInstance.data.datasets[0].data = history;
+                state.cryptoChartInstance.data.datasets[0].borderColor = color;
+                state.cryptoChartInstance.update('none');
+            } else {
+                state.cryptoChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: history.map((_, i) => i),
+                        datasets: [{ data: history, borderColor: color, borderWidth: 2, fill: false, pointRadius: 0, tension: 0.3 }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
+                });
+            }
         }
 
         function buyCrypto(ticker) {
