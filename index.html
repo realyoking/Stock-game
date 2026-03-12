@@ -1752,6 +1752,7 @@
             renderAll();
             startDayTimer();
             startEventTimer();
+            startPriceTicker();
             updateNewsTicker();
         }
 
@@ -1836,8 +1837,9 @@
             checkLevelUp();
             // Save
             saveGame();
-            // Restart timer
+            // Restart timers
             startDayTimer();
+            startPriceTicker();
             renderAll();
             showToast('New Day!', `Day ${state.player.day} begins. Salary: $${state.player.salary.toLocaleString()}`, 'success');
         }
@@ -1863,6 +1865,41 @@
                 state.cryptoHistory[c.ticker].push(state.cryptoPrices[c.ticker]);
                 if (state.cryptoHistory[c.ticker].length > 30) state.cryptoHistory[c.ticker].shift();
             });
+        }
+
+        // ===================== PER-SECOND PRICE TICKER =====================
+        function startPriceTicker() {
+            if (state.priceTickerInterval) clearInterval(state.priceTickerInterval);
+            state.priceTickerInterval = setInterval(() => {
+                // Update stock prices
+                STOCKS.forEach(s => {
+                    const volatility = 0.001 + Math.random() * 0.003; // 0.1-0.4% per second
+                    const direction = Math.random() > 0.5 ? 1 : -1;
+                    const change = state.stockPrices[s.ticker] * volatility * direction;
+                    state.stockPrices[s.ticker] = Math.max(0.01, state.stockPrices[s.ticker] + change);
+                });
+                // Update crypto prices
+                CRYPTO_COINS.forEach(c => {
+                    const vol = (c.volatility || 0.05) * 0.02; // Scale down for per-second updates
+                    const direction = Math.random() > 0.5 ? 1 : -1;
+                    const change = state.cryptoPrices[c.ticker] * vol * direction;
+                    state.cryptoPrices[c.ticker] = Math.max(0.000000001, state.cryptoPrices[c.ticker] + change);
+                });
+                // Update UI if on market or crypto tab
+                const marketTab = document.getElementById('market-tab');
+                const cryptoTab = document.getElementById('crypto-tab');
+                if (marketTab && !marketTab.classList.contains('hidden')) {
+                    renderMarket();
+                    updateTradePanel();
+                }
+                if (cryptoTab && !cryptoTab.classList.contains('hidden')) {
+                    renderCrypto();
+                }
+            }, 1000); // Update every second
+        }
+
+        function stopPriceTicker() {
+            if (state.priceTickerInterval) clearInterval(state.priceTickerInterval);
         }
 
         // ===================== RANDOM EVENTS =====================
