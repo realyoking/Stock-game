@@ -259,7 +259,7 @@
                 <button class="pagination-btn" id="next-btn" onclick="nextPage()">Next →</button>
             </div>
             <div class="button-group">
-                <button id="resume-btn" class="btn btn-secondary" onclick="loadGame()" style="display: none;">Resume Game</button>
+                <button id="resume-btn" class="btn btn-secondary" onclick="openSaveModal(true)" style="display: none;">Resume Game</button>
                 <button id="start-btn" class="btn btn-primary" onclick="startGame()" disabled>Start New Game</button>
                 <button class="btn btn-secondary" onclick="resetGame()">Reset All Data</button>
                 <button class="btn btn-secondary" id="theme-btn" onclick="toggleTheme()">
@@ -1711,17 +1711,100 @@
             launchApp();
         }
 
-        function loadGame() {
-            const saved = localStorage.getItem('tradelife_save');
-            if (!saved) { showToast('No Save', 'No saved game found', 'warning'); return; }
+        function getSaves() {
+            const saves = localStorage.getItem('tradelife_saves');
+            return saves ? JSON.parse(saves) : {};
+        }
+
+        function openSaveModal(isResume = false) {
+            const saves = getSaves();
+            const list = document.getElementById('save-modal-list');
+            const title = document.getElementById('save-modal-title');
+            const newSaveGroup = document.getElementById('new-save-group');
+            
+            title.textContent = isResume ? "Select Save to Resume" : "Save Game";
+            newSaveGroup.style.display = isResume ? "none" : "flex";
+            
+            if (Object.keys(saves).length === 0) {
+                list.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:1rem">No saves found</div>';
+            } else {
+                list.innerHTML = Object.entries(saves).map(([name, data]) => `
+                    <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;margin-bottom:0.75rem;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+                        <div>
+                            <div style="font-weight:700">${name}</div>
+                            <div style="font-size:0.75rem;color:var(--text-muted)">Day ${data.player.day} | $${formatNum(data.player.cash)}</div>
+                        </div>
+                        <div style="display:flex;gap:0.5rem">
+                            <button class="btn btn-primary" onclick="${isResume ? `loadGame('${name}')` : `updateSave('${name}')`}" style="font-size:0.75rem">${isResume ? 'Load' : 'Update'}</button>
+                            <button class="btn btn-danger" onclick="deleteSave('${name}', ${isResume})" style="font-size:0.75rem">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            document.getElementById('save-modal').classList.remove('hidden');
+        }
+
+        function createNewSave() {
+            const name = document.getElementById('new-save-name').value.trim();
+            if (!name) { showToast('Error', 'Enter a save name', 'danger'); return; }
+            const saves = getSaves();
+            if (saves[name]) { showToast('Error', 'Save name already exists', 'danger'); return; }
+            
+            saveToSlot(name);
+            document.getElementById('new-save-name').value = '';
+            openSaveModal(false);
+            showToast('Saved', `New save "${name}" created`, 'success');
+        }
+
+        function updateSave(name) {
+            saveToSlot(name);
+            openSaveModal(false);
+            showToast('Saved', `Save "${name}" updated`, 'success');
+        }
+
+        function deleteSave(name, isResume) {
+            if (!confirm(`Delete save "${name}"?`)) return;
+            const saves = getSaves();
+            delete saves[name];
+            localStorage.setItem('tradelife_saves', JSON.stringify(saves));
+            openSaveModal(isResume);
+            showToast('Deleted', `Save "${name}" removed`, 'warning');
+            
+            // Update resume button visibility
+            const updatedSaves = getSaves();
+            if (Object.keys(updatedSaves).length === 0) {
+                document.getElementById('resume-btn').style.display = 'none';
+            }
+        }
+
+        function saveToSlot(name) {
+            const saves = getSaves();
+            saves[name] = {
+                player: state.player,
+                stockPrices: state.stockPrices,
+                cryptoPrices: state.cryptoPrices,
+                stockHistory: state.stockHistory,
+                cryptoHistory: state.cryptoHistory,
+                bannedFromIPO: state.bannedFromIPO || []
+            };
+            localStorage.setItem('tradelife_saves', JSON.stringify(saves));
+            document.getElementById('resume-btn').style.display = 'inline-flex';
+        }
+
+        function loadGame(name) {
+            const saves = getSaves();
+            const data = saves[name];
+            if (!data) { showToast('Error', 'Save not found', 'danger'); return; }
+            
             try {
-                const data = JSON.parse(saved);
                 // Restore full state
                 state.player = data.player;
                 state.stockPrices = data.stockPrices || {};
                 state.cryptoPrices = data.cryptoPrices || {};
                 state.stockHistory = data.stockHistory || {};
                 state.cryptoHistory = data.cryptoHistory || {};
+                state.bannedFromIPO = data.bannedFromIPO || [];
+                
                 // Ensure all required fields exist (migration safety)
                 if (!state.player.portfolio) state.player.portfolio = {};
                 if (!state.player.cryptoPortfolio) state.player.cryptoPortfolio = {};
@@ -1733,6 +1816,7 @@
                 if (!state.player.achievements) state.player.achievements = [];
                 if (!state.player.completedTasks) state.player.completedTasks = [];
                 if (!state.player.certifications) state.player.certifications = [];
+                
                 // Fill any missing prices and history
                 STOCKS.forEach(s => {
                     if (!state.stockPrices[s.ticker]) state.stockPrices[s.ticker] = s.basePrice;
@@ -1766,22 +1850,20 @@
                         state.cryptoHistory[c.ticker] = hist;
                     }
                 });
+                
+                document.getElementById('save-modal').classList.add('hidden');
                 launchApp();
-                showToast('Game Loaded', 'Welcome back!', 'success');
+                showToast('Game Loaded', `Welcome back to "${name}"!`, 'success');
             } catch(e) {
                 showToast('Error', 'Failed to load save', 'danger');
             }
         }
 
         function saveGame() {
-            const data = {
-                player: state.player,
-                stockPrices: state.stockPrices,
-                cryptoPrices: state.cryptoPrices,
-                stockHistory: state.stockHistory,
-                cryptoHistory: state.cryptoHistory
-            };
-            localStorage.setItem('tradelife_save', JSON.stringify(data));
+            // Auto-save to the last used slot if possible, or just keep it for internal state
+            // For this multi-save request, we'll rely on the manual Save button for slot management
+            // but we can still keep a "QuickSave" slot for auto-saves
+            saveToSlot('QuickSave');
         }
 
         function resetGame() {
@@ -1789,12 +1871,11 @@
             location.reload();
         }
 
-        function checkSaveExists() {
-            const saved = localStorage.getItem('tradelife_save');
-            if (saved) {
-                document.getElementById('resume-btn').style.display = 'inline-flex';
-            }
-        }
+        window.onload = () => {
+            const saves = getSaves();
+            if (Object.keys(saves).length > 0) document.getElementById('resume-btn').style.display = 'inline-flex';
+            renderCharacters();
+        };
 
         function initPrices() {
             STOCKS.forEach(s => {
