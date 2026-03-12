@@ -2274,6 +2274,7 @@
         }
 
         
+        
         function switchAuthTab(tab) {
             state._authTab = tab;
             const loginBtn = document.getElementById('tab-login');
@@ -2287,8 +2288,6 @@
                 signupBtn.style.background = 'var(--brand)';
                 signupBtn.style.color = 'white';
                 submitBtn.textContent = 'Create Account';
-                // Use a more robust way to set the click handler
-                submitBtn.setAttribute('onclick', "handleAuth('signup')");
                 emailGroup.style.display = 'flex';
             } else {
                 loginBtn.style.background = 'var(--brand)';
@@ -2296,85 +2295,83 @@
                 signupBtn.style.background = 'transparent';
                 signupBtn.style.color = 'var(--text-muted)';
                 submitBtn.textContent = 'Login';
-                submitBtn.setAttribute('onclick', "handleAuth('login')");
-                emailGroup.style.display = 'none';
-            }
-        }
- else {
-                loginBtn.style.background = 'var(--brand)';
-                loginBtn.style.color = 'white';
-                signupBtn.style.background = 'transparent';
-                signupBtn.style.color = 'var(--text-muted)';
-                submitBtn.textContent = 'Login';
-                submitBtn.onclick = () => handleAuth('login');
                 emailGroup.style.display = 'none';
             }
         }
 
-        
         async function handleAuth(type) {
             if (!type) type = state._authTab || 'login';
-            const username = document.getElementById('auth-username').value.trim();
-
-            const password = document.getElementById('auth-password').value;
+            
             if (!window.fbMethods) {
                 showToast('Error', 'Firebase is still loading. Please wait a moment...', 'warning');
                 return;
             }
 
-            if (!username || !password) { showToast('Error', 'Enter username and password', 'danger'); return; }
-            if (username.length < 3) { showToast('Error', 'Username must be at least 3 characters', 'danger'); return; }
-            // Convert username to a fake email for Firebase Auth
-            const fakeEmail = username.toLowerCase().replace(/[^a-z0-9]/g, '') + '@tradelife.game';
+            const username = document.getElementById('auth-username').value.trim();
+            const password = document.getElementById('auth-password').value;
+            const emailField = document.getElementById('auth-email-field').value.trim();
+
+            if (!username || !password) { 
+                showToast('Error', 'Enter username and password', 'danger'); 
+                return; 
+            }
+            
+            if (type === 'signup' && !emailField) {
+                showToast('Error', 'Enter an email for sign up', 'danger');
+                return;
+            }
+
+            if (username.length < 3) { 
+                showToast('Error', 'Username must be at least 3 characters', 'danger'); 
+                return; 
+            }
+            
+            let emailToUse = username.toLowerCase().replace(/[^a-z0-9]/g, '') + '@tradelife.game';
+            if (type === 'signup') emailToUse = emailField;
             
             document.getElementById('auth-form').classList.add('hidden');
             document.getElementById('auth-loading').classList.remove('hidden');
             
             try {
                 if (type === 'signup') {
-                    // Check if username is taken by trying to look it up in Firestore
                     try {
                         const usernameDoc = window.fbMethods.doc(window.fbDb, 'usernames', username.toLowerCase());
                         const snap = await window.fbMethods.getDoc(usernameDoc);
                         if (snap.exists()) {
-                            document.getElementById('auth-form').classList.remove('hidden');
-                            document.getElementById('auth-loading').classList.add('hidden');
-                            showToast('Username Taken', 'Please choose a different username', 'danger');
-                            return;
+                            throw new Error('Username already taken');
                         }
-                    } catch(e) { /* Firestore check failed, proceed */ }
-                    const cred = await window.fbMethods.createUserWithEmailAndPassword(window.fbAuth, fakeEmail, password);
-                    // Store username mapping
-                    try {
-                        await window.fbMethods.updateProfile(cred.user, { displayName: username });
-                        const usernameDoc = window.fbMethods.doc(window.fbDb, 'usernames', username.toLowerCase());
-                        await window.fbMethods.setDoc(usernameDoc, { uid: cred.user.uid, username });
-                    } catch(e) { console.warn('Profile update failed', e); }
+                    } catch(e) { 
+                        if (e.message === 'Username already taken') throw e;
+                    }
+
+                    const cred = await window.fbMethods.createUserWithEmailAndPassword(window.fbAuth, emailToUse, password);
+                    await window.fbMethods.updateProfile(cred.user, { displayName: username });
+                    
+                    const usernameDoc = window.fbMethods.doc(window.fbDb, 'usernames', username.toLowerCase());
+                    await window.fbMethods.setDoc(usernameDoc, { uid: cred.user.uid, username, email: emailToUse });
+                    
                     showToast('Success', 'Account created! Welcome, ' + username + '!', 'success');
-                    document.getElementById('auth-username').value = '';
-                    document.getElementById('auth-password').value = '';
                 } else {
-                    // Login: try username-based email first
-                    let emailToUse = fakeEmail;
-                    // Also try looking up username in Firestore to get exact uid mapping
                     try {
                         const usernameDoc = window.fbMethods.doc(window.fbDb, 'usernames', username.toLowerCase());
                         const snap = await window.fbMethods.getDoc(usernameDoc);
-                        if (snap.exists() && snap.data().username) {
-                            emailToUse = snap.data().username.toLowerCase().replace(/[^a-z0-9]/g, '') + '@tradelife.game';
+                        if (snap.exists() && snap.data().email) {
+                            emailToUse = snap.data().email;
                         }
-                    } catch(e) { /* use fakeEmail */ }
+                    } catch(e) {}
+                    
                     await window.fbMethods.signInWithEmailAndPassword(window.fbAuth, emailToUse, password);
                     showToast('Success', 'Welcome back, ' + username + '!', 'success');
-                    document.getElementById('auth-username').value = '';
-                    document.getElementById('auth-password').value = '';
                 }
+                document.getElementById('auth-username').value = '';
+                document.getElementById('auth-password').value = '';
+                document.getElementById('auth-email-field').value = '';
             } catch (e) {
                 document.getElementById('auth-form').classList.remove('hidden');
                 document.getElementById('auth-loading').classList.add('hidden');
                 let msg = e.message;
                 if (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') msg = 'Invalid username or password';
-                if (e.code === 'auth/email-already-in-use') msg = 'Username already taken';
+                if (e.code === 'auth/email-already-in-use') msg = 'Email already in use';
                 if (e.code === 'auth/weak-password') msg = 'Password must be at least 6 characters';
                 showToast('Auth Error', msg, 'danger');
             }
@@ -2388,8 +2385,7 @@
                 showToast('Error', 'Logout failed', 'danger');
             }
         }
-
-        function initPrices() {
+\n        function initPrices() {
             STOCKS.forEach(s => {
                 state.stockPrices[s.ticker] = s.basePrice;
                 // Generate 20 data points of realistic history so chart shows from Day 1
