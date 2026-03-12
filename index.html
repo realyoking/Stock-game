@@ -5,6 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TradeLife - Investment & Business Simulation</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, onSnapshot, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBPCIAisCWASmMkad10K9qJnRReKNsnLe4",
+            authDomain: "stock-game-c4432.firebaseapp.com",
+            projectId: "stock-game-c4432",
+            storageBucket: "stock-game-c4432.firebasestorage.app",
+            messagingSenderId: "1039361432275",
+            appId: "1:1039361432275:web:96bbed91a7d9e1c77a1226",
+            measurementId: "G-QSSV077J1T"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Export to window for global access
+        window.fbAuth = auth;
+        window.fbDb = db;
+        window.fbMethods = { 
+            createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut,
+            doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, onSnapshot, updateDoc, arrayUnion
+        };
+    </script>
     <style>
         :root {
             --bg-base: #09090b;
@@ -215,6 +243,7 @@
         }
         .news-ticker-inner { display: inline-block; animation: ticker 30s linear infinite; }
         @keyframes ticker { 0%{transform:translateX(100vw)} 100%{transform:translateX(-100%)} }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         /* STOCK PANEL - compact rows */
         .stock-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 0.65rem 1.25rem; border-bottom: 1px solid var(--border); cursor: pointer; transition: all 0.2s; align-items: center; }
@@ -247,10 +276,40 @@
 <body>
     <!-- Setup Screen -->
     <div id="setup-screen">
+        <!-- Auth Overlay -->
+        <div id="auth-overlay" style="position:fixed;inset:0;background:var(--bg-base);z-index:2000;display:flex;align-items:center;justify-content:center">
+            <div class="setup-container" style="max-width:400px;padding:2rem">
+                <div class="setup-header" style="margin-bottom:2rem">
+                    <h1 class="setup-title" style="font-size:2rem">TradeLife Cloud</h1>
+                    <p class="setup-subtitle">Login to sync your progress</p>
+                </div>
+                <div id="auth-form">
+                    <div class="input-group" style="margin-bottom:1rem"><input type="email" id="auth-email" placeholder="Email" style="text-align:left"></div>
+                    <div class="input-group" style="margin-bottom:1.5rem"><input type="password" id="auth-password" placeholder="Password" style="text-align:left"></div>
+                    <div class="button-group" style="flex-direction:column;gap:0.75rem">
+                        <button class="btn btn-primary" onclick="handleAuth('login')" style="width:100%">Login</button>
+                        <button class="btn btn-secondary" onclick="handleAuth('signup')" style="width:100%">Create Account</button>
+                    </div>
+                </div>
+                <div id="auth-loading" class="hidden" style="text-align:center;padding:1rem">
+                    <div style="margin-bottom:1rem">Connecting to Cloud...</div>
+                    <div style="width:30px;height:30px;border:3px solid var(--brand);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto"></div>
+                </div>
+            </div>
+        </div>
+
         <div class="setup-container">
             <div class="setup-header">
-                <h1 class="setup-title">TradeLife</h1>
-                <p class="setup-subtitle">Investment & Business Simulation</p>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+                    <div style="text-align:left">
+                        <h1 class="setup-title">TradeLife</h1>
+                        <p class="setup-subtitle">Investment & Business Simulation</p>
+                    </div>
+                    <div id="user-profile-box" style="text-align:right;font-size:0.85rem">
+                        <div id="user-email" style="font-weight:700;color:var(--brand)"></div>
+                        <a href="#" onclick="handleLogout()" style="color:var(--danger);text-decoration:none">Logout</a>
+                    </div>
+                </div>
             </div>
             <div id="character-grid" class="character-grid"></div>
             <div class="pagination">
@@ -405,6 +464,7 @@
                 <div class="nav-item" onclick="switchTab('crypto')">Crypto</div>
                 <div class="nav-item" onclick="switchTab('education')">Education</div>
                 <div class="nav-item" onclick="switchTab('achievements')">Achievements</div>
+                <div class="nav-item" onclick="switchTab('leaderboard')" style="color:var(--warning)">Leaderboard</div>
             </div>
             <div class="sidebar-stats">
                 <div class="stat-row"><span class="stat-label">Cash</span><span class="stat-value" id="stat-cash">$0</span></div>
@@ -637,12 +697,29 @@
                     <div id="education-list" class="widget-grid"></div>
                 </div>
 
-                <!-- Achievements Tab -->
-                <div id="achievements" class="tab-panel">
-                    <h2>Achievements</h2>
-                    <div id="achievements-list" class="widget-grid"></div>
-                </div>
+                <!-- Achievements T            <div id="achievements" class="tab-panel">
+                <h3 style="margin-bottom:1.5rem">Achievements</h3>
+                <div id="achievements-list" class="widget-grid"></div>
             </div>
+
+            <div id="leaderboard" class="tab-panel">
+                <h3 style="margin-bottom:1.5rem">Global Leaderboard</h3>
+                <div class="widget" style="padding:0">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Player</th>
+                                <th>Net Worth</th>
+                                <th>Day</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-body">
+                            <tr><td colspan="4" style="text-align:center;padding:2rem">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>       </div>
 
             <!-- News Ticker -->
             <div class="news-ticker"><div class="news-ticker-inner" id="news-ticker-text">Loading news...</div></div>
@@ -1777,18 +1854,69 @@
             }
         }
 
-        function saveToSlot(name) {
-            const saves = getSaves();
-            saves[name] = {
+        async function saveToSlot(name) {
+            const user = window.fbAuth.currentUser;
+            if (!user) return;
+            
+            const saveData = {
                 player: state.player,
                 stockPrices: state.stockPrices,
                 cryptoPrices: state.cryptoPrices,
                 stockHistory: state.stockHistory,
                 cryptoHistory: state.cryptoHistory,
-                bannedFromIPO: state.bannedFromIPO || []
+                bannedFromIPO: state.bannedFromIPO || [],
+                updatedAt: new Date().toISOString()
             };
-            localStorage.setItem('tradelife_saves', JSON.stringify(saves));
-            document.getElementById('resume-btn').style.display = 'inline-flex';
+            
+            // Save to Local Storage (Backup)
+            const localSaves = getSaves();
+            localSaves[name] = saveData;
+            localStorage.setItem('tradelife_saves', JSON.stringify(localSaves));
+            
+            // Save to Cloud (Firestore)
+            try {
+                const userDoc = window.fbMethods.doc(window.fbDb, "users", user.uid);
+                const savesDoc = window.fbMethods.doc(window.fbDb, "users", user.uid, "saves", name);
+                await window.fbMethods.setDoc(savesDoc, saveData);
+                
+                // Update Leaderboard Data
+                await window.fbMethods.setDoc(userDoc, {
+                    email: user.email,
+                    netWorth: calculateNetWorth(),
+                    day: state.player.day,
+                    lastActive: new Date().toISOString()
+                }, { merge: true });
+                
+                document.getElementById('resume-btn').style.display = 'inline-flex';
+            } catch (e) {
+                console.error("Cloud save failed", e);
+                showToast('Cloud Error', 'Failed to sync with cloud', 'warning');
+            }
+        }
+
+        async function syncSavesFromCloud() {
+            const user = window.fbAuth.currentUser;
+            if (!user) return;
+            
+            try {
+                const savesCol = window.fbMethods.collection(window.fbDb, "users", user.uid, "saves");
+                const snapshot = await window.fbMethods.getDocs(savesCol);
+                const cloudSaves = {};
+                snapshot.forEach(doc => {
+                    cloudSaves[doc.id] = doc.data();
+                });
+                
+                // Merge with local saves (Cloud wins on conflict)
+                const localSaves = getSaves();
+                const merged = { ...localSaves, ...cloudSaves };
+                localStorage.setItem('tradelife_saves', JSON.stringify(merged));
+                
+                if (Object.keys(merged).length > 0) {
+                    document.getElementById('resume-btn').style.display = 'inline-flex';
+                }
+            } catch (e) {
+                console.error("Cloud sync failed", e);
+            }
         }
 
         function loadGame(name) {
@@ -1859,11 +1987,9 @@
             }
         }
 
-        function saveGame() {
-            // Auto-save to the last used slot if possible, or just keep it for internal state
-            // For this multi-save request, we'll rely on the manual Save button for slot management
-            // but we can still keep a "QuickSave" slot for auto-saves
-            saveToSlot('QuickSave');
+        async function saveGame() {
+            // Auto-save to the last used slot if possible
+            await saveToSlot('QuickSave');
         }
 
         function resetGame() {
@@ -1872,10 +1998,53 @@
         }
 
         window.onload = () => {
-            const saves = getSaves();
-            if (Object.keys(saves).length > 0) document.getElementById('resume-btn').style.display = 'inline-flex';
+            // Initialize Firebase Auth Listener
+            if (window.fbMethods) {
+                window.fbMethods.onAuthStateChanged(window.fbAuth, (user) => {
+                    if (user) {
+                        document.getElementById('auth-overlay').classList.add('hidden');
+                        document.getElementById('user-email').textContent = user.email;
+                        // Load cloud saves after login
+                        syncSavesFromCloud();
+                    } else {
+                        document.getElementById('auth-overlay').classList.remove('hidden');
+                    }
+                });
+            }
             renderCharacters();
         };
+
+        async function handleAuth(type) {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            if (!email || !password) { showToast('Error', 'Enter email and password', 'danger'); return; }
+            
+            document.getElementById('auth-form').classList.add('hidden');
+            document.getElementById('auth-loading').classList.remove('hidden');
+            
+            try {
+                if (type === 'signup') {
+                    await window.fbMethods.createUserWithEmailAndPassword(window.fbAuth, email, password);
+                    showToast('Success', 'Account created!', 'success');
+                } else {
+                    await window.fbMethods.signInWithEmailAndPassword(window.fbAuth, email, password);
+                    showToast('Success', 'Logged in!', 'success');
+                }
+            } catch (e) {
+                document.getElementById('auth-form').classList.remove('hidden');
+                document.getElementById('auth-loading').classList.add('hidden');
+                showToast('Auth Error', e.message, 'danger');
+            }
+        }
+
+        async function handleLogout() {
+            try {
+                await window.fbMethods.signOut(window.fbAuth);
+                location.reload();
+            } catch (e) {
+                showToast('Error', 'Logout failed', 'danger');
+            }
+        }
 
         function initPrices() {
             STOCKS.forEach(s => {
@@ -1917,6 +2086,7 @@
             startEventTimer();
             startPriceTicker();
             updateNewsTicker();
+            syncGlobalMarket();
         }
 
         // ===================== DAY TIMER =====================
@@ -2297,9 +2467,9 @@
             else if (state.currentTab === 'lifestyle') renderLifestyle();
             else if (state.currentTab === 'banking') renderBanking();
             else if (state.currentTab === 'blackmarket') renderBlackMarket();
-            else if (state.currentTab === 'crypto') renderCrypto();
-            else if (state.currentTab === 'education') renderEducation();
             else if (state.currentTab === 'achievements') renderAchievements();
+            else if (state.currentTab === 'education') renderEducation();
+            else if (state.currentTab === 'leaderboard') renderLeaderboard();
         }
 
         function updateUI() {
@@ -3072,7 +3242,7 @@
             document.getElementById('amount-modal').classList.remove('hidden');
         }
 
-        function goPublic(coId) {
+        async function goPublic(coId) {
             const co = state.player.companies.find(c => c.id === coId);
             if (state.bannedFromIPO.includes(co.name)) {
                 showToast('Banned', 'This company is banned from going public due to past bankruptcy.', 'danger');
@@ -3087,8 +3257,17 @@
             const ipoPrice = 100 + Math.random() * 200;
             const shares = 1000000; // 1M shares for the founder
             
-            // Add to global stocks
-            STOCKS.push({ name: co.name, ticker: ticker, sector: 'Your Companies', basePrice: ipoPrice });
+            const stockData = { 
+                name: co.name, 
+                ticker: ticker, 
+                sector: 'Global IPOs', 
+                basePrice: ipoPrice,
+                founder: window.fbAuth.currentUser.email,
+                createdAt: new Date().toISOString()
+            };
+
+            // Add to Local
+            STOCKS.push(stockData);
             state.stockPrices[ticker] = ipoPrice;
             state.stockHistory[ticker] = [ipoPrice * 0.9, ipoPrice * 0.95, ipoPrice];
             
@@ -3098,13 +3277,69 @@
             co.isPublic = true;
             co.ticker = ticker;
             
+            // Upload to Global Market (Firestore)
+            try {
+                const globalStockDoc = window.fbMethods.doc(window.fbDb, "global_market", ticker);
+                await window.fbMethods.setDoc(globalStockDoc, stockData);
+                showToast('Global IPO!', `${co.name} is now available for everyone!`, 'success');
+            } catch (e) {
+                console.error("Global IPO failed", e);
+            }
+
             addActivity(`Day ${state.player.day}`, `${co.name} went public! Ticker: ${ticker}`, 'success');
             showToast('IPO Success!', `${co.name} is now trading on the stock market!`, 'success');
             
             saveGame(); updateUI(); renderCompanies(); renderMarket();
         }
 
-        function showJobApplications(coId) {
+        async function renderLeaderboard() {
+            const body = document.getElementById('leaderboard-body');
+            try {
+                const q = window.fbMethods.query(
+                    window.fbMethods.collection(window.fbDb, "users"),
+                    window.fbMethods.orderBy("netWorth", "desc"),
+                    window.fbMethods.limit(20)
+                );
+                const snapshot = await window.fbMethods.getDocs(q);
+                let html = '';
+                let rank = 1;
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    html += `
+                        <tr>
+                            <td>${rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank}</td>
+                            <td>${data.email.split('@')[0]}</td>
+                            <td style="color:var(--success);font-weight:700">$${formatNum(data.netWorth)}</td>
+                            <td>Day ${data.day}</td>
+                        </tr>
+                    `;
+                    rank++;
+                });
+                body.innerHTML = html || '<tr><td colspan="4" style="text-align:center">No players yet</td></tr>';
+            } catch (e) {
+                body.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--danger)">Failed to load leaderboard</td></tr>';
+            }
+        }
+
+        async function syncGlobalMarket() {
+            try {
+                const q = window.fbMethods.collection(window.fbDb, "global_market");
+                const snapshot = await window.fbMethods.getDocs(q);
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    // Add to STOCKS if not already there
+                    if (!STOCKS.find(s => s.ticker === data.ticker)) {
+                        STOCKS.push(data);
+                        if (!state.stockPrices[data.ticker]) {
+                            state.stockPrices[data.ticker] = data.basePrice;
+                            state.stockHistory[data.ticker] = [data.basePrice * 0.95, data.basePrice];
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error("Global market sync failed", e);
+            }
+        }        function showJobApplications(coId) {
             const co = state.player.companies.find(c => c.id === coId);
             const applicants = JOB_APPLICANTS.slice(0, 8).sort(() => Math.random() - 0.5).slice(0, 5);
             const content = document.getElementById('job-modal-content');
