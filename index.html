@@ -540,6 +540,10 @@
                             <div class="widget-title">Portfolio</div>
                             <div class="widget-value" id="dash-portfolio">$0</div>
                         </div>
+                        <div class="widget">
+                            <div class="widget-title">Crypto</div>
+                            <div class="widget-value" id="dash-crypto">$0</div>
+                        </div>
                     </div>
                     <h3>Recent Activity</h3>
                     <table class="data-table">
@@ -697,7 +701,8 @@
                         <thead>
                             <tr>
                                 <th>Property</th>
-                                <th>Price</th>
+                                <th>Buy Price</th>
+                                <th>Market Price</th>
                                 <th>Monthly Yield</th>
                                 <th>Action</th>
                             </tr>
@@ -736,6 +741,7 @@
                             <div class="widget-value" id="bank-rate">8.5%</div>
                         </div>
                     </div>
+                    <div id="credit-panel" style="margin-bottom:2rem"></div>
                     <h3>Active Loans</h3>
                     <table class="data-table" style="margin-bottom: 2rem;">
                         <thead>
@@ -753,11 +759,21 @@
                     </table>
                     <h3>Take a Loan</h3>
                     <div class="widget">
+                        <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;margin-bottom:1rem;border:1px solid var(--border);font-size:0.85rem">
+                            <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem">
+                                <span style="color:var(--text-muted)">Your Borrow Limit</span>
+                                <span style="font-weight:700;color:var(--brand)" id="loan-limit-display">$0</span>
+                            </div>
+                            <div style="display:flex;justify-content:space-between">
+                                <span style="color:var(--text-muted)">Interest Rate</span>
+                                <span style="font-weight:700;color:var(--warning)" id="loan-rate-display">0%</span>
+                            </div>
+                        </div>
                         <div class="input-group">
                             <input type="number" id="loan-amount" placeholder="10000" min="1000">
                             <span>Amount</span>
                         </div>
-                        <button class="btn btn-primary" onclick="takeLoan()" style="width: 100%; margin-top: 1rem;">Borrow Money</button>
+                        <button class="btn btn-primary" onclick="takeLoanWithRefresh()" style="width: 100%; margin-top: 1rem;">Borrow Money</button>
                     </div>
                 </div>
 
@@ -770,30 +786,80 @@
 
                 <!-- Crypto Tab -->
                 <div id="crypto" class="tab-panel">
-                    <h2>Cryptocurrency</h2>
-                    <div class="widget-grid">
+                    <h2>Cryptocurrency Market</h2>
+                    <div class="widget-grid" style="margin-bottom:1.5rem">
                         <div class="widget">
-                            <div class="widget-title">Bitcoin Price</div>
-                            <div class="widget-value" id="crypto-btc">$0</div>
+                            <div class="widget-title">Portfolio Value</div>
+                            <div class="widget-value" id="crypto-portfolio-value">$0.00</div>
                         </div>
-                        <div class="widget">
-                            <div class="widget-title">Ethereum Price</div>
-                            <div class="widget-value" id="crypto-eth">$0</div>
-                        </div>
-                        <div class="widget">
-                            <div class="widget-title">Holdings Value</div>
-                            <div class="widget-value" id="crypto-value">$0</div>
-                        </div>
+                        <!-- Legacy IDs kept for compatibility -->
+                        <span id="crypto-btc" style="display:none"></span>
+                        <span id="crypto-eth" style="display:none"></span>
+                        <span id="crypto-value" style="display:none"></span>
                     </div>
-                    <h3>Trade Crypto</h3>
-                    <div class="widget">
-                        <div class="input-group">
-                            <input type="number" id="crypto-amount" placeholder="1000" min="100">
-                            <span>Amount (USD)</span>
+                    <div style="display:grid;grid-template-columns:1fr 400px;gap:1.5rem">
+                        <div>
+                            <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;max-height:600px">
+                                <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;padding:0.75rem 1.25rem;background:var(--bg-panel);border-bottom:1px solid var(--border);font-weight:700;color:var(--text-muted);font-size:0.75rem">
+                                    <div>Coin</div><div style="text-align:right">Price</div><div style="text-align:right">24h Change</div><div style="text-align:right">Owned</div>
+                                </div>
+                                <div style="flex:1;overflow-y:auto" id="crypto-market-scroll"></div>
+                            </div>
                         </div>
-                        <div class="button-row">
-                            <button class="btn btn-success" onclick="buyCrypto('BTC')">Buy Bitcoin</button>
-                            <button class="btn btn-success" onclick="buyCrypto('ETH')">Buy Ethereum</button>
+                        <div id="crypto-trading-section" style="display:none">
+                            <div class="widget">
+                                <h3><span id="crypto-trade-ticker" style="color:var(--brand)">—</span> - <span id="crypto-trade-name">—</span></h3>
+                                <div style="height:200px;background:#000;border-radius:8px;margin:1rem 0;padding:0.5rem">
+                                    <canvas id="crypto-trading-chart"></canvas>
+                                </div>
+                                <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;margin-bottom:1rem;border:1px solid var(--border)">
+                                    <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;font-size:0.9rem">
+                                        <span style="color:var(--text-muted)">Price</span>
+                                        <span style="font-weight:700;color:var(--brand)" id="crypto-trade-price">$0</span>
+                                    </div>
+                                    <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;font-size:0.9rem">
+                                        <span style="color:var(--text-muted)">24h Change</span>
+                                        <span style="font-weight:700" id="crypto-trade-change">0%</span>
+                                    </div>
+                                    <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;font-size:0.9rem">
+                                        <span style="color:var(--text-muted)">Market Cap</span>
+                                        <span style="font-weight:700;color:var(--text-muted)" id="crypto-trade-marketcap">—</span>
+                                    </div>
+                                    <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;font-size:0.9rem">
+                                        <span style="color:var(--text-muted)">24h Volume</span>
+                                        <span style="font-weight:700;color:var(--text-muted)" id="crypto-trade-volume">—</span>
+                                    </div>
+                                    <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;font-size:0.9rem">
+                                        <span style="color:var(--text-muted)">Circulating Supply</span>
+                                        <span style="font-weight:700;color:var(--text-muted)" id="crypto-trade-supply">—</span>
+                                    </div>
+                                    <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;font-size:0.9rem">
+                                        <span style="color:var(--text-muted)">Sector</span>
+                                        <span style="font-weight:700;color:var(--text-muted)" id="crypto-trade-sector">—</span>
+                                    </div>
+                                    <div style="border-top:1px solid var(--border);padding-top:0.75rem;margin-top:0.5rem">
+                                        <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;font-size:0.9rem">
+                                            <span style="color:var(--text-muted)">Holdings</span>
+                                            <span style="font-weight:700;color:var(--brand)" id="crypto-trade-holdings">0</span>
+                                        </div>
+                                        <div style="display:flex;justify-content:space-between;font-size:0.9rem">
+                                            <span style="color:var(--text-muted)">Unrealized P/L</span>
+                                            <span style="font-weight:700" id="crypto-trade-pl">$0.00</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <input type="number" id="crypto-qty" value="0.01" min="0.000001" step="0.01">
+                                    <span>Qty</span>
+                                </div>
+                                <div class="button-row">
+                                    <button class="btn btn-success" onclick="buyCrypto(state.selectedCrypto)">Buy</button>
+                                    <button class="btn btn-danger" onclick="sellCrypto(state.selectedCrypto)">Sell</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="no-crypto" style="display:flex;align-items:center;justify-content:center;background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:2rem;text-align:center;color:var(--text-muted)">
+                            Select a coin to trade
                         </div>
                     </div>
                 </div>
@@ -843,6 +909,7 @@
         };
 
         const CHARACTERS = [
+            { id: 'normal', name: 'The Regular', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>', cash: 5000, debt: 0, credit: 650, desc: 'A normal person with no debt and average savings. Balanced start with fair credit.' },
             { id: 'hustler', name: 'The Hustler', icon: ICONS.briefcase, cash: 500, debt: 10000, credit: 300, desc: 'Starting from the bottom' },
             { id: 'graduate', name: 'The Graduate', icon: ICONS.book, cash: 5000, debt: 25000, credit: 650, desc: 'Educated but leveraged' },
             { id: 'heir', name: 'The Heir', icon: ICONS.crown, cash: 50000, debt: 0, credit: 800, desc: 'Life on easy mode' },
@@ -1043,11 +1110,19 @@
                 companies: [],
                 activityLog: [],
                 crypto: { BTC: 0, ETH: 0 },
-                loans: []
+                loans: [],
+                creditHistory: [],
+                lastLoanTime: 0,
+                totalBorrowed: 0,
+                cryptoHoldings: {},
+                propertyPrices: {}
             },
             market: [],
+            cryptoMarket: [],
             selectedStock: null,
+            selectedCrypto: null,
             chart: null,
+            cryptoChart: null,
             priceUpdateInterval: null
         };
 
@@ -1118,6 +1193,8 @@
             state.lastVisit = Date.now();
 
             initMarket();
+            initCryptoMarket();
+            initPropertyPrices();
             renderMarketFilters();
             renderMarket();
             renderCareer();
@@ -1127,6 +1204,14 @@
             renderAchievements();
             renderBlackMarket();
             renderCompanies();
+            renderCryptoMarket();
+
+            // Apply initial debt from borrowing $10,000 to credit score
+            if (state.player.totalBorrowed === 0 && state.player.debt > 0) {
+                const debtImpact = Math.floor(state.player.debt / 100);
+                state.player.credit = Math.max(300, state.player.credit - debtImpact);
+                state.player.totalBorrowed = state.player.debt;
+            }
 
             document.getElementById('setup-screen').classList.add('hidden');
             document.getElementById('app-layout').classList.remove('hidden');
@@ -1134,10 +1219,12 @@
             // Start price update interval
             state.priceUpdateInterval = setInterval(() => {
                 updateStockPrices();
+                updateCryptoPrices();
+                updatePropertyPrices();
                 renderMarket();
-                if (state.selectedStock) {
-                    selectStock(state.selectedStock);
-                }
+                if (state.selectedStock) selectStock(state.selectedStock);
+                if (state.selectedCrypto) selectCrypto(state.selectedCrypto);
+                if (document.getElementById('properties').classList.contains('active')) renderRealEstate();
             }, 2000);
 
             updateUI();
@@ -1494,6 +1581,10 @@
                             <button class="btn btn-secondary" onclick="showEmployees('${co.id}')" style="font-size: 0.85rem;">Staff</button>
                             <button class="btn btn-primary" onclick="showProjects('${co.id}')" style="font-size: 0.85rem;">Projects</button>
                         </div>
+                        <div class="button-row" style="margin-top:0.5rem">
+                            <button class="btn btn-success" onclick="investInCompany('${co.id}')" style="font-size: 0.8rem;">+ Invest</button>
+                            <button class="btn btn-danger" onclick="withdrawFromCompany('${co.id}')" style="font-size: 0.8rem;">- Withdraw</button>
+                        </div>
                     </div>
                 `).join('');
             }
@@ -1648,49 +1739,64 @@
         function renderRealEstate() {
             const owned = document.getElementById('properties-owned');
             if (state.player.properties.length === 0) {
-                owned.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No properties</td></tr>';
+                owned.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No properties</td></tr>';
             } else {
                 owned.innerHTML = state.player.properties.map(propId => {
                     const prop = REAL_ESTATE.find(p => p.id === propId);
+                    const currentPrice = getPropertyCurrentPrice(propId);
+                    const priceDelta = ((currentPrice - prop.price) / prop.price) * 100;
+                    const sellValue = currentPrice * 0.95; // 5% transaction fee
                     return `
                         <tr>
                             <td><strong>${prop.name}</strong></td>
                             <td style="text-align: right;">$${prop.price.toLocaleString()}</td>
+                            <td style="text-align: right; font-weight:700; color:var(--brand);">$${Math.round(currentPrice).toLocaleString()} <span style="font-size:0.75rem;color:${priceDelta>=0?'var(--success)':'var(--danger)'}">${priceDelta>=0?'+':''}${priceDelta.toFixed(1)}%</span></td>
                             <td style="text-align: right;">$${prop.yield}/mo</td>
-                            <td style="text-align: center;"><button class="btn btn-danger" onclick="sellProperty('${propId}')" style="font-size: 0.8rem;">Sell</button></td>
+                            <td style="text-align: center;"><button class="btn btn-danger" onclick="sellProperty('${propId}')" style="font-size: 0.8rem;">Sell $${Math.round(sellValue).toLocaleString()}</button></td>
                         </tr>
                     `;
                 }).join('');
             }
 
             const shop = document.getElementById('properties-shop');
-            shop.innerHTML = REAL_ESTATE.map(prop => `
+            shop.innerHTML = REAL_ESTATE.map(prop => {
+                const currentPrice = getPropertyCurrentPrice(prop.id);
+                const priceDelta = ((currentPrice - prop.price) / prop.price) * 100;
+                const alreadyOwned = state.player.properties.includes(prop.id);
+                return `
                 <div class="widget">
                     <div class="widget-title">${prop.name}</div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
                         <div>
-                            <span style="color: var(--text-muted); font-size: 0.8rem;">Price</span>
-                            <div style="font-weight: 700; color: var(--brand);">$${prop.price.toLocaleString()}</div>
+                            <span style="color: var(--text-muted); font-size: 0.75rem;">Base Price</span>
+                            <div style="font-size:0.85rem; color: var(--text-muted);">$${prop.price.toLocaleString()}</div>
                         </div>
-                        <div>
-                            <span style="color: var(--text-muted); font-size: 0.8rem;">Yield</span>
-                            <div style="font-weight: 700; color: var(--success);">$${prop.yield}/mo</div>
+                        <div style="text-align:right">
+                            <span style="color: var(--text-muted); font-size: 0.75rem;">Market Price</span>
+                            <div style="font-weight: 700; color: var(--brand);">$${Math.round(currentPrice).toLocaleString()}</div>
                         </div>
                     </div>
-                    <button class="btn btn-primary" onclick="buyProperty('${prop.id}')" style="width: 100%; font-size: 0.9rem;" ${state.player.cash < prop.price ? 'disabled' : ''}>Buy</button>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:1rem">
+                        <div><span style="color:var(--text-muted);font-size:0.75rem">Trend</span><div style="font-weight:700;color:${priceDelta>=0?'var(--success)':'var(--danger)'}">${priceDelta>=0?'+':''}${priceDelta.toFixed(1)}%</div></div>
+                        <div style="text-align:right"><span style="color:var(--text-muted);font-size:0.75rem">Yield</span><div style="font-weight:700;color:var(--success);">$${prop.yield}/mo</div></div>
+                    </div>
+                    <button class="btn btn-primary" onclick="buyProperty('${prop.id}')" style="width: 100%; font-size: 0.9rem;" ${state.player.cash < currentPrice || alreadyOwned ? 'disabled' : ''}>${alreadyOwned ? 'Owned' : 'Buy $' + Math.round(currentPrice).toLocaleString()}</button>
                 </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function buyProperty(propId) {
             const prop = REAL_ESTATE.find(p => p.id === propId);
-            if (state.player.cash < prop.price) {
+            const currentPrice = getPropertyCurrentPrice(propId);
+            if (state.player.cash < currentPrice) {
                 showToast('Insufficient Funds', 'Not enough cash', 'danger');
                 return;
             }
-            state.player.cash -= prop.price;
+            state.player.cash -= currentPrice;
             state.player.properties.push(propId);
-            showToast('Purchased', `${prop.name} acquired!`, 'success');
+            showToast('Purchased', `${prop.name} acquired for $${Math.round(currentPrice).toLocaleString()}!`, 'success');
+            logActivity(`Bought ${prop.name} for $${Math.round(currentPrice).toLocaleString()}`, 'success');
             renderRealEstate();
             updateUI();
             saveGame();
@@ -1698,9 +1804,12 @@
 
         function sellProperty(propId) {
             const prop = REAL_ESTATE.find(p => p.id === propId);
-            state.player.cash += prop.price * 0.8;
+            const currentPrice = getPropertyCurrentPrice(propId);
+            const sellValue = currentPrice * 0.95; // 5% transaction fee
+            state.player.cash += sellValue;
             state.player.properties = state.player.properties.filter(p => p !== propId);
-            showToast('Sold', `${prop.name} sold for $${(prop.price * 0.8).toLocaleString()}`, 'warning');
+            showToast('Sold', `${prop.name} sold for $${Math.round(sellValue).toLocaleString()} (market price)`, 'warning');
+            logActivity(`Sold ${prop.name} for $${Math.round(sellValue).toLocaleString()}`, 'success');
             renderRealEstate();
             updateUI();
             saveGame();
@@ -1829,17 +1938,92 @@
             `).join('');
         }
 
+        function getCreditLimit() {
+            const score = state.player.credit;
+            if (score >= 800) return 100000;
+            if (score >= 750) return 50000;
+            if (score >= 700) return 30000;
+            if (score >= 650) return 15000;
+            if (score >= 600) return 8000;
+            if (score >= 550) return 4000;
+            if (score >= 500) return 2000;
+            if (score >= 450) return 1000;
+            return 0;
+        }
+
+        function getLoanInterestRate() {
+            const score = state.player.credit;
+            if (score >= 800) return 0.04;
+            if (score >= 750) return 0.055;
+            if (score >= 700) return 0.07;
+            if (score >= 650) return 0.085;
+            if (score >= 600) return 0.10;
+            if (score >= 550) return 0.13;
+            if (score >= 500) return 0.16;
+            return 0.20;
+        }
+
+        function getLoanCooldownRemaining() {
+            const cooldownMs = 30000; // 30 seconds real-time per loan (simulate days)
+            const elapsed = Date.now() - (state.player.lastLoanTime || 0);
+            return Math.max(0, cooldownMs - elapsed);
+        }
+
         function takeLoan() {
             const amount = parseFloat(document.getElementById('loan-amount').value);
             if (isNaN(amount) || amount < 1000) {
                 showToast('Invalid Amount', 'Minimum $1,000', 'danger');
                 return;
             }
+
+            // Credit score check
+            const creditLimit = getCreditLimit();
+            if (creditLimit === 0) {
+                showToast('Loan Denied', 'Credit score too low (below 450). Improve your credit first!', 'danger');
+                return;
+            }
+
+            // Cooldown check (can't spam borrow)
+            const cooldown = getLoanCooldownRemaining();
+            if (cooldown > 0) {
+                const secs = Math.ceil(cooldown / 1000);
+                showToast('Loan Denied', `Wait ${secs}s before taking another loan (cooldown period)`, 'warning');
+                return;
+            }
+
+            // Amount vs credit limit check
+            const existingDebt = state.player.debt;
+            if (amount > creditLimit) {
+                showToast('Loan Denied', `Max loan for your credit score ($${state.player.credit}): $${creditLimit.toLocaleString()}`, 'danger');
+                return;
+            }
+
+            // Debt-to-income ratio check (can't exceed credit limit + reasonable buffer)
+            const career = CAREERS.find(c => c.id === state.player.careerId);
+            const annualIncome = (career ? career.salary : 0) * 12;
+            // Max debt = credit limit * 2 OR annual income * 3, whichever is higher, minimum $50,000
+            const maxDebt = Math.max(50000, creditLimit * 2, annualIncome * 3);
+            if (existingDebt + amount > maxDebt) {
+                showToast('Loan Denied', `Debt-to-income ratio too high. Max total debt: $${maxDebt.toLocaleString()}`, 'danger');
+                return;
+            }
+
+            const rate = getLoanInterestRate();
             state.player.cash += amount;
-            state.player.debt += amount * 1.08;
-            state.player.loans.push({ amount, rate: 0.08, remaining: amount * 1.08, monthlyPayment: amount * 0.1 });
+            state.player.debt += amount * (1 + rate);
+            state.player.totalBorrowed = (state.player.totalBorrowed || 0) + amount;
+            state.player.lastLoanTime = Date.now();
+
+            // Reduce credit score for taking loan
+            const creditPenalty = Math.min(30, Math.floor(amount / 1000) * 2);
+            state.player.credit = Math.max(300, state.player.credit - creditPenalty);
+            state.player.creditHistory = state.player.creditHistory || [];
+            state.player.creditHistory.push({ day: state.day, event: `Loan $${amount.toLocaleString()}`, change: -creditPenalty, score: state.player.credit });
+
+            state.player.loans.push({ amount, rate, remaining: amount * (1 + rate), monthlyPayment: Math.ceil(amount * 0.1) });
             renderLoans();
-            showToast('Loan Approved', `+$${amount.toLocaleString()}`, 'success');
+            renderCreditPanel();
+            showToast('Loan Approved', `+$${amount.toLocaleString()} | Rate: ${(rate*100).toFixed(1)}% | Credit: -${creditPenalty}`, 'success');
             document.getElementById('loan-amount').value = '';
             updateUI();
             saveGame();
@@ -1854,7 +2038,7 @@
                     <tr>
                         <td>$${loan.amount.toLocaleString()}</td>
                         <td>${(loan.rate * 100).toFixed(1)}%</td>
-                        <td>$${loan.remaining.toLocaleString()}</td>
+                        <td>$${parseFloat(loan.remaining).toFixed(2)}</td>
                         <td>$${loan.monthlyPayment.toLocaleString()}</td>
                         <td><button class="btn btn-primary" onclick="openLoanPaymentModal(${i})" style="font-size: 0.8rem;">Pay</button></td>
                     </tr>
@@ -1907,15 +2091,25 @@
             loan.remaining -= amount;
             state.player.debt -= amount;
 
+            // Boost credit score for making payments
+            const creditBoost = Math.min(15, Math.floor(amount / 500));
+            state.player.credit = Math.min(850, state.player.credit + creditBoost);
+            state.player.creditHistory = state.player.creditHistory || [];
+            state.player.creditHistory.push({ day: state.day, event: `Payment $${amount.toLocaleString()}`, change: +creditBoost, score: state.player.credit });
+
             if (loan.remaining <= 0) {
                 state.player.loans.splice(currentLoanIndex, 1);
-                showToast('Loan Paid Off', 'Congratulations!', 'success');
+                const bonusBoost = 20;
+                state.player.credit = Math.min(850, state.player.credit + bonusBoost);
+                state.player.creditHistory.push({ day: state.day, event: 'Loan Fully Paid', change: +bonusBoost, score: state.player.credit });
+                showToast('Loan Paid Off', `Congratulations! Credit +${bonusBoost + creditBoost}`, 'success');
             } else {
-                showToast('Payment Made', `Remaining: $${loan.remaining.toLocaleString()}`, 'success');
+                showToast('Payment Made', `Remaining: $${loan.remaining.toFixed(0)} | Credit +${creditBoost}`, 'success');
             }
 
             closeLoanModal();
             renderLoans();
+            renderCreditPanel();
             updateUI();
             saveGame();
         }
@@ -1928,21 +2122,302 @@
             document.getElementById('project-modal').classList.add('hidden');
         }
 
-        function buyCrypto(type) {
-            const amount = parseFloat(document.getElementById('crypto-amount').value);
-            if (isNaN(amount) || amount < 100) {
-                showToast('Invalid Amount', 'Minimum $100', 'danger');
+        function buyCrypto(ticker) {
+            const coin = state.cryptoMarket.find(c => c.ticker === ticker);
+            if (!coin) return;
+            const qty = parseFloat(document.getElementById('crypto-qty').value) || 0;
+            if (qty <= 0) { showToast('Invalid Qty', 'Enter a valid quantity', 'danger'); return; }
+            const cost = qty * coin.price;
+            if (state.player.cash < cost) {
+                showToast('Insufficient Funds', `Need $${cost.toFixed(2)}`, 'danger');
                 return;
             }
+            state.player.cash -= cost;
+            if (!state.player.cryptoHoldings[ticker]) {
+                state.player.cryptoHoldings[ticker] = { qty: 0, totalCost: 0 };
+            }
+            state.player.cryptoHoldings[ticker].qty += qty;
+            state.player.cryptoHoldings[ticker].totalCost += cost;
+            // Legacy support
+            if (ticker === 'BTC') state.player.crypto.BTC = state.player.cryptoHoldings.BTC.qty;
+            if (ticker === 'ETH') state.player.crypto.ETH = state.player.cryptoHoldings.ETH ? state.player.cryptoHoldings.ETH.qty : 0;
+            showToast('Purchased', `${qty} ${ticker} for $${cost.toFixed(2)}`, 'success');
+            logActivity(`Bought ${qty} ${ticker} @ $${coin.price.toFixed(2)}`, 'success');
+            selectCrypto(ticker);
+            updateCryptoPortfolioValue();
+            updateUI();
+            saveGame();
+        }
+
+        function sellCrypto(ticker) {
+            const coin = state.cryptoMarket.find(c => c.ticker === ticker);
+            if (!coin) return;
+            const qty = parseFloat(document.getElementById('crypto-qty').value) || 0;
+            const holding = state.player.cryptoHoldings[ticker];
+            if (!holding || holding.qty < qty || qty <= 0) {
+                showToast('Invalid Qty', `You only have ${holding ? holding.qty.toFixed(6) : 0} ${ticker}`, 'danger');
+                return;
+            }
+            const proceeds = qty * coin.price;
+            const avgCost = holding.totalCost / holding.qty;
+            holding.qty -= qty;
+            holding.totalCost -= avgCost * qty;
+            if (holding.qty <= 0) { holding.qty = 0; holding.totalCost = 0; }
+            state.player.cash += proceeds;
+            if (ticker === 'BTC') state.player.crypto.BTC = holding.qty;
+            if (ticker === 'ETH') state.player.crypto.ETH = holding.qty;
+            showToast('Sold', `${qty} ${ticker} for $${proceeds.toFixed(2)}`, 'success');
+            logActivity(`Sold ${qty} ${ticker} @ $${coin.price.toFixed(2)}`, 'success');
+            selectCrypto(ticker);
+            updateCryptoPortfolioValue();
+            updateUI();
+            saveGame();
+        }
+
+        // =============================================
+        // CRYPTO MARKET - DYNAMIC PRICES WITH INFO PANEL
+        // =============================================
+        const CRYPTO_COINS = [
+            { ticker: 'BTC', name: 'Bitcoin', basePrice: 45000, marketCap: '880B', supply: '19.6M', sector: 'Store of Value', volatility: 0.04, color: '#f7931a' },
+            { ticker: 'ETH', name: 'Ethereum', basePrice: 2500, marketCap: '300B', supply: '120M', sector: 'Smart Contracts', volatility: 0.05, color: '#627eea' },
+            { ticker: 'SOL', name: 'Solana', basePrice: 180, marketCap: '80B', supply: '440M', sector: 'Layer 1', volatility: 0.08, color: '#9945ff' },
+            { ticker: 'BNB', name: 'Binance Coin', basePrice: 420, marketCap: '65B', supply: '155M', sector: 'Exchange', volatility: 0.06, color: '#f3ba2f' },
+            { ticker: 'XRP', name: 'Ripple', basePrice: 0.62, marketCap: '34B', supply: '55B', sector: 'Payments', volatility: 0.07, color: '#00aae4' },
+            { ticker: 'DOGE', name: 'Dogecoin', basePrice: 0.12, marketCap: '17B', supply: '143B', sector: 'Meme', volatility: 0.12, color: '#c2a633' },
+            { ticker: 'ADA', name: 'Cardano', basePrice: 0.55, marketCap: '19B', supply: '35B', sector: 'Smart Contracts', volatility: 0.07, color: '#0033ad' },
+            { ticker: 'AVAX', name: 'Avalanche', basePrice: 38, marketCap: '16B', supply: '420M', sector: 'Layer 1', volatility: 0.09, color: '#e84142' }
+        ];
+
+        function initCryptoMarket() {
+            state.cryptoMarket = CRYPTO_COINS.map(coin => ({
+                ...coin,
+                price: coin.basePrice,
+                history: Array(40).fill(0).map(() => coin.basePrice * (0.9 + Math.random() * 0.2)),
+                change24h: (Math.random() - 0.5) * 20,
+                volume24h: Math.floor(Math.random() * 1000000000) + 100000000
+            }));
+        }
+
+        function updateCryptoPrices() {
+            if (!state.cryptoMarket || state.cryptoMarket.length === 0) return;
+            state.cryptoMarket.forEach(coin => {
+                const volatility = coin.volatility || 0.05;
+                const change = (Math.random() - 0.5) * 2 * volatility;
+                coin.price = Math.max(coin.basePrice * 0.1, coin.price * (1 + change));
+                coin.history.push(coin.price);
+                if (coin.history.length > 40) coin.history.shift();
+                coin.change24h = ((coin.price - coin.basePrice) / coin.basePrice) * 100;
+                coin.volume24h = Math.floor(Math.random() * 1000000000) + 100000000;
+            });
+            if (document.getElementById('crypto').classList.contains('active')) {
+                renderCryptoMarket();
+                updateCryptoPortfolioValue();
+            }
+        }
+
+        function renderCryptoMarket() {
+            const scroll = document.getElementById('crypto-market-scroll');
+            if (!scroll || !state.cryptoMarket) return;
+            scroll.innerHTML = state.cryptoMarket.map(coin => {
+                const holding = state.player.cryptoHoldings && state.player.cryptoHoldings[coin.ticker];
+                const ownedQty = holding ? holding.qty : 0;
+                return `
+                    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;padding:1rem 1.25rem;border-bottom:1px solid var(--border);cursor:pointer;transition:all 0.2s;align-items:center;background:${state.selectedCrypto===coin.ticker?'var(--bg-hover)':''}" onclick="selectCrypto('${coin.ticker}')">
+                        <div><strong style="color:${coin.color}">${coin.ticker}</strong><br><span style="color:var(--text-muted);font-size:0.8rem">${coin.name}</span></div>
+                        <div style="text-align:right;font-weight:700">$${coin.price < 1 ? coin.price.toFixed(4) : coin.price.toFixed(2)}</div>
+                        <div style="text-align:right;font-weight:700;color:${coin.change24h>=0?'var(--success)':'var(--danger)'}">${coin.change24h>=0?'+':''}${coin.change24h.toFixed(2)}%</div>
+                        <div style="text-align:right;color:var(--text-muted);font-size:0.85rem">${ownedQty > 0 ? ownedQty.toFixed(4) : '—'}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectCrypto(ticker) {
+            state.selectedCrypto = ticker;
+            const coin = state.cryptoMarket.find(c => c.ticker === ticker);
+            if (!coin) return;
+
+            document.getElementById('no-crypto').style.display = 'none';
+            document.getElementById('crypto-trading-section').style.display = 'block';
+
+            document.getElementById('crypto-trade-ticker').textContent = coin.ticker;
+            document.getElementById('crypto-trade-name').textContent = coin.name;
+            document.getElementById('crypto-trade-price').textContent = `$${coin.price < 1 ? coin.price.toFixed(6) : coin.price.toFixed(2)}`;
+            document.getElementById('crypto-trade-change').textContent = `${coin.change24h >= 0 ? '+' : ''}${coin.change24h.toFixed(2)}%`;
+            document.getElementById('crypto-trade-change').style.color = coin.change24h >= 0 ? 'var(--success)' : 'var(--danger)';
+            document.getElementById('crypto-trade-marketcap').textContent = coin.marketCap;
+            document.getElementById('crypto-trade-supply').textContent = coin.supply;
+            document.getElementById('crypto-trade-sector').textContent = coin.sector;
+            document.getElementById('crypto-trade-volume').textContent = `$${(coin.volume24h / 1e9).toFixed(2)}B`;
+
+            const holding = state.player.cryptoHoldings && state.player.cryptoHoldings[ticker];
+            const ownedQty = holding ? holding.qty : 0;
+            const avgCost = (holding && holding.qty > 0) ? holding.totalCost / holding.qty : 0;
+            const pl = ownedQty > 0 ? (coin.price - avgCost) * ownedQty : 0;
+            document.getElementById('crypto-trade-holdings').textContent = ownedQty.toFixed(6);
+            document.getElementById('crypto-trade-pl').textContent = `$${pl.toFixed(2)}`;
+            document.getElementById('crypto-trade-pl').style.color = pl >= 0 ? 'var(--success)' : 'var(--danger)';
+
+            renderCryptoMarket();
+            initCryptoChart(ticker);
+        }
+
+        function initCryptoChart(ticker) {
+            const coin = state.cryptoMarket.find(c => c.ticker === ticker);
+            const ctx = document.getElementById('crypto-trading-chart').getContext('2d');
+            if (state.cryptoChart) state.cryptoChart.destroy();
+            const isUp = coin.price >= coin.basePrice;
+            const color = isUp ? '#10b981' : '#ef4444';
+            state.cryptoChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array(coin.history.length).fill(''),
+                    datasets: [{ data: coin.history, borderColor: color, borderWidth: 2, pointRadius: 0, tension: 0.3, fill: true, backgroundColor: isUp ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)' }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } }, animation: false }
+            });
+        }
+
+        function updateCryptoPortfolioValue() {
+            if (!state.cryptoMarket) return;
+            let total = 0;
+            Object.entries(state.player.cryptoHoldings || {}).forEach(([ticker, h]) => {
+                const coin = state.cryptoMarket.find(c => c.ticker === ticker);
+                if (coin && h.qty > 0) total += coin.price * h.qty;
+            });
+            const el = document.getElementById('crypto-portfolio-value');
+            if (el) el.textContent = `$${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+        }
+
+        // =============================================
+        // DYNAMIC PROPERTY PRICES
+        // =============================================
+        function initPropertyPrices() {
+            if (!state.player.propertyPrices) state.player.propertyPrices = {};
+            REAL_ESTATE.forEach(prop => {
+                if (!state.player.propertyPrices[prop.id]) {
+                    state.player.propertyPrices[prop.id] = prop.price;
+                }
+            });
+        }
+
+        function updatePropertyPrices() {
+            if (!state.player.propertyPrices) return;
+            REAL_ESTATE.forEach(prop => {
+                const current = state.player.propertyPrices[prop.id] || prop.price;
+                const change = (Math.random() - 0.48) * 0.01; // slight upward bias
+                state.player.propertyPrices[prop.id] = Math.max(prop.price * 0.5, current * (1 + change));
+            });
+        }
+
+        function getPropertyCurrentPrice(propId) {
+            try {
+                if (state && state.player && state.player.propertyPrices && state.player.propertyPrices[propId]) {
+                    return state.player.propertyPrices[propId];
+                }
+            } catch(e) {}
+            const prop = REAL_ESTATE.find(p => p.id === propId);
+            return prop ? prop.price : 0;
+        }
+
+        // =============================================
+        // CREDIT PANEL RENDER
+        // =============================================
+        function takeLoanWithRefresh() {
+            takeLoan();
+            const limitEl = document.getElementById('loan-limit-display');
+            const rateEl = document.getElementById('loan-rate-display');
+            if (limitEl) limitEl.textContent = `$${getCreditLimit().toLocaleString()}`;
+            if (rateEl) rateEl.textContent = `${(getLoanInterestRate() * 100).toFixed(1)}%`;
+        }
+
+        function renderCreditPanel() {
+            const el = document.getElementById('credit-panel');
+            if (!el) return;
+            const score = state.player.credit;
+            const limit = getCreditLimit();
+            const limitEl = document.getElementById('loan-limit-display');
+            const rateEl = document.getElementById('loan-rate-display');
+            if (limitEl) limitEl.textContent = `$${limit.toLocaleString()}`;
+            if (rateEl) rateEl.textContent = `${(getLoanInterestRate() * 100).toFixed(1)}%`;
+            const rate = getLoanInterestRate();
+            const cooldown = getLoanCooldownRemaining();
+            const cooldownSecs = Math.ceil(cooldown / 1000);
+            let tier = 'Poor', tierColor = 'var(--danger)';
+            if (score >= 800) { tier = 'Excellent'; tierColor = 'var(--success)'; }
+            else if (score >= 740) { tier = 'Very Good'; tierColor = '#10b981'; }
+            else if (score >= 670) { tier = 'Good'; tierColor = 'var(--brand)'; }
+            else if (score >= 580) { tier = 'Fair'; tierColor = 'var(--warning)'; }
+            else if (score >= 500) { tier = 'Poor'; tierColor = '#f97316'; }
+            const history = (state.player.creditHistory || []).slice(-5).reverse();
+            el.innerHTML = `
+                <div style="background:var(--bg-panel);padding:1.5rem;border-radius:12px;border:1px solid var(--border);margin-bottom:1.5rem">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+                        <div>
+                            <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Credit Score</div>
+                            <div style="font-size:2.5rem;font-weight:900;color:${tierColor}">${score}</div>
+                            <div style="font-size:0.9rem;color:${tierColor};font-weight:600">${tier}</div>
+                        </div>
+                        <div style="text-align:right">
+                            <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.25rem">Borrow Limit</div>
+                            <div style="font-size:1.2rem;font-weight:700;color:var(--brand)">$${limit.toLocaleString()}</div>
+                            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem">Interest Rate</div>
+                            <div style="font-size:1rem;font-weight:700;color:var(--warning)">${(rate*100).toFixed(1)}%</div>
+                        </div>
+                    </div>
+                    <div style="height:8px;background:var(--bg-base);border-radius:4px;overflow:hidden;margin-bottom:0.5rem">
+                        <div style="height:100%;width:${((score-300)/550*100).toFixed(1)}%;background:${tierColor};transition:width 0.5s"></div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text-muted)">
+                        <span>300 (Poor)</span><span>580 (Fair)</span><span>740 (Good)</span><span>850 (Excellent)</span>
+                    </div>
+                    ${cooldown > 0 ? `<div style="margin-top:1rem;padding:0.75rem;background:rgba(245,158,11,0.1);border:1px solid var(--warning);border-radius:8px;color:var(--warning);font-size:0.85rem">⏳ Loan cooldown: ${cooldownSecs}s remaining</div>` : '<div style="margin-top:1rem;padding:0.75rem;background:rgba(16,185,129,0.1);border:1px solid var(--success);border-radius:8px;color:var(--success);font-size:0.85rem">✓ Eligible to borrow</div>'}
+                </div>
+                <div style="background:var(--bg-panel);padding:1.25rem;border-radius:12px;border:1px solid var(--border)">
+                    <div style="font-weight:700;margin-bottom:1rem">Credit History</div>
+                    ${history.length === 0 ? '<div style="color:var(--text-muted);font-size:0.85rem">No history yet</div>' : history.map(h => `
+                        <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border);font-size:0.85rem">
+                            <span style="color:var(--text-muted)">Day ${h.day} — ${h.event}</span>
+                            <span style="color:${h.change>=0?'var(--success)':'var(--danger)'};font-weight:700">${h.change>=0?'+':''}${h.change} → ${h.score}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        // =============================================
+        // COMPANY INVESTMENT
+        // =============================================
+        function investInCompany(coId) {
+            const co = state.player.companies.find(c => c.id === coId);
+            const amount = parseFloat(prompt(`Invest cash into ${co.name}\nYour cash: $${state.player.cash.toLocaleString()}\nAmount to invest:`));
+            if (isNaN(amount) || amount <= 0) return;
             if (state.player.cash < amount) {
-                showToast('Insufficient Funds', 'Not enough cash', 'danger');
+                showToast('Insufficient Funds', 'Not enough personal cash', 'danger');
                 return;
             }
             state.player.cash -= amount;
-            const price = type === 'BTC' ? 45000 + Math.random() * 5000 : 2500 + Math.random() * 500;
-            state.player.crypto[type] += amount / price;
-            showToast('Purchased', `${(amount / price).toFixed(4)} ${type}`, 'success');
-            document.getElementById('crypto-amount').value = '';
+            co.cash += amount;
+            showToast('Invested', `$${amount.toLocaleString()} moved to ${co.name}`, 'success');
+            logActivity(`Invested $${amount.toLocaleString()} in ${co.name}`, 'success');
+            renderCompanies();
+            updateUI();
+            saveGame();
+        }
+
+        function withdrawFromCompany(coId) {
+            const co = state.player.companies.find(c => c.id === coId);
+            const amount = parseFloat(prompt(`Withdraw from ${co.name}\nCompany cash: $${co.cash.toLocaleString()}\nAmount to withdraw:`));
+            if (isNaN(amount) || amount <= 0) return;
+            if (co.cash < amount) {
+                showToast('Insufficient Funds', 'Company does not have enough cash', 'danger');
+                return;
+            }
+            co.cash -= amount;
+            state.player.cash += amount;
+            showToast('Withdrawn', `$${amount.toLocaleString()} withdrawn from ${co.name}`, 'success');
+            logActivity(`Withdrew $${amount.toLocaleString()} from ${co.name}`, 'success');
+            renderCompanies();
             updateUI();
             saveGame();
         }
@@ -1961,14 +2436,11 @@
                 document.getElementById('bank-debt').textContent = `$${state.player.debt.toLocaleString()}`;
                 document.getElementById('bank-credit').textContent = state.player.credit;
                 renderLoans();
+                renderCreditPanel();
             }
             if (tabName === 'crypto') {
-                const btcPrice = 45000 + Math.random() * 5000;
-                const ethPrice = 2500 + Math.random() * 500;
-                document.getElementById('crypto-btc').textContent = `$${btcPrice.toFixed(0)}`;
-                document.getElementById('crypto-eth').textContent = `$${ethPrice.toFixed(0)}`;
-                const value = state.player.crypto.BTC * btcPrice + state.player.crypto.ETH * ethPrice;
-                document.getElementById('crypto-value').textContent = `$${value.toLocaleString()}`;
+                renderCryptoMarket();
+                updateCryptoPortfolioValue();
             }
         }
 
@@ -2036,7 +2508,19 @@
 
             const companyValue = state.player.companies.reduce((sum, c) => sum + c.cash, 0);
 
-            const netWorth = state.player.cash + portfolioValue + propertyValue + lifestyleValue + companyValue - state.player.debt;
+            let cryptoValue = 0;
+            if (state.cryptoMarket && state.player.cryptoHoldings) {
+                Object.entries(state.player.cryptoHoldings).forEach(([ticker, h]) => {
+                    const coin = state.cryptoMarket.find(c => c.ticker === ticker);
+                    if (coin && h.qty > 0) cryptoValue += coin.price * h.qty;
+                });
+            }
+
+            const dynamicPropertyValue = state.player.properties.reduce((sum, propId) => {
+                return sum + getPropertyCurrentPrice(propId);
+            }, 0);
+
+            const netWorth = state.player.cash + portfolioValue + dynamicPropertyValue + lifestyleValue + companyValue + cryptoValue - state.player.debt;
 
             document.getElementById('stat-cash').textContent = `$${state.player.cash.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
             document.getElementById('stat-networth').textContent = `$${netWorth.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
@@ -2050,6 +2534,16 @@
             document.getElementById('dash-networth').textContent = `$${netWorth.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
             document.getElementById('dash-debt').textContent = `$${state.player.debt.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
             document.getElementById('dash-portfolio').textContent = `$${portfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+            const dashCrypto = document.getElementById('dash-crypto');
+            if (dashCrypto) dashCrypto.textContent = `$${cryptoValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+
+            // Update banking panel live values
+            const bankDebtEl = document.getElementById('bank-debt');
+            const bankCreditEl = document.getElementById('bank-credit');
+            const bankRateEl = document.getElementById('bank-rate');
+            if (bankDebtEl) bankDebtEl.textContent = `$${state.player.debt.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+            if (bankCreditEl) bankCreditEl.textContent = state.player.credit;
+            if (bankRateEl && typeof getLoanInterestRate === 'function') bankRateEl.textContent = `${(getLoanInterestRate() * 100).toFixed(1)}%`;
         }
 
         function logActivity(message, status = 'info') {
@@ -2089,8 +2583,16 @@
             if (!saved) return;
 
             state = JSON.parse(saved);
-
             initMarket();
+            initCryptoMarket();
+            if (!state.player.creditHistory) state.player.creditHistory = [];
+            if (!state.player.lastLoanTime) state.player.lastLoanTime = 0;
+            if (!state.player.totalBorrowed) state.player.totalBorrowed = 0;
+            if (!state.player.cryptoHoldings) state.player.cryptoHoldings = {};
+            if (!state.player.propertyPrices) state.player.propertyPrices = {};
+            if (!state.cryptoMarket) state.cryptoMarket = [];
+            if (!state.selectedCrypto) state.selectedCrypto = null;
+            initPropertyPrices();
             renderMarketFilters();
             renderMarket();
             renderCareer();
@@ -2100,16 +2602,19 @@
             renderAchievements();
             renderBlackMarket();
             renderCompanies();
+            renderCryptoMarket();
 
             document.getElementById('setup-screen').classList.add('hidden');
             document.getElementById('app-layout').classList.remove('hidden');
 
             state.priceUpdateInterval = setInterval(() => {
                 updateStockPrices();
+                updateCryptoPrices();
+                updatePropertyPrices();
                 renderMarket();
-                if (state.selectedStock) {
-                    selectStock(state.selectedStock);
-                }
+                if (state.selectedStock) selectStock(state.selectedStock);
+                if (state.selectedCrypto) selectCrypto(state.selectedCrypto);
+                if (document.getElementById('properties').classList.contains('active')) renderRealEstate();
             }, 2000);
 
             updateUI();
