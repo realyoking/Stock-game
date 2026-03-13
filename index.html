@@ -6742,6 +6742,7 @@ What is your experience?"></textarea></div>
         }
 
         // ===================== NUKE SYSTEM =====================
+        let nukeExecuting = false; // Prevent multiple simultaneous nuke executions
         async function openNukeModal() {
             const modal = document.getElementById('nuke-modal');
             const playerSelect = document.getElementById('nuke-player-select');
@@ -6828,8 +6829,15 @@ What is your experience?"></textarea></div>
         }
 
         async function executeNuke() {
+            // Prevent multiple simultaneous executions (debounce)
+            if (nukeExecuting) {
+                showToast('Processing', 'Nuke is already being launched. Please wait...', 'warning');
+                return;
+            }
+            
             const playerSelect = document.getElementById('nuke-player-select');
             const citySelect = document.getElementById('nuke-city-select');
+            const nukeBtn = document.querySelector('[onclick="executeNuke()"]');
             const targetUid = playerSelect.value;
             const targetCity = citySelect.value;
             const nukeCost = 5000000000000; // 5T
@@ -6843,6 +6851,10 @@ What is your experience?"></textarea></div>
                 showToast('Insufficient Funds', `Launching a nuke costs $${formatNum(nukeCost)} (5T)`, 'danger');
                 return;
             }
+            
+            // Set executing state and disable button
+            nukeExecuting = true;
+            if (nukeBtn) { nukeBtn.disabled = true; nukeBtn.textContent = '⏳ Launching...'; }
             
             try {
                 if (!window.fbDb || !window.fbMethods) {
@@ -6950,9 +6962,39 @@ What is your experience?"></textarea></div>
             } catch (e) {
                 console.error('Nuke execution error:', e);
                 showToast('Error', 'Failed to launch nuke: ' + e.message, 'danger');
+            } finally {
+                // Reset executing state and re-enable button
+                nukeExecuting = false;
+                if (nukeBtn) { nukeBtn.disabled = false; nukeBtn.textContent = '\ud83d\udca3 Launch Nuke'; }
             }
         }
 
+        // ===================== NOTIFICATION QUEUE SYSTEM =====================
+        let notificationQueue = [];
+        let isShowingNotification = false;
+        
+        function enqueueNotification(type, data) {
+            notificationQueue.push({ type, data });
+            processNotificationQueue();
+        }
+        
+        async function processNotificationQueue() {
+            if (isShowingNotification || notificationQueue.length === 0) return;
+            
+            isShowingNotification = true;
+            const notification = notificationQueue.shift();
+            
+            if (notification.type === 'nuke_received') {
+                await showNukeReceivedPopupQueued(notification.data.from, notification.data.city, notification.data.notifId);
+            } else if (notification.type === 'job_hired') {
+                await showJobHiredPopupQueued(notification.data.title, notification.data.company, notification.data.salary, notification.data.notifId);
+            }
+            
+            isShowingNotification = false;
+            // Process next notification in queue
+            processNotificationQueue();
+        }
+        
         // Listen for nuke and job notifications
         function startGlobalNotificationListener() {
             const user = window.fbAuth ? window.fbAuth.currentUser : null;
@@ -6966,16 +7008,22 @@ What is your experience?"></textarea></div>
                     if (change.type === "added") {
                         const notif = change.doc.data();
                         if (notif.type === 'nuke_received') {
-                            showNukeReceivedPopup(notif.from, notif.city, change.doc.id);
+                            enqueueNotification('nuke_received', { from: notif.from, city: notif.city, notifId: change.doc.id });
                         } else if (notif.type === 'job_hired') {
-                            showJobHiredPopup(notif.jobTitle, notif.companyName, notif.salary, change.doc.id);
+                            enqueueNotification('job_hired', { title: notif.jobTitle, company: notif.companyName, salary: notif.salary, notifId: change.doc.id });
                         }
                     }
                 });
             });
         }
 
-        function showJobHiredPopup(title, company, salary, notifId) {
+        function showJobHiredPopupQueued(title, company, salary, notifId) {
+            return new Promise((resolve) => {
+                showJobHiredPopup(title, company, salary, notifId, resolve);
+            });
+        }
+
+        function showJobHiredPopup(title, company, salary, notifId, onClose) {
             const popup = document.createElement('div');
             popup.className = 'modal-overlay';
             popup.style.zIndex = '10000';
@@ -7006,13 +7054,21 @@ What is your experience?"></textarea></div>
                 
                 document.body.removeChild(popup);
                 saveGame();
+                if (onClose) onClose();
             };
         }
 
-        function showNukeReceivedPopup(from, city, notifId) {
+        function showNukeReceivedPopupQueued(from, city, notifId) {
+            return new Promise((resolve) => {
+                showNukeReceivedPopup(from, city, notifId, resolve);
+            });
+        }
+
+        function showNukeReceivedPopup(from, city, notifId, onClose) {
             const popup = document.createElement('div');
             popup.className = 'modal-overlay';
             popup.style.zIndex = '10000';
+            const btnId = 'nuke-acknowledge-btn-' + notifId;
             popup.innerHTML = `
                 <div class="modal-content" style="max-width:400px;text-align:center;border:2px solid var(--danger);background:linear-gradient(135deg,rgba(239,68,68,0.1),rgba(220,38,38,0.1))">
                     <div style="font-size:4rem;margin-bottom:1rem;animation:pulse 0.5s infinite">💣</div>
@@ -7022,17 +7078,32 @@ What is your experience?"></textarea></div>
                         <div style="margin-bottom:0.5rem">📉 <strong>Your stocks & crypto dropped 50%!</strong></div>
                         <div>⏱️ Effects last for 10 minutes</div>
                     </div>
-                    <button class="btn btn-danger" id="nuke-acknowledge-btn" style="width:100%;background:linear-gradient(135deg,#ef4444,#dc2626)">Acknowledge</button>
+                    <button class="btn btn-danger" id="${btnId}" style="width:100%;background:linear-gradient(135deg,#ef4444,#dc2626)">Acknowledge</button>
                 </div>
             `;
             document.body.appendChild(popup);
 
-            document.getElementById('nuke-acknowledge-btn').onclick = async () => {
-                const user = window.fbAuth.currentUser;
-                const docRef = window.fbMethods.doc(window.fbDb, 'users', user.uid, 'notifications', notifId);
-                await window.fbMethods.updateDoc(docRef, { read: true });
-                document.body.removeChild(popup);
-            };
+            const acknowledgeBtn = document.getElementById(btnId);
+            if (acknowledgeBtn) {
+                acknowledgeBtn.onclick = async () => {
+                    acknowledgeBtn.disabled = true;
+                    acknowledgeBtn.textContent = '✓ Acknowledged';
+                    try {
+                        const user = window.fbAuth.currentUser;
+                        if (user) {
+                            const docRef = window.fbMethods.doc(window.fbDb, 'users', user.uid, 'notifications', notifId);
+                            await window.fbMethods.updateDoc(docRef, { read: true });
+                        }
+                    } catch (e) {
+                        console.error('Error marking notification as read:', e);
+                    } finally {
+                        if (popup.parentNode) {
+                            document.body.removeChild(popup);
+                        }
+                        if (onClose) onClose();
+                    }
+                };
+            }
         }
 
         // ===================== INIT =====================
