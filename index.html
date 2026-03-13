@@ -496,6 +496,8 @@
                 <div class="nav-item" onclick="switchTab('crypto')">Crypto</div>
                 <div class="nav-item" onclick="switchTab('education')">Education</div>
                 <div class="nav-item" onclick="switchTab('achievements')">Achievements</div>
+                <div class="nav-item" onclick="switchTab('aibot')" style="color:#a855f7">AI Invest Bot</div>
+                <div class="nav-item" id="club-nav-item" onclick="switchTab('club')" style="color:#f59e0b">The Club 🔒</div>
                 <div class="nav-item" onclick="switchTab('leaderboard')" style="color:var(--warning)">Leaderboard</div>
                 <div class="nav-item" onclick="switchTab('profile')" style="color:var(--brand);border-top:1px solid var(--border);margin-top:auto;padding-top:1rem">Profile</div>
             </div>
@@ -779,6 +781,52 @@
                     </table>
                 </div>
             </div>
+
+                <!-- AI Bot Tab -->
+                <div id="aibot" class="tab-panel">
+                    <h2 style="margin-bottom:0.5rem">AI Auto-Invest Bots</h2>
+                    <p style="color:var(--text-muted);margin-bottom:1.5rem">Let AI manage your investments — choose your tier wisely. Cheaper bots lose money; premium bots find the best stocks.</p>
+                    <div id="aibot-active-panel" style="margin-bottom:2rem"></div>
+                    <h3 style="margin-bottom:1rem">Available Bots</h3>
+                    <div id="aibot-shop" class="widget-grid" style="grid-template-columns:repeat(auto-fill,minmax(280px,1fr))"></div>
+                </div>
+
+                <!-- The Club Tab -->
+                <div id="club" class="tab-panel">
+                    <div id="club-locked-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center">
+                        <div style="font-size:4rem;margin-bottom:1rem">🔒</div>
+                        <h2 style="margin-bottom:0.5rem;color:var(--warning)">The Club — Members Only</h2>
+                        <p style="color:var(--text-muted);margin-bottom:1.5rem;max-width:400px">Exclusive VIP gambling lounge. Requires a net worth of $500,000,000 to unlock. Play Blackjack, Slots, Roulette, Dice, and more!</p>
+                        <div style="font-size:1.2rem;font-weight:700;color:var(--danger);margin-bottom:1rem">Your Net Worth: <span id="club-nw-display">$0</span></div>
+                        <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:1rem;width:100%;max-width:360px;margin-bottom:1rem">
+                            <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;font-size:0.9rem"><span style="color:var(--text-muted)">Required</span><span style="font-weight:700;color:var(--warning)">$500,000,000</span></div>
+                            <div style="height:12px;background:var(--bg-base);border-radius:6px;overflow:hidden">
+                                <div id="club-progress-bar" style="height:100%;background:linear-gradient(90deg,var(--warning),var(--success));transition:width 0.5s;width:0%"></div>
+                            </div>
+                        </div>
+                        <p style="color:var(--text-muted);font-size:0.85rem">Keep investing and growing your wealth to gain access!</p>
+                    </div>
+                    <div id="club-unlocked-screen" style="display:none">
+                        <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem">
+                            <div style="font-size:2.5rem">🎰</div>
+                            <div><h2 style="color:var(--warning)">Welcome to The Club</h2><p style="color:var(--text-muted)">VIP Gambling Lounge — Play responsibly!</p></div>
+                            <div style="margin-left:auto;background:var(--bg-surface);border:1px solid var(--warning);border-radius:8px;padding:0.75rem 1.25rem;text-align:right">
+                                <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase">Club Balance</div>
+                                <div style="font-weight:700;color:var(--warning);font-size:1.2rem" id="club-balance-display">$0</div>
+                            </div>
+                        </div>
+                        <!-- Game Tabs -->
+                        <div style="display:flex;gap:0.5rem;margin-bottom:1.5rem;flex-wrap:wrap">
+                            <button class="btn btn-primary" id="club-tab-bj" onclick="switchClubGame('blackjack')" style="font-size:0.85rem">🃏 Blackjack</button>
+                            <button class="btn btn-secondary" id="club-tab-slots" onclick="switchClubGame('slots')" style="font-size:0.85rem">🎰 Slots</button>
+                            <button class="btn btn-secondary" id="club-tab-roulette" onclick="switchClubGame('roulette')" style="font-size:0.85rem">🎡 Roulette</button>
+                            <button class="btn btn-secondary" id="club-tab-dice" onclick="switchClubGame('dice')" style="font-size:0.85rem">🎲 Dice Roll</button>
+                            <button class="btn btn-secondary" id="club-tab-hilo" onclick="switchClubGame('hilo')" style="font-size:0.85rem">📈 Hi-Lo</button>
+                            <button class="btn btn-secondary" id="club-tab-crash" onclick="switchClubGame('crash')" style="font-size:0.85rem">💥 Crash</button>
+                        </div>
+                        <div id="club-game-area"></div>
+                    </div>
+                </div>
 
             <!-- Profile Tab -->
             <div id="profile" class="tab-panel">
@@ -1900,7 +1948,9 @@
                 cryptoPortfolio: {},
                 activityLog: [],
                 achievements: [],
-                completedTasks: []
+                completedTasks: [],
+                aiBots: [],
+                clubBalance: 0
             },
             stockPrices: {},
             cryptoPrices: {},
@@ -2188,6 +2238,8 @@
                 if (!state.player.achievements) state.player.achievements = [];
                 if (!state.player.completedTasks) state.player.completedTasks = [];
                 if (!state.player.certifications) state.player.certifications = [];
+                if (!state.player.aiBots) state.player.aiBots = [];
+                if (state.player.clubBalance === undefined) state.player.clubBalance = 0;
                 
                 // Fill any missing prices and history
                 STOCKS.forEach(s => {
@@ -2601,6 +2653,8 @@
                     });
                 }
             });
+            // Process AI bots
+            processAIBots();
             // Update stock prices
             tickMarket();
             // Level up check
@@ -2937,6 +2991,8 @@
             else if (state.currentTab === 'education') renderEducation();
             else if (state.currentTab === 'leaderboard') renderLeaderboard();
             else if (state.currentTab === 'profile') renderProfile();
+            else if (state.currentTab === 'aibot') renderAIBot();
+            else if (state.currentTab === 'club') renderClub();
         }
 
         function updateUI() {
@@ -3015,10 +3071,14 @@
         function switchTab(tab) {
             state.currentTab = tab;
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => { if (n.textContent.toLowerCase().includes(tab.toLowerCase().replace('blackmarket','black'))) n.classList.add('active'); });
+            // Match by onclick attribute for precise tab switching
+            document.querySelectorAll('.nav-item').forEach(n => {
+                const oc = n.getAttribute('onclick') || '';
+                if (oc.includes("'" + tab + "'") || oc.includes('"' + tab + '"')) n.classList.add('active');
+            });
             document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
             document.getElementById(tab).classList.add('active');
-            const titles = { dashboard:'Dashboard', market:'Stock Market', portfolio:'Portfolio', career:'Career', company:'Company Management', properties:'Real Estate', lifestyle:'Lifestyle', banking:'Banking', blackmarket:'Black Market', crypto:'Cryptocurrency', education:'Education', achievements:'Achievements', leaderboard:'Leaderboard', profile:'Profile & Settings' };
+            const titles = { dashboard:'Dashboard', market:'Stock Market', portfolio:'Portfolio', career:'Career', company:'Company Management', properties:'Real Estate', lifestyle:'Lifestyle', banking:'Banking', blackmarket:'Black Market', crypto:'Cryptocurrency', education:'Education', achievements:'Achievements', aibot:'AI Invest Bot', club:'The Club', leaderboard:'Leaderboard', profile:'Profile & Settings' };
             document.getElementById('tab-title').textContent = titles[tab] || tab;
             renderAll();
         }
@@ -3931,8 +3991,9 @@
             const co = state.player.companies.find(c => c.id === coId);
             const content = document.getElementById('job-modal-content');
             content.innerHTML = `
-                <div style="margin-bottom:1.5rem">
+                    <div style="margin-bottom:1.5rem">
                     <h4 style="margin-bottom:1rem">Start New Project</h4>
+                    ${co.projects.filter(p=>!p.completed).length >= 5 ? `<div style="background:rgba(245,158,11,0.15);border:1px solid var(--warning);border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.85rem;color:var(--warning)">⚠️ <strong>Project Limit Reached:</strong> You have 5 active projects. Complete or wait for them to finish before starting new ones.</div>` : ''}
                     <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;border:1px solid var(--border);margin-bottom:1rem">
                         <div style="font-weight:700;margin-bottom:0.5rem">Custom Project</div>
                         <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem">Invest any amount. Potential revenue is 5x-15x investment.</div>
@@ -3975,6 +4036,8 @@
 
         function startProject(coId, name, cost) {
             const co = state.player.companies.find(c => c.id === coId);
+            const activeProjects = co.projects.filter(p => !p.completed);
+            if (activeProjects.length >= 5) { showToast('Project Limit', 'Max 5 active projects! Finish existing ones first.', 'warning'); return; }
             if (co.cash < cost) { showToast('Insufficient Funds', 'Company needs more cash', 'danger'); return; }
             co.cash -= cost;
             co.projects.push({ name, stage: 'In Progress', progress: 0, invested: cost, completed: false });
@@ -3986,6 +4049,8 @@
 
         function startCustomProject(coId) {
             const co = state.player.companies.find(c => c.id === coId);
+            const activeProjects = co.projects.filter(p => !p.completed);
+            if (activeProjects.length >= 5) { showToast('Project Limit', 'Max 5 active projects! Finish existing ones first.', 'warning'); return; }
             const amt = parseFloat(document.getElementById('custom-proj-amt').value);
             const name = document.getElementById('custom-proj-name').value || "Custom Project";
             if (!amt || amt < 1000) { showToast('Error', 'Minimum investment is $1,000', 'danger'); return; }
@@ -4773,6 +4838,695 @@
             showToast('Back Online', 'Syncing local saves to cloud...', 'success');
             setTimeout(syncLocalToCloud, 2000);
         });
+
+        // ===================== AI INVEST BOTS =====================
+        const AI_BOTS = [
+            { id: 'bot1', name: 'Budget Guesser', tier: 1, price: 100000, icon: '🤖', color: '#ef4444', desc: 'Barely knows what a stock is. Guaranteed to lose money every day.', winRate: 0, dailyReturn: -0.08, maxLoss: 0.15 },
+            { id: 'bot2', name: 'Penny Predictor', tier: 2, price: 500000, icon: '🤖', color: '#f97316', desc: 'Occasionally gets lucky, but mostly just burns your cash slowly.', winRate: 0.15, dailyReturn: -0.05, maxLoss: 0.10 },
+            { id: 'bot3', name: 'Average Joe Bot', tier: 3, price: 2000000, icon: '🤖', color: '#eab308', desc: 'Performs about as well as random chance. Sometimes wins, often loses.', winRate: 0.35, dailyReturn: -0.02, maxLoss: 0.07 },
+            { id: 'bot4', name: 'Market Watcher', tier: 4, price: 10000000, icon: '🤖', color: '#84cc16', desc: 'Reads trends but acts too slow. Slightly positive on good days.', winRate: 0.50, dailyReturn: 0.01, maxLoss: 0.05 },
+            { id: 'bot5', name: 'Quant Analyst', tier: 5, price: 50000000, icon: '🤖', color: '#22c55e', desc: 'Uses quantitative models. Consistent small gains with occasional dips.', winRate: 0.65, dailyReturn: 0.025, maxLoss: 0.03 },
+            { id: 'bot6', name: 'Hedge Fund AI', tier: 6, price: 200000000, icon: '🤖', color: '#06b6d4', desc: 'Institutional-grade algorithms. Strong daily returns with minimal risk.', winRate: 0.80, dailyReturn: 0.04, maxLoss: 0.02 },
+            { id: 'bot7', name: 'Quantum Oracle', tier: 7, price: 1000000000, icon: '🤖', color: '#a855f7', desc: 'The ultimate AI. Always finds the best stocks. Never loses. Worth every penny.', winRate: 1.0, dailyReturn: 0.08, maxLoss: 0 }
+        ];
+
+        function renderAIBot() {
+            if (!state.player.aiBots) state.player.aiBots = [];
+            const panel = document.getElementById('aibot-active-panel');
+            const shop = document.getElementById('aibot-shop');
+            
+            // Active bots
+            if (state.player.aiBots.length === 0) {
+                panel.innerHTML = '';
+            } else {
+                panel.innerHTML = `<h3 style="margin-bottom:1rem">Your Active Bots</h3><div class="widget-grid" style="grid-template-columns:repeat(auto-fill,minmax(280px,1fr))">${
+                    state.player.aiBots.map(ab => {
+                        const bot = AI_BOTS.find(b => b.id === ab.botId);
+                        if (!bot) return '';
+                        const totalPL = ab.totalPL || 0;
+                        const plColor = totalPL >= 0 ? 'var(--success)' : 'var(--danger)';
+                        return `<div style="background:var(--bg-surface);border:2px solid ${bot.color};border-radius:12px;padding:1.5rem">
+                            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem">
+                                <div style="font-size:2rem">${bot.icon}</div>
+                                <div><div style="font-weight:700">${bot.name}</div><div style="font-size:0.75rem;color:${bot.color}">Tier ${bot.tier}</div></div>
+                                <div style="margin-left:auto;text-align:right">
+                                    <div style="font-size:0.7rem;color:var(--text-muted)">Invested</div>
+                                    <div style="font-weight:700;color:var(--brand)">$${formatNum(ab.invested)}</div>
+                                </div>
+                            </div>
+                            <div style="background:var(--bg-panel);border-radius:8px;padding:0.75rem;margin-bottom:1rem;font-size:0.85rem">
+                                <div style="display:flex;justify-content:space-between;margin-bottom:0.4rem"><span style="color:var(--text-muted)">Current Value</span><span style="font-weight:700;color:var(--brand)">$${formatNum(ab.value)}</span></div>
+                                <div style="display:flex;justify-content:space-between;margin-bottom:0.4rem"><span style="color:var(--text-muted)">Total P/L</span><span style="font-weight:700;color:${plColor}">${totalPL >= 0 ? '+' : ''}$${formatNum(totalPL)}</span></div>
+                                <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Days Active</span><span style="font-weight:700">${ab.daysActive || 0}</span></div>
+                            </div>
+                            <div style="display:flex;gap:0.5rem">
+                                <button class="btn btn-danger" onclick="sellAIBot('${ab.id}')" style="flex:1;font-size:0.8rem">Sell Bot</button>
+                                <button class="btn btn-secondary" onclick="addFundsToBot('${ab.id}')" style="flex:1;font-size:0.8rem">Add Funds</button>
+                            </div>
+                        </div>`;
+                    }).join('')
+                }</div>`;
+            }
+            
+            // Shop
+            shop.innerHTML = AI_BOTS.map(bot => {
+                const owned = state.player.aiBots.find(ab => ab.botId === bot.id);
+                const canAfford = state.player.cash >= bot.price;
+                return `<div style="background:var(--bg-surface);border:2px solid ${owned ? bot.color : 'var(--border)'};border-radius:12px;padding:1.5rem;position:relative;overflow:hidden">
+                    ${owned ? `<div style="position:absolute;top:0.75rem;right:0.75rem;background:${bot.color};color:#fff;font-size:0.65rem;font-weight:700;padding:0.2rem 0.5rem;border-radius:4px">OWNED</div>` : ''}
+                    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem">
+                        <div style="font-size:2.5rem">${bot.icon}</div>
+                        <div>
+                            <div style="font-weight:700;font-size:1rem">${bot.name}</div>
+                            <div style="font-size:0.75rem;color:${bot.color};font-weight:700">Tier ${bot.tier} — $${formatNum(bot.price)}</div>
+                        </div>
+                    </div>
+                    <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;line-height:1.5">${bot.desc}</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;font-size:0.8rem;margin-bottom:1rem">
+                        <div style="background:var(--bg-panel);padding:0.5rem;border-radius:6px;text-align:center">
+                            <div style="color:var(--text-muted)">Win Rate</div>
+                            <div style="font-weight:700;color:${bot.winRate >= 0.5 ? 'var(--success)' : 'var(--danger)'}">${(bot.winRate*100).toFixed(0)}%</div>
+                        </div>
+                        <div style="background:var(--bg-panel);padding:0.5rem;border-radius:6px;text-align:center">
+                            <div style="color:var(--text-muted)">Daily Return</div>
+                            <div style="font-weight:700;color:${bot.dailyReturn >= 0 ? 'var(--success)' : 'var(--danger)'}">${bot.dailyReturn >= 0 ? '+' : ''}${(bot.dailyReturn*100).toFixed(1)}%</div>
+                        </div>
+                    </div>
+                    <button class="btn ${canAfford && !owned ? 'btn-primary' : 'btn-secondary'}" onclick="buyAIBot('${bot.id}')" style="width:100%;font-size:0.85rem" ${(!canAfford || owned) ? 'disabled' : ''}>
+                        ${owned ? 'Already Owned' : canAfford ? 'Buy Bot — $' + formatNum(bot.price) : 'Need $' + formatNum(bot.price)}
+                    </button>
+                </div>`;
+            }).join('');
+        }
+
+        function buyAIBot(botId) {
+            const bot = AI_BOTS.find(b => b.id === botId);
+            if (!bot) return;
+            if (state.player.cash < bot.price) { showToast('Insufficient Funds', `Need $${formatNum(bot.price)}`, 'danger'); return; }
+            if (state.player.aiBots.find(ab => ab.botId === botId)) { showToast('Already Owned', 'You already own this bot', 'warning'); return; }
+            state.player.cash -= bot.price;
+            const investAmt = bot.price * 0.5; // 50% of price goes to investment pool
+            state.player.aiBots.push({
+                id: 'ab_' + Date.now(),
+                botId,
+                invested: investAmt,
+                value: investAmt,
+                totalPL: 0,
+                daysActive: 0
+            });
+            addActivity(`Day ${state.player.day}`, `Purchased ${bot.name} AI Bot for $${formatNum(bot.price)}`, 'success');
+            showToast('Bot Purchased!', `${bot.name} is now managing your investments!`, 'success');
+            saveGame(); updateUI(); renderAIBot();
+        }
+
+        function sellAIBot(abId) {
+            const ab = state.player.aiBots.find(a => a.id === abId);
+            if (!ab) return;
+            const bot = AI_BOTS.find(b => b.id === ab.botId);
+            const sellValue = ab.value;
+            state.player.cash += sellValue;
+            state.player.aiBots = state.player.aiBots.filter(a => a.id !== abId);
+            addActivity(`Day ${state.player.day}`, `Sold ${bot ? bot.name : 'AI Bot'} — Recovered $${formatNum(sellValue)}`, 'warning');
+            showToast('Bot Sold', `Recovered $${formatNum(sellValue)} from bot portfolio`, 'warning');
+            saveGame(); updateUI(); renderAIBot();
+        }
+
+        function addFundsToBot(abId) {
+            const ab = state.player.aiBots.find(a => a.id === abId);
+            if (!ab) return;
+            const bot = AI_BOTS.find(b => b.id === ab.botId);
+            document.getElementById('amount-modal-title').textContent = `Add Funds to ${bot ? bot.name : 'Bot'}`;
+            document.getElementById('amount-modal-desc').textContent = `Your cash: $${formatNum(state.player.cash)}. Funds will be managed by the bot.`;
+            document.getElementById('amount-modal-input').value = '';
+            const btn = document.getElementById('amount-modal-confirm');
+            btn.onclick = () => {
+                const amt = parseFloat(document.getElementById('amount-modal-input').value);
+                if (!amt || amt <= 0) { showToast('Error', 'Enter a valid amount', 'danger'); return; }
+                if (state.player.cash < amt) { showToast('Insufficient Funds', '', 'danger'); return; }
+                state.player.cash -= amt;
+                ab.invested += amt;
+                ab.value += amt;
+                document.getElementById('amount-modal').classList.add('hidden');
+                showToast('Funds Added', `$${formatNum(amt)} added to bot`, 'success');
+                saveGame(); updateUI(); renderAIBot();
+            };
+            document.getElementById('amount-modal').classList.remove('hidden');
+        }
+
+        function processAIBots() {
+            if (!state.player.aiBots || state.player.aiBots.length === 0) return;
+            state.player.aiBots.forEach(ab => {
+                const bot = AI_BOTS.find(b => b.id === ab.botId);
+                if (!bot || ab.value <= 0) return;
+                ab.daysActive = (ab.daysActive || 0) + 1;
+                let changeRate;
+                const roll = Math.random();
+                if (bot.id === 'bot7') {
+                    // Quantum Oracle: always wins
+                    changeRate = bot.dailyReturn * (0.8 + Math.random() * 0.5);
+                } else if (roll < bot.winRate) {
+                    // Win day
+                    changeRate = bot.dailyReturn * (0.5 + Math.random() * 1.5);
+                } else {
+                    // Loss day
+                    changeRate = -(bot.maxLoss * (0.3 + Math.random() * 0.7));
+                }
+                const change = ab.value * changeRate;
+                ab.value = Math.max(0, ab.value + change);
+                ab.totalPL = ab.value - ab.invested;
+                const changeStr = change >= 0 ? `+$${formatNum(change)}` : `-$${formatNum(Math.abs(change))}`;
+                addActivity(`Day ${state.player.day}`, `${bot.name}: ${changeStr} (${(changeRate*100).toFixed(1)}%)`, change >= 0 ? 'success' : 'danger');
+            });
+        }
+
+        // ===================== THE CLUB =====================
+        const CLUB_UNLOCK_AMOUNT = 500000000;
+        let clubState = { game: 'blackjack', bjDeck: [], bjPlayerHand: [], bjDealerHand: [], bjBet: 0, bjPhase: 'bet', crashMultiplier: 1, crashRunning: false, crashInterval: null, crashBet: 0, crashCashedOut: false };
+
+        function renderClub() {
+            const nw = calcNetWorth();
+            const locked = document.getElementById('club-locked-screen');
+            const unlocked = document.getElementById('club-unlocked-screen');
+            const nwEl = document.getElementById('club-nw-display');
+            const bar = document.getElementById('club-progress-bar');
+            if (nwEl) nwEl.textContent = '$' + formatNum(nw);
+            if (bar) bar.style.width = Math.min(100, (nw / CLUB_UNLOCK_AMOUNT) * 100) + '%';
+            const navItem = document.getElementById('club-nav-item');
+            if (nw >= CLUB_UNLOCK_AMOUNT) {
+                if (locked) locked.style.display = 'none';
+                if (unlocked) unlocked.style.display = 'block';
+                if (!state.player.clubBalance) state.player.clubBalance = 0;
+                if (navItem) navItem.textContent = 'The Club 🎰';
+                updateClubBalanceDisplay();
+                switchClubGame(clubState.game);
+            } else {
+                if (locked) locked.style.display = 'flex';
+                if (unlocked) unlocked.style.display = 'none';
+                if (navItem) navItem.textContent = 'The Club 🔒';
+            }
+        }
+
+        function updateClubBalanceDisplay() {
+            const el = document.getElementById('club-balance-display');
+            if (el) el.textContent = '$' + formatNum(state.player.clubBalance);
+        }
+
+        function clubDeposit() {
+            document.getElementById('amount-modal-title').textContent = 'Deposit to Club';
+            document.getElementById('amount-modal-desc').textContent = `Cash: $${formatNum(state.player.cash)}. Deposit to play at The Club.`;
+            document.getElementById('amount-modal-input').value = '';
+            const btn = document.getElementById('amount-modal-confirm');
+            btn.onclick = () => {
+                const amt = parseFloat(document.getElementById('amount-modal-input').value);
+                if (!amt || amt <= 0) { showToast('Error', 'Enter a valid amount', 'danger'); return; }
+                if (state.player.cash < amt) { showToast('Insufficient Funds', '', 'danger'); return; }
+                state.player.cash -= amt;
+                state.player.clubBalance += amt;
+                document.getElementById('amount-modal').classList.add('hidden');
+                updateClubBalanceDisplay(); updateUI(); saveGame();
+                showToast('Deposited', `$${formatNum(amt)} added to Club balance`, 'success');
+            };
+            document.getElementById('amount-modal').classList.remove('hidden');
+        }
+
+        function clubWithdraw() {
+            document.getElementById('amount-modal-title').textContent = 'Withdraw from Club';
+            document.getElementById('amount-modal-desc').textContent = `Club Balance: $${formatNum(state.player.clubBalance)}`;
+            document.getElementById('amount-modal-input').value = '';
+            const btn = document.getElementById('amount-modal-confirm');
+            btn.onclick = () => {
+                const amt = parseFloat(document.getElementById('amount-modal-input').value);
+                if (!amt || amt <= 0) { showToast('Error', 'Enter a valid amount', 'danger'); return; }
+                if (state.player.clubBalance < amt) { showToast('Insufficient Club Balance', '', 'danger'); return; }
+                state.player.clubBalance -= amt;
+                state.player.cash += amt;
+                document.getElementById('amount-modal').classList.add('hidden');
+                updateClubBalanceDisplay(); updateUI(); saveGame();
+                showToast('Withdrawn', `$${formatNum(amt)} moved to wallet`, 'success');
+            };
+            document.getElementById('amount-modal').classList.remove('hidden');
+        }
+
+        function switchClubGame(game) {
+            clubState.game = game;
+            ['bj','slots','roulette','dice','hilo','crash'].forEach(g => {
+                const btn = document.getElementById('club-tab-' + g);
+                if (btn) { btn.className = game === (g === 'bj' ? 'blackjack' : g) ? 'btn btn-primary' : 'btn btn-secondary'; }
+            });
+            const area = document.getElementById('club-game-area');
+            if (!area) return;
+            const depositRow = `<div style="display:flex;gap:0.75rem;margin-bottom:1.5rem;align-items:center;flex-wrap:wrap">
+                <div style="flex:1;min-width:200px;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:0.75rem 1rem;font-size:0.9rem">
+                    <span style="color:var(--text-muted)">Club Balance: </span><strong style="color:var(--warning)">$${formatNum(state.player.clubBalance)}</strong>
+                </div>
+                <button class="btn btn-success" onclick="clubDeposit()" style="font-size:0.85rem">+ Deposit</button>
+                <button class="btn btn-secondary" onclick="clubWithdraw()" style="font-size:0.85rem">- Withdraw</button>
+            </div>`;
+            if (game === 'blackjack') area.innerHTML = depositRow + renderBlackjackGame();
+            else if (game === 'slots') area.innerHTML = depositRow + renderSlotsGame();
+            else if (game === 'roulette') area.innerHTML = depositRow + renderRouletteGame();
+            else if (game === 'dice') area.innerHTML = depositRow + renderDiceGame();
+            else if (game === 'hilo') area.innerHTML = depositRow + renderHiLoGame();
+            else if (game === 'crash') area.innerHTML = depositRow + renderCrashGame();
+        }
+
+        // ---- BLACKJACK ----
+        function bjNewDeck() {
+            const suits = ['♠','♥','♦','♣'], vals = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+            let deck = [];
+            suits.forEach(s => vals.forEach(v => deck.push({s, v})));
+            for (let i = deck.length-1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [deck[i],deck[j]]=[deck[j],deck[i]]; }
+            return deck;
+        }
+        function bjCardVal(card) { if (['J','Q','K'].includes(card.v)) return 10; if (card.v==='A') return 11; return parseInt(card.v); }
+        function bjHandVal(hand) {
+            let val = hand.reduce((s,c) => s + bjCardVal(c), 0);
+            let aces = hand.filter(c => c.v==='A').length;
+            while (val > 21 && aces > 0) { val -= 10; aces--; }
+            return val;
+        }
+        function bjCardHtml(card, hidden=false) {
+            if (hidden) return `<div style="display:inline-flex;align-items:center;justify-content:center;width:50px;height:72px;background:var(--brand);border-radius:6px;margin:0.25rem;font-size:1.5rem;color:white;border:2px solid var(--border)">?</div>`;
+            const red = card.s==='♥'||card.s==='♦';
+            return `<div style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:50px;height:72px;background:white;border-radius:6px;margin:0.25rem;font-size:0.9rem;font-weight:700;color:${red?'#e11d48':'#1e293b'};border:2px solid #ccc">${card.v}<br>${card.s}</div>`;
+        }
+        function renderBlackjackGame() {
+            return `<div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;max-width:600px">
+                <h3 style="margin-bottom:1rem;color:var(--brand)">🃏 Blackjack</h3>
+                <div id="bj-table" style="background:#0d5c2e;border-radius:12px;padding:1.5rem;margin-bottom:1rem;min-height:200px">
+                    <div style="color:#fff;font-size:0.85rem;margin-bottom:0.5rem">Dealer's Hand</div>
+                    <div id="bj-dealer-cards" style="margin-bottom:1rem;min-height:80px"></div>
+                    <div style="color:#fff;font-size:0.85rem;margin-bottom:0.5rem">Your Hand</div>
+                    <div id="bj-player-cards" style="min-height:80px"></div>
+                </div>
+                <div id="bj-status" style="text-align:center;font-size:1.1rem;font-weight:700;margin-bottom:1rem;min-height:1.5rem"></div>
+                <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap">
+                    <div class="input-group" style="flex:1;min-width:120px;margin-bottom:0">
+                        <input type="number" id="bj-bet-input" placeholder="Bet amount" min="100">
+                        <span>$</span>
+                    </div>
+                    <button class="btn btn-success" id="bj-deal-btn" onclick="bjDeal()">Deal</button>
+                    <button class="btn btn-primary" id="bj-hit-btn" onclick="bjHit()" style="display:none">Hit</button>
+                    <button class="btn btn-secondary" id="bj-stand-btn" onclick="bjStand()" style="display:none">Stand</button>
+                    <button class="btn btn-warning" id="bj-double-btn" onclick="bjDouble()" style="display:none;background:var(--warning);color:#000">Double</button>
+                </div>
+            </div>`;
+        }
+        function bjDeal() {
+            const bet = parseFloat(document.getElementById('bj-bet-input').value);
+            if (!bet || bet <= 0) { showToast('Error','Enter a bet amount','danger'); return; }
+            if (state.player.clubBalance < bet) { showToast('Insufficient Club Balance','Deposit more funds','danger'); return; }
+            state.player.clubBalance -= bet;
+            clubState.bjBet = bet;
+            clubState.bjDeck = bjNewDeck();
+            clubState.bjPlayerHand = [clubState.bjDeck.pop(), clubState.bjDeck.pop()];
+            clubState.bjDealerHand = [clubState.bjDeck.pop(), clubState.bjDeck.pop()];
+            clubState.bjPhase = 'play';
+            bjRender();
+            updateClubBalanceDisplay();
+            const pv = bjHandVal(clubState.bjPlayerHand);
+            if (pv === 21) { setTimeout(bjStand, 500); }
+        }
+        function bjRender(showAll=false) {
+            const dc = document.getElementById('bj-dealer-cards');
+            const pc = document.getElementById('bj-player-cards');
+            const st = document.getElementById('bj-status');
+            if (!dc) return;
+            const dv = showAll ? bjHandVal(clubState.bjDealerHand) : bjCardVal(clubState.bjDealerHand[0]);
+            dc.innerHTML = clubState.bjDealerHand.map((c,i) => bjCardHtml(c, !showAll && i>0)).join('') + (showAll ? `<span style="color:#fff;margin-left:0.5rem;font-weight:700">${dv}</span>` : '');
+            const pv = bjHandVal(clubState.bjPlayerHand);
+            pc.innerHTML = clubState.bjPlayerHand.map(c => bjCardHtml(c)).join('') + `<span style="color:#fff;margin-left:0.5rem;font-weight:700">${pv}</span>`;
+            const dealBtn = document.getElementById('bj-deal-btn');
+            const hitBtn = document.getElementById('bj-hit-btn');
+            const standBtn = document.getElementById('bj-stand-btn');
+            const dblBtn = document.getElementById('bj-double-btn');
+            if (clubState.bjPhase === 'play') {
+                if(dealBtn) dealBtn.style.display='none';
+                if(hitBtn) hitBtn.style.display='inline-flex';
+                if(standBtn) standBtn.style.display='inline-flex';
+                if(dblBtn) dblBtn.style.display = state.player.clubBalance >= clubState.bjBet ? 'inline-flex' : 'none';
+                if(st) st.innerHTML = '';
+            } else {
+                if(dealBtn) dealBtn.style.display='inline-flex';
+                if(hitBtn) hitBtn.style.display='none';
+                if(standBtn) standBtn.style.display='none';
+                if(dblBtn) dblBtn.style.display='none';
+            }
+        }
+        function bjHit() {
+            clubState.bjPlayerHand.push(clubState.bjDeck.pop());
+            const pv = bjHandVal(clubState.bjPlayerHand);
+            bjRender();
+            if (pv > 21) bjResolve();
+        }
+        function bjDouble() {
+            if (state.player.clubBalance < clubState.bjBet) { showToast('Insufficient','Not enough club balance','danger'); return; }
+            state.player.clubBalance -= clubState.bjBet;
+            clubState.bjBet *= 2;
+            clubState.bjPlayerHand.push(clubState.bjDeck.pop());
+            updateClubBalanceDisplay();
+            bjRender();
+            setTimeout(bjStand, 300);
+        }
+        function bjStand() {
+            while (bjHandVal(clubState.bjDealerHand) < 17) clubState.bjDealerHand.push(clubState.bjDeck.pop());
+            bjResolve();
+        }
+        function bjResolve() {
+            clubState.bjPhase = 'done';
+            const pv = bjHandVal(clubState.bjPlayerHand);
+            const dv = bjHandVal(clubState.bjDealerHand);
+            bjRender(true);
+            const st = document.getElementById('bj-status');
+            let msg = '', win = 0;
+            if (pv > 21) { msg = '💥 Bust! You lose.'; win = 0; }
+            else if (dv > 21) { msg = '🎉 Dealer busts! You win!'; win = clubState.bjBet * 2; }
+            else if (pv > dv) { msg = '🏆 You win!'; win = clubState.bjBet * 2; }
+            else if (pv === dv) { msg = '🤝 Push! Bet returned.'; win = clubState.bjBet; }
+            else { msg = '😞 Dealer wins.'; win = 0; }
+            if (pv === 21 && clubState.bjPlayerHand.length === 2) { msg = '🃏 Blackjack! 3:2 payout!'; win = clubState.bjBet * 2.5; }
+            state.player.clubBalance += win;
+            const net = win - clubState.bjBet;
+            if (st) st.innerHTML = `<span style="color:${net>=0?'var(--success)':'var(--danger)'}">${msg} ${net>=0?'+':''} $${formatNum(net)}</span>`;
+            addActivity(`Day ${state.player.day}`, `Club Blackjack: ${msg} ${net>=0?'+':''} $${formatNum(net)}`, net>=0?'success':'danger');
+            updateClubBalanceDisplay(); saveGame();
+        }
+
+        // ---- SLOTS ----
+        const SLOT_SYMBOLS = ['🍒','🍋','🍊','🍇','🔔','💎','7️⃣','🎰','⭐','🃏'];
+        const SLOT_PAYOUTS = { '🍒': 2, '🍋': 3, '🍊': 4, '🍇': 5, '🔔': 8, '💎': 15, '7️⃣': 20, '🎰': 50, '⭐': 10, '🃏': 25 };
+        function renderSlotsGame() {
+            return `<div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;max-width:500px">
+                <h3 style="margin-bottom:1rem;color:var(--warning)">🎰 Slot Machine</h3>
+                <div style="background:linear-gradient(135deg,#1a0533,#2d0a5e);border-radius:12px;padding:2rem;margin-bottom:1rem;text-align:center">
+                    <div id="slot-reels" style="display:flex;justify-content:center;gap:1rem;font-size:3rem;margin-bottom:1rem">
+                        <div style="background:white;border-radius:8px;width:80px;height:80px;display:flex;align-items:center;justify-content:center">🎰</div>
+                        <div style="background:white;border-radius:8px;width:80px;height:80px;display:flex;align-items:center;justify-content:center">🎰</div>
+                        <div style="background:white;border-radius:8px;width:80px;height:80px;display:flex;align-items:center;justify-content:center">🎰</div>
+                    </div>
+                    <div id="slot-status" style="color:#fff;font-size:1rem;font-weight:700;min-height:1.5rem"></div>
+                </div>
+                <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap">
+                    <div class="input-group" style="flex:1;min-width:120px;margin-bottom:0">
+                        <input type="number" id="slot-bet-input" placeholder="Bet" min="100">
+                        <span>$</span>
+                    </div>
+                    <button class="btn btn-warning" onclick="spinSlots()" style="background:var(--warning);color:#000;font-size:1rem;padding:0.75rem 2rem">🎰 SPIN!</button>
+                </div>
+                <div style="margin-top:1rem;font-size:0.75rem;color:var(--text-muted)">
+                    Payouts: 🍒×2 🍋×3 🍊×4 🍇×5 ⭐×10 🔔×8 💎×15 🃏×25 7️⃣×20 🎰×50
+                </div>
+            </div>`;
+        }
+        function spinSlots() {
+            const bet = parseFloat(document.getElementById('slot-bet-input').value);
+            if (!bet || bet <= 0) { showToast('Error','Enter a bet','danger'); return; }
+            if (state.player.clubBalance < bet) { showToast('Insufficient Club Balance','','danger'); return; }
+            state.player.clubBalance -= bet;
+            updateClubBalanceDisplay();
+            const reels = document.getElementById('slot-reels');
+            const status = document.getElementById('slot-status');
+            const divs = reels.querySelectorAll('div');
+            let spins = 0;
+            const interval = setInterval(() => {
+                divs.forEach(d => d.textContent = SLOT_SYMBOLS[Math.floor(Math.random()*SLOT_SYMBOLS.length)]);
+                spins++;
+                if (spins > 15) {
+                    clearInterval(interval);
+                    const results = Array.from({length:3}, () => SLOT_SYMBOLS[Math.floor(Math.random()*SLOT_SYMBOLS.length)]);
+                    results.forEach((r,i) => divs[i].textContent = r);
+                    let win = 0, msg = '';
+                    if (results[0]===results[1]&&results[1]===results[2]) {
+                        const mult = SLOT_PAYOUTS[results[0]] || 5;
+                        win = bet * mult;
+                        msg = `🎉 JACKPOT! ${results[0]}${results[0]}${results[0]} × ${mult} = +$${formatNum(win)}`;
+                    } else if (results[0]===results[1]||results[1]===results[2]||results[0]===results[2]) {
+                        win = bet * 1.5;
+                        msg = `✨ Two of a kind! +$${formatNum(win - bet)}`;
+                    } else {
+                        msg = `😞 No match. -$${formatNum(bet)}`;
+                    }
+                    state.player.clubBalance += win;
+                    const net = win - bet;
+                    if (status) status.innerHTML = `<span style="color:${net>=0?'#4ade80':'#f87171'}">${msg}</span>`;
+                    addActivity(`Day ${state.player.day}`, `Club Slots: ${msg}`, net>=0?'success':'danger');
+                    updateClubBalanceDisplay(); saveGame();
+                }
+            }, 80);
+        }
+
+        // ---- ROULETTE ----
+        function renderRouletteGame() {
+            return `<div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;max-width:600px">
+                <h3 style="margin-bottom:1rem;color:var(--success)">🎡 Roulette</h3>
+                <div style="background:linear-gradient(135deg,#0a2e0a,#1a5c1a);border-radius:12px;padding:1.5rem;margin-bottom:1rem">
+                    <div id="roulette-wheel" style="text-align:center;font-size:4rem;margin-bottom:1rem">🎡</div>
+                    <div id="roulette-result" style="text-align:center;font-size:1.5rem;font-weight:700;color:#fff;min-height:2rem"></div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem">
+                    <button class="btn" onclick="rouletteBet('red')" style="background:#dc2626;color:white">🔴 Red (×2)</button>
+                    <button class="btn" onclick="rouletteBet('black')" style="background:#1e293b;color:white;border:1px solid #475569">⚫ Black (×2)</button>
+                    <button class="btn btn-secondary" onclick="rouletteBet('even')">Even (×2)</button>
+                    <button class="btn btn-secondary" onclick="rouletteBet('odd')">Odd (×2)</button>
+                    <button class="btn btn-secondary" onclick="rouletteBet('low')">1-18 (×2)</button>
+                    <button class="btn btn-secondary" onclick="rouletteBet('high')">19-36 (×2)</button>
+                    <button class="btn btn-secondary" onclick="rouletteBet('dozen1')">1st 12 (×3)</button>
+                    <button class="btn btn-secondary" onclick="rouletteBet('dozen2')">2nd 12 (×3)</button>
+                    <button class="btn btn-secondary" onclick="rouletteBet('dozen3')">3rd 12 (×3)</button>
+                    <button class="btn btn-secondary" onclick="rouletteBet('zero')">0 (×36)</button>
+                </div>
+                <div class="input-group" style="margin-bottom:0">
+                    <input type="number" id="roulette-bet-input" placeholder="Bet amount" min="100">
+                    <span>$</span>
+                </div>
+                <div id="roulette-status" style="margin-top:0.75rem;font-weight:700;min-height:1.5rem"></div>
+            </div>`;
+        }
+        function rouletteBet(type) {
+            const bet = parseFloat(document.getElementById('roulette-bet-input').value);
+            if (!bet || bet <= 0) { showToast('Error','Enter a bet','danger'); return; }
+            if (state.player.clubBalance < bet) { showToast('Insufficient Club Balance','','danger'); return; }
+            state.player.clubBalance -= bet;
+            updateClubBalanceDisplay();
+            const wheel = document.getElementById('roulette-wheel');
+            const result = document.getElementById('roulette-result');
+            const status = document.getElementById('roulette-status');
+            let spins = 0;
+            const interval = setInterval(() => {
+                if(wheel) wheel.style.transform = `rotate(${spins*45}deg)`;
+                spins++;
+                if (spins > 20) {
+                    clearInterval(interval);
+                    const num = Math.floor(Math.random()*37);
+                    const redNums = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
+                    const isRed = redNums.includes(num);
+                    const isBlack = num > 0 && !isRed;
+                    if(result) result.textContent = num + (num===0 ? ' 🟢' : isRed ? ' 🔴' : ' ⚫');
+                    let win = 0, mult = 0;
+                    if (type==='red' && isRed) { mult=2; }
+                    else if (type==='black' && isBlack) { mult=2; }
+                    else if (type==='even' && num>0 && num%2===0) { mult=2; }
+                    else if (type==='odd' && num%2===1) { mult=2; }
+                    else if (type==='low' && num>=1 && num<=18) { mult=2; }
+                    else if (type==='high' && num>=19 && num<=36) { mult=2; }
+                    else if (type==='dozen1' && num>=1 && num<=12) { mult=3; }
+                    else if (type==='dozen2' && num>=13 && num<=24) { mult=3; }
+                    else if (type==='dozen3' && num>=25 && num<=36) { mult=3; }
+                    else if (type==='zero' && num===0) { mult=36; }
+                    win = bet * mult;
+                    state.player.clubBalance += win;
+                    const net = win - bet;
+                    if(status) status.innerHTML = `<span style="color:${net>=0?'var(--success)':'var(--danger)'}">${net>=0?'🎉 Won':'😞 Lost'} $${formatNum(Math.abs(net))} — Ball landed on ${num}</span>`;
+                    addActivity(`Day ${state.player.day}`, `Club Roulette: ${net>=0?'+':''} $${formatNum(net)}`, net>=0?'success':'danger');
+                    updateClubBalanceDisplay(); saveGame();
+                }
+            }, 60);
+        }
+
+        // ---- DICE ----
+        function renderDiceGame() {
+            return `<div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;max-width:500px">
+                <h3 style="margin-bottom:1rem;color:var(--brand)">🎲 Dice Roll</h3>
+                <div style="background:var(--bg-panel);border-radius:12px;padding:1.5rem;margin-bottom:1rem;text-align:center">
+                    <div id="dice-display" style="font-size:5rem;margin-bottom:0.5rem">🎲</div>
+                    <div id="dice-status" style="font-size:1rem;font-weight:700;min-height:1.5rem"></div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem">
+                    <button class="btn btn-secondary" onclick="rollDice('high')">High (4-6) ×2</button>
+                    <button class="btn btn-secondary" onclick="rollDice('low')">Low (1-3) ×2</button>
+                    <button class="btn btn-secondary" onclick="rollDice('exact6')">Exact 6 ×6</button>
+                    <button class="btn btn-secondary" onclick="rollDice('exact1')">Exact 1 ×6</button>
+                </div>
+                <div class="input-group" style="margin-bottom:0">
+                    <input type="number" id="dice-bet-input" placeholder="Bet amount" min="100">
+                    <span>$</span>
+                </div>
+            </div>`;
+        }
+        const DICE_FACES = ['','⚀','⚁','⚂','⚃','⚄','⚅'];
+        function rollDice(type) {
+            const bet = parseFloat(document.getElementById('dice-bet-input').value);
+            if (!bet || bet <= 0) { showToast('Error','Enter a bet','danger'); return; }
+            if (state.player.clubBalance < bet) { showToast('Insufficient Club Balance','','danger'); return; }
+            state.player.clubBalance -= bet;
+            updateClubBalanceDisplay();
+            const display = document.getElementById('dice-display');
+            const status = document.getElementById('dice-status');
+            let spins = 0;
+            const interval = setInterval(() => {
+                if(display) display.textContent = DICE_FACES[Math.ceil(Math.random()*6)];
+                spins++;
+                if (spins > 15) {
+                    clearInterval(interval);
+                    const roll = Math.ceil(Math.random()*6);
+                    if(display) display.textContent = DICE_FACES[roll];
+                    let win = 0;
+                    if (type==='high' && roll>=4) win = bet*2;
+                    else if (type==='low' && roll<=3) win = bet*2;
+                    else if (type==='exact6' && roll===6) win = bet*6;
+                    else if (type==='exact1' && roll===1) win = bet*6;
+                    state.player.clubBalance += win;
+                    const net = win - bet;
+                    if(status) status.innerHTML = `<span style="color:${net>=0?'var(--success)':'var(--danger)'}">${net>=0?'🎉 Won':'😞 Lost'} $${formatNum(Math.abs(net))} — Rolled ${roll}</span>`;
+                    addActivity(`Day ${state.player.day}`, `Club Dice: ${net>=0?'+':''} $${formatNum(net)}`, net>=0?'success':'danger');
+                    updateClubBalanceDisplay(); saveGame();
+                }
+            }, 80);
+        }
+
+        // ---- HI-LO ----
+        let hiloState = { deck: [], current: null };
+        function renderHiLoGame() {
+            return `<div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;max-width:500px">
+                <h3 style="margin-bottom:1rem;color:var(--success)">📈 Hi-Lo Card Game</h3>
+                <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem">Guess if the next card is higher or lower than the current one!</p>
+                <div style="background:var(--bg-panel);border-radius:12px;padding:1.5rem;margin-bottom:1rem;text-align:center">
+                    <div style="color:var(--text-muted);font-size:0.8rem;margin-bottom:0.5rem">Current Card</div>
+                    <div id="hilo-card" style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:80px;height:110px;background:white;border-radius:8px;font-size:1.5rem;font-weight:700;color:#1e293b;border:2px solid #ccc;margin-bottom:0.75rem">?</div>
+                    <div id="hilo-status" style="font-size:1rem;font-weight:700;min-height:1.5rem"></div>
+                </div>
+                <div style="display:flex;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap">
+                    <button class="btn btn-success" onclick="hiloGuess('higher')" style="flex:1">📈 Higher (×1.8)</button>
+                    <button class="btn btn-danger" onclick="hiloGuess('lower')" style="flex:1">📉 Lower (×1.8)</button>
+                    <button class="btn btn-secondary" onclick="hiloNewCard()" style="flex:1">🔄 New Card</button>
+                </div>
+                <div class="input-group" style="margin-bottom:0">
+                    <input type="number" id="hilo-bet-input" placeholder="Bet amount" min="100">
+                    <span>$</span>
+                </div>
+            </div>`;
+        }
+        function hiloNewCard() {
+            if (!hiloState.deck || hiloState.deck.length < 5) hiloState.deck = bjNewDeck();
+            hiloState.current = hiloState.deck.pop();
+            const el = document.getElementById('hilo-card');
+            if (el) {
+                const red = hiloState.current.s==='♥'||hiloState.current.s==='♦';
+                el.style.color = red ? '#e11d48' : '#1e293b';
+                el.innerHTML = `${hiloState.current.v}<br>${hiloState.current.s}`;
+            }
+            const st = document.getElementById('hilo-status');
+            if (st) st.textContent = '';
+        }
+        function hiloGuess(dir) {
+            if (!hiloState.current) { hiloNewCard(); showToast('Info','Card drawn! Now place your bet and guess.','warning'); return; }
+            const bet = parseFloat(document.getElementById('hilo-bet-input').value);
+            if (!bet || bet <= 0) { showToast('Error','Enter a bet','danger'); return; }
+            if (state.player.clubBalance < bet) { showToast('Insufficient Club Balance','','danger'); return; }
+            state.player.clubBalance -= bet;
+            const prev = bjCardVal(hiloState.current);
+            hiloState.current = hiloState.deck.pop() || bjNewDeck().pop();
+            const next = bjCardVal(hiloState.current);
+            const el = document.getElementById('hilo-card');
+            if (el) {
+                const red = hiloState.current.s==='♥'||hiloState.current.s==='♦';
+                el.style.color = red ? '#e11d48' : '#1e293b';
+                el.innerHTML = `${hiloState.current.v}<br>${hiloState.current.s}`;
+            }
+            const correct = (dir==='higher' && next > prev) || (dir==='lower' && next < prev);
+            const win = correct ? bet * 1.8 : 0;
+            state.player.clubBalance += win;
+            const net = win - bet;
+            const st = document.getElementById('hilo-status');
+            if (st) st.innerHTML = `<span style="color:${net>=0?'var(--success)':'var(--danger)'}">${correct ? '🎉 Correct!' : '😞 Wrong!'} ${net>=0?'+':''} $${formatNum(net)}</span>`;
+            addActivity(`Day ${state.player.day}`, `Club Hi-Lo: ${net>=0?'+':''} $${formatNum(net)}`, net>=0?'success':'danger');
+            updateClubBalanceDisplay(); saveGame();
+        }
+
+        // ---- CRASH ----
+        function renderCrashGame() {
+            return `<div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;max-width:500px">
+                <h3 style="margin-bottom:1rem;color:var(--danger)">💥 Crash</h3>
+                <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem">Watch the multiplier rise and cash out before it crashes!</p>
+                <div style="background:var(--bg-panel);border-radius:12px;padding:2rem;margin-bottom:1rem;text-align:center">
+                    <div id="crash-multiplier" style="font-size:4rem;font-weight:900;color:var(--success)">1.00x</div>
+                    <div id="crash-status" style="font-size:1rem;font-weight:700;margin-top:0.5rem;min-height:1.5rem"></div>
+                </div>
+                <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1rem">
+                    <div class="input-group" style="flex:1;min-width:120px;margin-bottom:0">
+                        <input type="number" id="crash-bet-input" placeholder="Bet" min="100">
+                        <span>$</span>
+                    </div>
+                    <button class="btn btn-success" id="crash-start-btn" onclick="crashStart()">🚀 Start</button>
+                    <button class="btn btn-warning" id="crash-cashout-btn" onclick="crashCashOut()" style="display:none;background:var(--warning);color:#000">💰 Cash Out</button>
+                </div>
+            </div>`;
+        }
+        function crashStart() {
+            const bet = parseFloat(document.getElementById('crash-bet-input').value);
+            if (!bet || bet <= 0) { showToast('Error','Enter a bet','danger'); return; }
+            if (state.player.clubBalance < bet) { showToast('Insufficient Club Balance','','danger'); return; }
+            state.player.clubBalance -= bet;
+            updateClubBalanceDisplay();
+            clubState.crashBet = bet;
+            clubState.crashMultiplier = 1.0;
+            clubState.crashRunning = true;
+            clubState.crashCashedOut = false;
+            const crashPoint = 1 + Math.random() * Math.random() * 10;
+            const startBtn = document.getElementById('crash-start-btn');
+            const cashBtn = document.getElementById('crash-cashout-btn');
+            const multEl = document.getElementById('crash-multiplier');
+            const statusEl = document.getElementById('crash-status');
+            if(startBtn) startBtn.style.display='none';
+            if(cashBtn) cashBtn.style.display='inline-flex';
+            if(statusEl) statusEl.textContent = '';
+            if(clubState.crashInterval) clearInterval(clubState.crashInterval);
+            clubState.crashInterval = setInterval(() => {
+                clubState.crashMultiplier += 0.05 + clubState.crashMultiplier * 0.02;
+                if(multEl) {
+                    multEl.textContent = clubState.crashMultiplier.toFixed(2) + 'x';
+                    multEl.style.color = clubState.crashMultiplier < 2 ? 'var(--success)' : clubState.crashMultiplier < 5 ? 'var(--warning)' : 'var(--danger)';
+                }
+                if (clubState.crashMultiplier >= crashPoint && !clubState.crashCashedOut) {
+                    clearInterval(clubState.crashInterval);
+                    clubState.crashRunning = false;
+                    if(multEl) { multEl.textContent = '💥 CRASH!'; multEl.style.color='var(--danger)'; }
+                    if(statusEl) statusEl.innerHTML = `<span style="color:var(--danger)">😞 Crashed at ${crashPoint.toFixed(2)}x! Lost $${formatNum(bet)}</span>`;
+                    if(startBtn) startBtn.style.display='inline-flex';
+                    if(cashBtn) cashBtn.style.display='none';
+                    addActivity(`Day ${state.player.day}`, `Club Crash: Lost $${formatNum(bet)} (crashed at ${crashPoint.toFixed(2)}x)`, 'danger');
+                    saveGame();
+                }
+            }, 150);
+        }
+        function crashCashOut() {
+            if (!clubState.crashRunning || clubState.crashCashedOut) return;
+            clearInterval(clubState.crashInterval);
+            clubState.crashCashedOut = true;
+            clubState.crashRunning = false;
+            const win = clubState.crashBet * clubState.crashMultiplier;
+            state.player.clubBalance += win;
+            const net = win - clubState.crashBet;
+            const multEl = document.getElementById('crash-multiplier');
+            const statusEl = document.getElementById('crash-status');
+            const startBtn = document.getElementById('crash-start-btn');
+            const cashBtn = document.getElementById('crash-cashout-btn');
+            if(statusEl) statusEl.innerHTML = `<span style="color:var(--success)">🎉 Cashed out at ${clubState.crashMultiplier.toFixed(2)}x! +$${formatNum(net)}</span>`;
+            if(startBtn) startBtn.style.display='inline-flex';
+            if(cashBtn) cashBtn.style.display='none';
+            addActivity(`Day ${state.player.day}`, `Club Crash: Cashed out at ${clubState.crashMultiplier.toFixed(2)}x! +$${formatNum(net)}`, 'success');
+            updateClubBalanceDisplay(); saveGame();
+        }
 
         // ===================== INIT =====================
         // (window.onload is defined above with Firebase auth listener)
