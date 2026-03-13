@@ -430,7 +430,8 @@
                     </select>
                 </div>
                 <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;border:1px solid var(--border);font-size:0.85rem;color:var(--text-muted)">
-                    <div style="margin-bottom:0.5rem"><strong>Effects:</strong></div>
+                    <div style="margin-bottom:0.5rem"><strong>Cost & Effects:</strong></div>
+                    <div style="color:var(--danger);font-weight:700;margin-bottom:0.25rem">💸 Cost: $5,000,000,000,000 (5T)</div>
                     <div>💰 Company stock: -50% (if public)</div>
                     <div>📉 All stocks & crypto: -50% for 10 mins</div>
                     <div>🔔 Target receives notification</div>
@@ -2603,7 +2604,12 @@ What is your experience?"></textarea></div>
             const hasLocalAutoSave = !!localStorage.getItem(LOCAL_AUTOSAVE_KEY);
             const resumeBtn = document.getElementById('resume-btn');
             if (resumeBtn) {
-                resumeBtn.style.display = (Object.keys(saves).length > 0 || hasLocalAutoSave) ? 'inline-flex' : 'none';
+                // Force display if any saves exist
+                if (Object.keys(saves).length > 0 || hasLocalAutoSave) {
+                    resumeBtn.style.setProperty('display', 'inline-flex', 'important');
+                } else {
+                    resumeBtn.style.display = 'none';
+                }
             }
         }
 
@@ -2803,8 +2809,8 @@ What is your experience?"></textarea></div>
             setTimeout(syncLocalToCloud, 3000);
             // Start listening for money transfers
             startNotificationListener();
-            // Start listening for nuke notifications
-            startNukeNotificationListener();
+            // Start listening for global notifications (nukes, jobs, etc.)
+            startGlobalNotificationListener();
         }
 
         // ===================== SEARCH & VISIT PLAYERS =====================
@@ -4875,17 +4881,48 @@ What is your experience?"></textarea></div>
         
         async function hireRealPlayer(coId, jobId, playerUid, playerName, salary) {
             showToast('Hiring', 'Processing...', 'info');
-            // In a real multiplayer game, this would update the player's job status in Firestore
-            // For this simulation, we'll just add them to the company's employee list
-            const co = state.player.companies.find(c => c.id === coId);
-            co.employees.push({ name: playerName, salary: salary, performance: 80, happiness: 90, isRealPlayer: true, uid: playerUid });
-            co.expenses += salary;
-            
-            // Remove the job or decrement vacancies? Let's just keep it simple.
-            showToast('Hired', `${playerName} is now working for you!`, 'success');
-            closeJobModal();
-            renderCompanies();
-            saveGame();
+            try {
+                const co = state.player.companies.find(c => c.id === coId);
+                const jobDoc = window.fbMethods.doc(window.fbDb, "global_jobs", jobId);
+                const jobSnap = await window.fbMethods.getDoc(jobDoc);
+                const job = jobSnap.data();
+
+                // 1. Add to company employees
+                co.employees.push({ name: playerName, salary: salary, performance: 80, happiness: 90, isRealPlayer: true, uid: playerUid });
+                co.expenses += salary;
+
+                // 2. Notify the hired player
+                const notifRef = window.fbMethods.collection(window.fbDb, 'users', playerUid, 'notifications');
+                await window.fbMethods.addDoc(notifRef, {
+                    type: 'job_hired',
+                    jobTitle: job.title,
+                    companyName: co.name,
+                    salary: salary,
+                    timestamp: new Date().toISOString(),
+                    read: false
+                });
+
+                // 3. Update job vacancies or remove if full
+                const newApplicants = (job.applicants || []).filter(a => a.uid !== playerUid);
+                const newVacancies = (job.vacancies || 1) - 1;
+                
+                if (newVacancies <= 0) {
+                    await window.fbMethods.deleteDoc(jobDoc);
+                } else {
+                    await window.fbMethods.updateDoc(jobDoc, {
+                        vacancies: newVacancies,
+                        applicants: newApplicants
+                    });
+                }
+
+                showToast('Hired', `${playerName} is now working for you!`, 'success');
+                closeJobModal();
+                renderCompanies();
+                saveGame();
+            } catch (e) {
+                console.error("Hiring failed", e);
+                showToast('Error', 'Failed to hire player', 'danger');
+            }
         }
 
         function hireApplicantDirect(coId, name, salary) {
@@ -6612,17 +6649,39 @@ What is your experience?"></textarea></div>
                 showToast('Error', 'Could not load player list', 'danger');
             }
             
-            playerSelect.onchange = () => {
+            playerSelect.onchange = async () => {
                 const selectedOption = playerSelect.options[playerSelect.selectedIndex];
                 if (selectedOption.value) {
-                    const countries = ['United States', 'China', 'Japan', 'Germany', 'United Kingdom', 'France', 'India', 'Brazil', 'Canada', 'Russia', 'South Korea', 'Italy', 'Spain', 'Mexico', 'Australia', 'Netherlands', 'Saudi Arabia', 'Switzerland', 'Sweden', 'Norway', 'Denmark', 'Finland', 'Poland', 'Belgium', 'Austria', 'Ireland', 'Portugal', 'Greece', 'Czech Republic', 'Hungary'];
-                    citySelect.innerHTML = '<option value="">-- Choose a city --</option>';
-                    countries.forEach(country => {
-                        const option = document.createElement('option');
-                        option.value = country;
-                        option.textContent = country;
-                        citySelect.appendChild(option);
-                    });
+                    citySelect.innerHTML = '<option value="">Loading cities...</option>';
+                    try {
+                        // Fetch target's owned countries from their save data
+                        const targetUid = selectedOption.value;
+                        const savesCol = window.fbMethods.collection(window.fbDb, 'users', targetUid, 'saves');
+                        const savesSnapshot = await window.fbMethods.getDocs(savesCol);
+                        let targetSaveData = null;
+                        savesSnapshot.forEach(doc => {
+                            if (doc.id === 'QuickSave' || !targetSaveData) targetSaveData = doc.data();
+                        });
+
+                        citySelect.innerHTML = '<option value="">-- Choose a city --</option>';
+                        if (targetSaveData && targetSaveData.player && targetSaveData.player.countriesOwned && targetSaveData.player.countriesOwned.length > 0) {
+                            targetSaveData.player.countriesOwned.forEach(country => {
+                                const option = document.createElement('option');
+                                option.value = country;
+                                option.textContent = country;
+                                citySelect.appendChild(option);
+                            });
+                        } else {
+                            const option = document.createElement('option');
+                            option.value = "";
+                            option.textContent = "No cities owned by this player";
+                            option.disabled = true;
+                            citySelect.appendChild(option);
+                        }
+                    } catch (e) {
+                        console.error("Error fetching target cities:", e);
+                        citySelect.innerHTML = '<option value="">Error loading cities</option>';
+                    }
                 } else {
                     citySelect.innerHTML = '<option value="">-- Choose a city --</option>';
                 }
@@ -6638,9 +6697,15 @@ What is your experience?"></textarea></div>
             const citySelect = document.getElementById('nuke-city-select');
             const targetUid = playerSelect.value;
             const targetCity = citySelect.value;
+            const nukeCost = 5000000000000; // 5T
             
             if (!targetUid || !targetCity) {
                 showToast('Invalid', 'Please select both a player and a city', 'warning');
+                return;
+            }
+
+            if (state.player.cash < nukeCost) {
+                showToast('Insufficient Funds', `Launching a nuke costs $${formatNum(nukeCost)} (5T)`, 'danger');
                 return;
             }
             
@@ -6735,11 +6800,15 @@ What is your experience?"></textarea></div>
                     read: false
                 });
                 
+                // Deduct cost
+                state.player.cash -= nukeCost;
+                updateUI();
+
                 // Add activity to current player
-                addActivity(`Day ${state.player.day}`, `🎯 Launched nuclear strike on ${targetName}'s ${targetCity}!`, 'danger');
+                addActivity(`Day ${state.player.day}`, `🎯 Launched nuclear strike on ${targetName}'s ${targetCity}! (-$5T)`, 'danger');
                 
                 // Show success message
-                showToast('Nuke Launched!', `💣 ${targetName}'s stocks and crypto have been hit!`, 'success');
+                showToast('Nuke Launched!', `💣 ${targetName}'s stocks and crypto have been hit! (-$5T)`, 'success');
                 closeNukeModal();
                 saveGame();
                 
@@ -6749,8 +6818,8 @@ What is your experience?"></textarea></div>
             }
         }
 
-        // Listen for nuke notifications
-        function startNukeNotificationListener() {
+        // Listen for nuke and job notifications
+        function startGlobalNotificationListener() {
             const user = window.fbAuth ? window.fbAuth.currentUser : null;
             if (!user || !window.fbMethods.onSnapshot) return;
 
@@ -6763,10 +6832,46 @@ What is your experience?"></textarea></div>
                         const notif = change.doc.data();
                         if (notif.type === 'nuke_received') {
                             showNukeReceivedPopup(notif.from, notif.city, change.doc.id);
+                        } else if (notif.type === 'job_hired') {
+                            showJobHiredPopup(notif.jobTitle, notif.companyName, notif.salary, change.doc.id);
                         }
                     }
                 });
             });
+        }
+
+        function showJobHiredPopup(title, company, salary, notifId) {
+            const popup = document.createElement('div');
+            popup.className = 'modal-overlay';
+            popup.style.zIndex = '10000';
+            popup.innerHTML = `
+                <div class="modal-content" style="max-width:400px;text-align:center;border:2px solid var(--success)">
+                    <div style="font-size:4rem;margin-bottom:1rem">💼</div>
+                    <h2 style="color:var(--success);margin-bottom:0.5rem">You're Hired!</h2>
+                    <p style="margin-bottom:1.5rem">Congratulations! You've been hired as a <strong>${title}</strong> at <strong>${company}</strong>.</p>
+                    <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;margin-bottom:1.5rem;border:1px solid var(--border)">
+                        <div style="color:var(--success);font-weight:700;font-size:1.2rem">$${salary.toLocaleString()}/day</div>
+                        <div style="color:var(--text-muted);font-size:0.8rem">Daily Salary</div>
+                    </div>
+                    <button class="btn btn-success" id="job-accept-btn" style="width:100%">Start Working</button>
+                </div>
+            `;
+            document.body.appendChild(popup);
+
+            document.getElementById('job-accept-btn').onclick = async () => {
+                state.player.career = { title: title, companyName: company, isPlayerJob: true };
+                state.player.salary = salary;
+                updateUI();
+                renderCareer();
+                addActivity(`Day ${state.player.day}`, `Started working as ${title} at ${company}`, 'success');
+                
+                const user = window.fbAuth.currentUser;
+                const docRef = window.fbMethods.doc(window.fbDb, 'users', user.uid, 'notifications', notifId);
+                await window.fbMethods.updateDoc(docRef, { read: true });
+                
+                document.body.removeChild(popup);
+                saveGame();
+            };
         }
 
         function showNukeReceivedPopup(from, city, notifId) {
