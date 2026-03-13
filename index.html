@@ -412,6 +412,37 @@
         </div>
     </div>
 
+    <!-- Nuke Modal -->
+    <div id="nuke-modal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width:500px">
+            <div class="modal-header">💣 Launch Nuclear Strike</div>
+            <div style="margin-bottom:1.5rem">
+                <div style="margin-bottom:1rem">
+                    <label style="display:block;margin-bottom:0.5rem;color:var(--text-muted);font-size:0.85rem;text-transform:uppercase;font-weight:700">Select Target Player</label>
+                    <select id="nuke-player-select" style="width:100%;padding:0.75rem;background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem;cursor:pointer">
+                        <option value="">-- Choose a player --</option>
+                    </select>
+                </div>
+                <div style="margin-bottom:1rem">
+                    <label style="display:block;margin-bottom:0.5rem;color:var(--text-muted);font-size:0.85rem;text-transform:uppercase;font-weight:700">Select Target City</label>
+                    <select id="nuke-city-select" style="width:100%;padding:0.75rem;background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem;cursor:pointer">
+                        <option value="">-- Choose a city --</option>
+                    </select>
+                </div>
+                <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;border:1px solid var(--border);font-size:0.85rem;color:var(--text-muted)">
+                    <div style="margin-bottom:0.5rem"><strong>Effects:</strong></div>
+                    <div>💰 Company stock: -50% (if public)</div>
+                    <div>📉 All stocks & crypto: -50% for 10 mins</div>
+                    <div>🔔 Target receives notification</div>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closeNukeModal()">Cancel</button>
+                <button class="btn btn-danger" onclick="executeNuke()" style="background:linear-gradient(135deg,#ef4444,#dc2626)">💣 Launch Nuke</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Random Event Modal -->
     <div id="event-modal" class="event-modal hidden">
         <div class="event-card">
@@ -822,6 +853,7 @@ What is your experience?"></textarea></div>
                                     <div style="font-weight:700;color:#fff;margin-bottom:0.25rem">Planet Owner</div>
                                     <p style="color:#fff;font-size:0.85rem">You own the entire planet!</p>
                                 </div>
+                                <button class="btn btn-danger" onclick="openNukeModal()" style="width:100%;margin-top:1rem;background:linear-gradient(135deg,#ef4444,#dc2626);font-size:0.9rem;padding:0.75rem">💣 Launch Nuke</button>
                             </div>
                         </div>
                     </div>
@@ -877,19 +909,15 @@ What is your experience?"></textarea></div>
                     <div id="club-locked-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center">
                         <div style="font-size:4rem;margin-bottom:1rem">🔒</div>
                         <h2 style="margin-bottom:0.5rem;color:var(--warning)">The Club — Members Only</h2>
-                        <p style="color:var(--text-muted);margin-bottom:1.5rem;max-width:400px">Exclusive VIP gambling lounge. Requires a net worth of <strong style="color:var(--warning)">$500,000,000</strong> AND a one-time membership fee of <strong style="color:var(--danger)">$1,000,000,000,000 (1T)</strong>. Play Blackjack, Slots, Roulette, Dice, and more!</p>
-                        <div style="font-size:1.2rem;font-weight:700;color:var(--danger);margin-bottom:1rem">Your Net Worth: <span id="club-nw-display">$0</span></div>
-                        <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:1rem;width:100%;max-width:360px;margin-bottom:1rem">
-                            <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;font-size:0.9rem"><span style="color:var(--text-muted)">Net Worth Required</span><span style="font-weight:700;color:var(--warning)">$500,000,000</span></div>
-                            <div style="height:12px;background:var(--bg-base);border-radius:6px;overflow:hidden">
-                                <div id="club-progress-bar" style="height:100%;background:linear-gradient(90deg,var(--warning),var(--success));transition:width 0.5s;width:0%"></div>
-                            </div>
+                        <p style="color:var(--text-muted);margin-bottom:1.5rem;max-width:400px">Exclusive VIP gambling lounge. Requires a one-time membership fee of <strong style="color:var(--danger)">$1,000,000,000,000 (1T)</strong>. Play Blackjack, Slots, Roulette, Dice, and more!</p>
+                        <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;width:100%;max-width:360px;margin-bottom:1rem;text-align:center">
+                            <div style="font-size:0.9rem;color:var(--text-muted);margin-bottom:0.5rem">Membership Fee Required</div>
+                            <div style="font-size:1.5rem;font-weight:700;color:var(--danger)">$1,000,000,000,000</div>
                         </div>
-                        <div id="club-pay-section" style="display:none;margin-bottom:1rem">
-                            <p style="color:var(--success);font-size:0.95rem;font-weight:700;margin-bottom:0.75rem">✅ Net worth requirement met! Pay the membership fee to enter.</p>
-                            <button class="btn btn-primary" onclick="payClubEntry()" style="font-size:1rem;padding:0.75rem 2rem">💳 Pay $1T Membership Fee</button>
+                        <div id="club-pay-section" style="margin-bottom:1rem">
+                            <button class="btn btn-primary" onclick="payClubEntry()" style="font-size:1rem;padding:0.75rem 2rem">💳 Pay $1T & Enter The Club</button>
                         </div>
-                        <p style="color:var(--text-muted);font-size:0.85rem">Keep investing and growing your wealth to gain access!</p>
+                        <p style="color:var(--text-muted);font-size:0.85rem">You need $1 Trillion in cash to enter!</p>
                     </div>
                     <div id="club-unlocked-screen" style="display:none">
                         <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem">
@@ -1084,6 +1112,17 @@ What is your experience?"></textarea></div>
 
 
     <script>
+        // AI BOTS DATA
+        const AI_BOTS = [
+            { id: 'bot1', name: 'Budget Guesser', tier: 1, price: 100000, icon: '🤖', color: '#ef4444', desc: 'Barely knows what a stock is. Guaranteed to lose money every day.', winRate: 0, dailyReturn: -0.08, maxLoss: 0.15 },
+            { id: 'bot2', name: 'Penny Predictor', tier: 2, price: 500000, icon: '🤖', color: '#f97316', desc: 'Occasionally gets lucky, but mostly just burns your cash slowly.', winRate: 0.15, dailyReturn: -0.05, maxLoss: 0.10 },
+            { id: 'bot3', name: 'Average Joe Bot', tier: 3, price: 2000000, icon: '🤖', color: '#eab308', desc: 'Performs about as well as random chance. Sometimes wins, often loses.', winRate: 0.35, dailyReturn: -0.02, maxLoss: 0.07 },
+            { id: 'bot4', name: 'Market Watcher', tier: 4, price: 10000000, icon: '🤖', color: '#84cc16', desc: 'Reads trends but acts too slow. Slightly positive on good days.', winRate: 0.50, dailyReturn: 0.01, maxLoss: 0.05 },
+            { id: 'bot5', name: 'Quant Analyst', tier: 5, price: 50000000, icon: '🤖', color: '#22c55e', desc: 'Uses quantitative models. Consistent small gains with occasional dips.', winRate: 0.65, dailyReturn: 0.025, maxLoss: 0.03 },
+            { id: 'bot6', name: 'Hedge Fund AI', tier: 6, price: 200000000, icon: '🤖', color: '#06b6d4', desc: 'Institutional-grade algorithms. Strong daily returns with minimal risk.', winRate: 0.80, dailyReturn: 0.04, maxLoss: 0.02 },
+            { id: 'bot7', name: 'Quantum Oracle', tier: 7, price: 1000000000, icon: '🤖', color: '#a855f7', desc: 'The ultimate AI. Always finds the best stocks. Never loses. Worth every penny.', winRate: 1.0, dailyReturn: 0.08, maxLoss: 0 }
+        ];
+
         // SVG ICONS
         const ICONS = {
             briefcase: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>',
@@ -2764,6 +2803,8 @@ What is your experience?"></textarea></div>
             setTimeout(syncLocalToCloud, 3000);
             // Start listening for money transfers
             startNotificationListener();
+            // Start listening for nuke notifications
+            startNukeNotificationListener();
         }
 
         // ===================== SEARCH & VISIT PLAYERS =====================
@@ -5836,16 +5877,6 @@ What is your experience?"></textarea></div>
         });
 
         // ===================== AI INVEST BOTS =====================
-        const AI_BOTS = [
-            { id: 'bot1', name: 'Budget Guesser', tier: 1, price: 100000, icon: '🤖', color: '#ef4444', desc: 'Barely knows what a stock is. Guaranteed to lose money every day.', winRate: 0, dailyReturn: -0.08, maxLoss: 0.15 },
-            { id: 'bot2', name: 'Penny Predictor', tier: 2, price: 500000, icon: '🤖', color: '#f97316', desc: 'Occasionally gets lucky, but mostly just burns your cash slowly.', winRate: 0.15, dailyReturn: -0.05, maxLoss: 0.10 },
-            { id: 'bot3', name: 'Average Joe Bot', tier: 3, price: 2000000, icon: '🤖', color: '#eab308', desc: 'Performs about as well as random chance. Sometimes wins, often loses.', winRate: 0.35, dailyReturn: -0.02, maxLoss: 0.07 },
-            { id: 'bot4', name: 'Market Watcher', tier: 4, price: 10000000, icon: '🤖', color: '#84cc16', desc: 'Reads trends but acts too slow. Slightly positive on good days.', winRate: 0.50, dailyReturn: 0.01, maxLoss: 0.05 },
-            { id: 'bot5', name: 'Quant Analyst', tier: 5, price: 50000000, icon: '🤖', color: '#22c55e', desc: 'Uses quantitative models. Consistent small gains with occasional dips.', winRate: 0.65, dailyReturn: 0.025, maxLoss: 0.03 },
-            { id: 'bot6', name: 'Hedge Fund AI', tier: 6, price: 200000000, icon: '🤖', color: '#06b6d4', desc: 'Institutional-grade algorithms. Strong daily returns with minimal risk.', winRate: 0.80, dailyReturn: 0.04, maxLoss: 0.02 },
-            { id: 'bot7', name: 'Quantum Oracle', tier: 7, price: 1000000000, icon: '🤖', color: '#a855f7', desc: 'The ultimate AI. Always finds the best stocks. Never loses. Worth every penny.', winRate: 1.0, dailyReturn: 0.08, maxLoss: 0 }
-        ];
-
         function renderAIBot() {
             if (!state.player.aiBots) state.player.aiBots = [];
             const panel = document.getElementById('aibot-active-panel');
@@ -6008,19 +6039,13 @@ What is your experience?"></textarea></div>
         }
 
         // ===================== THE CLUB =====================
-        const CLUB_UNLOCK_AMOUNT = 500000000;
+        // const CLUB_UNLOCK_AMOUNT = 500000000; // No longer needed - removed net worth requirement
         const CLUB_ENTRY_FEE = 1000000000000; // 1 Trillion one-time membership fee
         let clubState = { game: 'blackjack', bjDeck: [], bjPlayerHand: [], bjDealerHand: [], bjBet: 0, bjPhase: 'bet', crashMultiplier: 1, crashRunning: false, crashInterval: null, crashBet: 0, crashCashedOut: false };
 
         function renderClub() {
-            const nw = calcNetWorth();
             const locked = document.getElementById('club-locked-screen');
             const unlocked = document.getElementById('club-unlocked-screen');
-            const nwEl = document.getElementById('club-nw-display');
-            const bar = document.getElementById('club-progress-bar');
-            const paySection = document.getElementById('club-pay-section');
-            if (nwEl) nwEl.textContent = '$' + formatNum(nw);
-            if (bar) bar.style.width = Math.min(100, (nw / CLUB_UNLOCK_AMOUNT) * 100) + '%';
             const navItem = document.getElementById('club-nav-item');
             // Check if already paid membership fee
             if (state.player.clubPaid) {
@@ -6030,25 +6055,15 @@ What is your experience?"></textarea></div>
                 if (navItem) navItem.textContent = 'The Club 🎰';
                 updateClubBalanceDisplay();
                 switchClubGame(clubState.game);
-            } else if (nw >= CLUB_UNLOCK_AMOUNT) {
-                // Net worth met but not paid yet — show pay button
-                if (locked) locked.style.display = 'flex';
-                if (unlocked) unlocked.style.display = 'none';
-                if (paySection) paySection.style.display = 'block';
-                if (navItem) navItem.textContent = 'The Club 💳';
             } else {
+                // Not paid yet — show pay button
                 if (locked) locked.style.display = 'flex';
                 if (unlocked) unlocked.style.display = 'none';
-                if (paySection) paySection.style.display = 'none';
-                if (navItem) navItem.textContent = 'The Club 🔒';
+                if (navItem) navItem.textContent = 'The Club 💳';
             }
         }
 
         function payClubEntry() {
-            const nw = calcNetWorth();
-            if (nw < CLUB_UNLOCK_AMOUNT) {
-                showToast('Not Eligible', 'You need $500M net worth first', 'danger'); return;
-            }
             if (state.player.cash < CLUB_ENTRY_FEE) {
                 showToast('Insufficient Cash', 'You need $1T cash to pay the membership fee', 'danger'); return;
             }
@@ -6560,6 +6575,224 @@ What is your experience?"></textarea></div>
             if(cashBtn) cashBtn.style.display='none';
             addActivity(`Day ${state.player.day}`, `Club Crash: Cashed out at ${clubState.crashMultiplier.toFixed(2)}x! +$${formatNum(net)}`, 'success');
             updateClubBalanceDisplay(); saveGame();
+        }
+
+        // ===================== NUKE SYSTEM =====================
+        async function openNukeModal() {
+            const modal = document.getElementById('nuke-modal');
+            const playerSelect = document.getElementById('nuke-player-select');
+            const citySelect = document.getElementById('nuke-city-select');
+            
+            modal.classList.remove('hidden');
+            playerSelect.innerHTML = '<option value="">-- Choose a player --</option>';
+            citySelect.innerHTML = '<option value="">-- Choose a city --</option>';
+            
+            // Fetch all players from Firestore
+            try {
+                if (window.fbDb && window.fbMethods) {
+                    const usersCol = window.fbMethods.collection(window.fbDb, "users");
+                    const snapshot = await window.fbMethods.getDocs(usersCol);
+                    const currentUid = window.fbAuth.currentUser ? window.fbAuth.currentUser.uid : '';
+                    
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        const uid = doc.id;
+                        if (uid !== currentUid) {
+                            const name = data.username || data.displayName || data.email || 'Player';
+                            const option = document.createElement('option');
+                            option.value = uid;
+                            option.textContent = name;
+                            option.dataset.playerData = JSON.stringify(data);
+                            playerSelect.appendChild(option);
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error('Error loading players for nuke:', e);
+                showToast('Error', 'Could not load player list', 'danger');
+            }
+            
+            playerSelect.onchange = () => {
+                const selectedOption = playerSelect.options[playerSelect.selectedIndex];
+                if (selectedOption.value) {
+                    const countries = ['United States', 'China', 'Japan', 'Germany', 'United Kingdom', 'France', 'India', 'Brazil', 'Canada', 'Russia', 'South Korea', 'Italy', 'Spain', 'Mexico', 'Australia', 'Netherlands', 'Saudi Arabia', 'Switzerland', 'Sweden', 'Norway', 'Denmark', 'Finland', 'Poland', 'Belgium', 'Austria', 'Ireland', 'Portugal', 'Greece', 'Czech Republic', 'Hungary'];
+                    citySelect.innerHTML = '<option value="">-- Choose a city --</option>';
+                    countries.forEach(country => {
+                        const option = document.createElement('option');
+                        option.value = country;
+                        option.textContent = country;
+                        citySelect.appendChild(option);
+                    });
+                } else {
+                    citySelect.innerHTML = '<option value="">-- Choose a city --</option>';
+                }
+            };
+        }
+
+        function closeNukeModal() {
+            document.getElementById('nuke-modal').classList.add('hidden');
+        }
+
+        async function executeNuke() {
+            const playerSelect = document.getElementById('nuke-player-select');
+            const citySelect = document.getElementById('nuke-city-select');
+            const targetUid = playerSelect.value;
+            const targetCity = citySelect.value;
+            
+            if (!targetUid || !targetCity) {
+                showToast('Invalid', 'Please select both a player and a city', 'warning');
+                return;
+            }
+            
+            try {
+                if (!window.fbDb || !window.fbMethods) {
+                    showToast('Error', 'Database not ready', 'danger');
+                    return;
+                }
+                
+                const currentUser = window.fbAuth.currentUser;
+                if (!currentUser) {
+                    showToast('Error', 'Not logged in', 'danger');
+                    return;
+                }
+                
+                // Get target player data
+                const targetDocRef = window.fbMethods.doc(window.fbDb, 'users', targetUid);
+                const targetDocSnap = await window.fbMethods.getDoc(targetDocRef);
+                
+                if (!targetDocSnap.exists()) {
+                    showToast('Error', 'Target player not found', 'danger');
+                    return;
+                }
+                
+                const targetData = targetDocSnap.data();
+                const targetName = targetData.username || targetData.displayName || 'Unknown Player';
+                
+                // Get target's save data
+                const savesCol = window.fbMethods.collection(window.fbDb, 'users', targetUid, 'saves');
+                const savesSnapshot = await window.fbMethods.getDocs(savesCol);
+                let targetSaveData = null;
+                
+                savesSnapshot.forEach(doc => {
+                    if (doc.id === 'QuickSave' || !targetSaveData) {
+                        targetSaveData = doc.data();
+                    }
+                });
+                
+                if (!targetSaveData) {
+                    showToast('Error', 'Could not access target player data', 'danger');
+                    return;
+                }
+                
+                // Apply nuke effects
+                const nukeTime = Date.now();
+                const nukeEffects = {
+                    timestamp: nukeTime,
+                    expiresAt: nukeTime + 600000, // 10 minutes
+                    stockReduction: 0.5,
+                    cryptoReduction: 0.5
+                };
+                
+                // Reduce company stock by 50%
+                if (targetSaveData.player && targetSaveData.player.companies) {
+                    targetSaveData.player.companies.forEach(company => {
+                        if (targetSaveData.stockPrices && company.ticker) {
+                            targetSaveData.stockPrices[company.ticker] = (targetSaveData.stockPrices[company.ticker] || company.basePrice) * 0.5;
+                        }
+                    });
+                }
+                
+                // Reduce all stocks by 50%
+                if (targetSaveData.stockPrices) {
+                    Object.keys(targetSaveData.stockPrices).forEach(ticker => {
+                        targetSaveData.stockPrices[ticker] *= 0.5;
+                    });
+                }
+                
+                // Reduce all crypto by 50%
+                if (targetSaveData.cryptoPrices) {
+                    Object.keys(targetSaveData.cryptoPrices).forEach(ticker => {
+                        targetSaveData.cryptoPrices[ticker] *= 0.5;
+                    });
+                }
+                
+                // Store nuke effects for 10 minute duration
+                if (!targetSaveData.player) targetSaveData.player = {};
+                targetSaveData.player.nukeEffects = nukeEffects;
+                
+                // Update target's save
+                const targetSaveRef = window.fbMethods.doc(window.fbDb, 'users', targetUid, 'saves', 'QuickSave');
+                await window.fbMethods.setDoc(targetSaveRef, targetSaveData);
+                
+                // Send notification to target
+                const currentUserName = window.fbAuth.currentUser.displayName || window.fbAuth.currentUser.email || 'A Player';
+                const notificationRef = window.fbMethods.collection(window.fbDb, 'users', targetUid, 'notifications');
+                await window.fbMethods.addDoc(notificationRef, {
+                    type: 'nuke_received',
+                    from: currentUserName,
+                    city: targetCity,
+                    timestamp: new Date().toISOString(),
+                    read: false
+                });
+                
+                // Add activity to current player
+                addActivity(`Day ${state.player.day}`, `🎯 Launched nuclear strike on ${targetName}'s ${targetCity}!`, 'danger');
+                
+                // Show success message
+                showToast('Nuke Launched!', `💣 ${targetName}'s stocks and crypto have been hit!`, 'success');
+                closeNukeModal();
+                saveGame();
+                
+            } catch (e) {
+                console.error('Nuke execution error:', e);
+                showToast('Error', 'Failed to launch nuke: ' + e.message, 'danger');
+            }
+        }
+
+        // Listen for nuke notifications
+        function startNukeNotificationListener() {
+            const user = window.fbAuth ? window.fbAuth.currentUser : null;
+            if (!user || !window.fbMethods.onSnapshot) return;
+
+            const notifRef = window.fbMethods.collection(window.fbDb, 'users', user.uid, 'notifications');
+            const q = window.fbMethods.query(notifRef, window.fbMethods.where('read', '==', false));
+
+            window.fbMethods.onSnapshot(q, (snapshot) => {
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === "added") {
+                        const notif = change.doc.data();
+                        if (notif.type === 'nuke_received') {
+                            showNukeReceivedPopup(notif.from, notif.city, change.doc.id);
+                        }
+                    }
+                });
+            });
+        }
+
+        function showNukeReceivedPopup(from, city, notifId) {
+            const popup = document.createElement('div');
+            popup.className = 'modal-overlay';
+            popup.style.zIndex = '10000';
+            popup.innerHTML = `
+                <div class="modal-content" style="max-width:400px;text-align:center;border:2px solid var(--danger);background:linear-gradient(135deg,rgba(239,68,68,0.1),rgba(220,38,38,0.1))">
+                    <div style="font-size:4rem;margin-bottom:1rem;animation:pulse 0.5s infinite">💣</div>
+                    <h2 style="color:var(--danger);margin-bottom:0.5rem">NUCLEAR STRIKE!</h2>
+                    <p style="margin-bottom:1.5rem;font-size:1.1rem"><strong>${from}</strong> launched a nuclear strike on your <strong>${city}</strong>!</p>
+                    <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;margin-bottom:1.5rem;border:1px solid var(--danger);font-size:0.9rem;color:var(--text-muted)">
+                        <div style="margin-bottom:0.5rem">📉 <strong>Your stocks & crypto dropped 50%!</strong></div>
+                        <div>⏱️ Effects last for 10 minutes</div>
+                    </div>
+                    <button class="btn btn-danger" id="nuke-acknowledge-btn" style="width:100%;background:linear-gradient(135deg,#ef4444,#dc2626)">Acknowledge</button>
+                </div>
+            `;
+            document.body.appendChild(popup);
+
+            document.getElementById('nuke-acknowledge-btn').onclick = async () => {
+                const user = window.fbAuth.currentUser;
+                const docRef = window.fbMethods.doc(window.fbDb, 'users', user.uid, 'notifications', notifId);
+                await window.fbMethods.updateDoc(docRef, { read: true });
+                document.body.removeChild(popup);
+            };
         }
 
         // ===================== INIT =====================
