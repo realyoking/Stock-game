@@ -177,6 +177,32 @@
         .quick-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 1rem; }
         .quick-buttons button { padding: 0.5rem; font-size: 0.8rem; }
 
+        /* ADMIN PANEL STYLES */
+        .admin-badge-pill {
+            display: inline-flex; align-items: center; gap: 0.3rem;
+            padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.78rem; font-weight: 700;
+            border: 1px solid; cursor: default;
+        }
+        .admin-sub-panel { animation: fadeIn 0.2s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        .admin-company-row {
+            background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px;
+            padding: 0.75rem 1rem; margin-bottom: 0.5rem; font-size: 0.85rem;
+        }
+        /* ANNOUNCEMENT POPUP */
+        .announcement-popup-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 99999;
+            display: flex; align-items: center; justify-content: center; padding: 1rem;
+            animation: fadeIn 0.3s ease;
+        }
+        .announcement-popup {
+            background: var(--bg-surface); border-radius: 16px; padding: 2rem;
+            max-width: 520px; width: 100%; text-align: center;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
         #toast-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; }
         .toast { background: var(--bg-surface); border: 1px solid var(--border); border-left: 4px solid var(--brand); color: var(--text-main); padding: 1rem; border-radius: 8px; animation: slideIn 0.3s ease-out; min-width: 300px; }
         .toast.success { border-left-color: var(--success); }
@@ -549,6 +575,7 @@
                 <div class="nav-item" onclick="switchTab('leaderboard')" style="color:var(--warning)">Leaderboard</div>
                 <div class="nav-item" onclick="switchTab('search')" style="color:#38bdf8">Search Players</div>
                 <div class="nav-item" onclick="switchTab('profile')" style="color:var(--brand);border-top:1px solid var(--border);margin-top:auto;padding-top:1rem">Profile</div>
+                <div class="nav-item hidden" id="admin-nav-item" onclick="switchTab('admin')" style="color:#ff0080;background:rgba(255,0,128,0.1);border:1px solid rgba(255,0,128,0.3);margin-top:0.5rem">⚙️ Admin Panel</div>
             </div>
             <div class="sidebar-stats">
                 <div class="stat-row"><span class="stat-label">Cash</span><span class="stat-value" id="stat-cash">$0</span></div>
@@ -995,6 +1022,12 @@ What is your experience?"></textarea></div>
                                 <div id="visit-day" style="font-weight:800;color:var(--brand);font-size:1.1rem">1</div>
                             </div>
                         </div>
+                        <div style="margin-bottom:1rem">
+                            <h4 style="margin-bottom:0.75rem;font-size:0.85rem;color:var(--text-muted);text-transform:uppercase">🏅 Badges</h4>
+                            <div id="visit-badges" style="display:flex;flex-wrap:wrap;gap:0.4rem">
+                                <div style="font-size:0.85rem;color:var(--text-muted)">No badges</div>
+                            </div>
+                        </div>
                         <div style="margin-bottom:1.5rem">
                             <h4 style="margin-bottom:0.75rem;font-size:0.85rem;color:var(--text-muted);text-transform:uppercase">Companies</h4>
                             <div id="visit-companies" style="display:flex;flex-wrap:wrap;gap:0.5rem">
@@ -1052,6 +1085,13 @@ What is your experience?"></textarea></div>
                                 <button class="btn btn-primary" onclick="saveDisplayName()" style="font-size:0.8rem">Save</button>
                             </div>
                         </div>
+                        <!-- Badges Display -->
+                        <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;border:1px solid var(--border);margin-bottom:1rem">
+                            <div style="font-size:0.85rem;color:var(--text-muted);font-weight:700;margin-bottom:0.75rem;text-transform:uppercase">🏅 Your Badges</div>
+                            <div id="profile-badges-display" style="display:flex;flex-wrap:wrap;gap:0.5rem">
+                                <div style="font-size:0.85rem;color:var(--text-muted)">No badges yet</div>
+                            </div>
+                        </div>
                         <!-- Account info -->
                         <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;border:1px solid var(--border);font-size:0.9rem">
                             <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem">
@@ -1097,6 +1137,202 @@ What is your experience?"></textarea></div>
                     </div>
                 </div>
             </div>       </div>
+
+            <!-- Admin Panel Tab -->
+            <div id="admin" class="tab-panel">
+                <div style="display:flex;align-items:center;gap:1rem;margin-bottom:2rem">
+                    <div style="font-size:2.5rem">⚙️</div>
+                    <div>
+                        <h2 style="color:#ff0080;margin-bottom:0.25rem">Admin Control Panel</h2>
+                        <p style="color:var(--text-muted);font-size:0.9rem">Restricted access — PROEDITDUDE only</p>
+                    </div>
+                </div>
+
+                <!-- Admin Tabs -->
+                <div style="display:flex;gap:0.5rem;margin-bottom:1.5rem;flex-wrap:wrap;border-bottom:1px solid var(--border);padding-bottom:1rem">
+                    <button class="btn btn-primary" id="atab-announce" onclick="switchAdminTab('announce')" style="font-size:0.85rem">📢 Announcements</button>
+                    <button class="btn btn-secondary" id="atab-players" onclick="switchAdminTab('players')" style="font-size:0.85rem">👤 Player Control</button>
+                    <button class="btn btn-secondary" id="atab-stocks" onclick="switchAdminTab('stocks')" style="font-size:0.85rem">📈 Stock Prices</button>
+                    <button class="btn btn-secondary" id="atab-crypto" onclick="switchAdminTab('crypto')" style="font-size:0.85rem">🪙 Crypto Prices</button>
+                </div>
+
+                <!-- Announcements Sub-Panel -->
+                <div id="admin-panel-announce" class="admin-sub-panel">
+                    <div class="widget" style="max-width:700px">
+                        <h3 style="margin-bottom:1.5rem;color:#ff0080">📢 Send Global Announcement</h3>
+                        <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1.5rem">This will pop up a notification for ALL players currently online when they next load or are active in the game.</p>
+                        <div style="margin-bottom:1rem">
+                            <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:0.5rem;font-weight:700">ANNOUNCEMENT TITLE</label>
+                            <input type="text" id="admin-announce-title" placeholder="e.g. Server Update, New Feature..." style="width:100%;padding:0.75rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:1rem">
+                        </div>
+                        <div style="margin-bottom:1rem">
+                            <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:0.5rem;font-weight:700">MESSAGE</label>
+                            <textarea id="admin-announce-msg" placeholder="Enter your announcement message here..." rows="4" style="width:100%;padding:0.75rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:1rem;resize:vertical;font-family:inherit"></textarea>
+                        </div>
+                        <div style="margin-bottom:1.5rem">
+                            <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:0.5rem;font-weight:700">TYPE</label>
+                            <select id="admin-announce-type" style="padding:0.75rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:1rem;width:100%">
+                                <option value="info">ℹ️ Info (Blue)</option>
+                                <option value="success">✅ Success (Green)</option>
+                                <option value="warning">⚠️ Warning (Yellow)</option>
+                                <option value="danger">🚨 Alert (Red)</option>
+                                <option value="event">🎉 Special Event (Purple)</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="adminSendAnnouncement()" style="width:100%;padding:0.9rem;font-size:1rem;background:linear-gradient(135deg,#ff0080,#7c3aed)">📢 Send to All Players</button>
+                        <div style="margin-top:1.5rem">
+                            <h4 style="margin-bottom:1rem;color:var(--text-muted)">Recent Announcements</h4>
+                            <div id="admin-announce-history" style="max-height:300px;overflow-y:auto"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Player Control Sub-Panel -->
+                <div id="admin-panel-players" class="admin-sub-panel" style="display:none">
+                    <div style="display:grid;grid-template-columns:350px 1fr;gap:1.5rem">
+                        <div>
+                            <div class="widget">
+                                <h3 style="margin-bottom:1rem;color:#ff0080">👤 Search Player</h3>
+                                <div style="display:flex;gap:0.5rem;margin-bottom:1rem">
+                                    <input type="text" id="admin-player-search" placeholder="Username..." onkeyup="if(event.key==='Enter')adminSearchPlayer()" style="flex:1;padding:0.75rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.95rem">
+                                    <button class="btn btn-primary" onclick="adminSearchPlayer()">Find</button>
+                                </div>
+                                <div id="admin-player-results"></div>
+                            </div>
+                        </div>
+                        <div id="admin-player-detail" style="display:none">
+                            <div class="widget" style="margin-bottom:1.5rem">
+                                <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem">
+                                    <div id="admin-pd-avatar" style="font-size:3rem;width:70px;height:70px;border-radius:50%;background:var(--bg-panel);display:flex;align-items:center;justify-content:center;border:2px solid var(--border)">🧑</div>
+                                    <div>
+                                        <div id="admin-pd-name" style="font-size:1.3rem;font-weight:700">Player Name</div>
+                                        <div id="admin-pd-username" style="color:var(--text-muted);font-size:0.9rem">@username</div>
+                                        <div id="admin-pd-uid" style="color:var(--text-muted);font-size:0.75rem">UID: —</div>
+                                    </div>
+                                </div>
+                                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:1.5rem">
+                                    <div style="background:var(--bg-panel);padding:0.75rem;border-radius:8px;text-align:center;border:1px solid var(--border)">
+                                        <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Cash</div>
+                                        <div id="admin-pd-cash" style="font-weight:800;color:var(--success);font-size:1.1rem">$0</div>
+                                    </div>
+                                    <div style="background:var(--bg-panel);padding:0.75rem;border-radius:8px;text-align:center;border:1px solid var(--border)">
+                                        <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Day</div>
+                                        <div id="admin-pd-day" style="font-weight:800;color:var(--brand);font-size:1.1rem">1</div>
+                                    </div>
+                                    <div style="background:var(--bg-panel);padding:0.75rem;border-radius:8px;text-align:center;border:1px solid var(--border)">
+                                        <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Level</div>
+                                        <div id="admin-pd-level" style="font-weight:800;color:var(--warning);font-size:1.1rem">1</div>
+                                    </div>
+                                </div>
+
+                                <!-- Coin Control -->
+                                <div style="background:var(--bg-panel);border-radius:12px;padding:1.25rem;margin-bottom:1rem;border:1px solid var(--border)">
+                                    <h4 style="margin-bottom:1rem;color:#ff0080">💰 Coin Control</h4>
+                                    <div style="display:flex;gap:0.75rem;margin-bottom:0.75rem">
+                                        <input type="number" id="admin-coin-amount" placeholder="Amount (e.g. 10000)" style="flex:1;padding:0.6rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem">
+                                    </div>
+                                    <div style="display:flex;gap:0.5rem">
+                                        <button class="btn btn-success" onclick="adminAddCoins()" style="flex:1;font-size:0.85rem">+ Add Coins</button>
+                                        <button class="btn btn-danger" onclick="adminRemoveCoins()" style="flex:1;font-size:0.85rem">- Remove Coins</button>
+                                        <button class="btn btn-secondary" onclick="adminSetCoins()" style="flex:1;font-size:0.85rem">= Set Amount</button>
+                                    </div>
+                                </div>
+
+                                <!-- Name Change -->
+                                <div style="background:var(--bg-panel);border-radius:12px;padding:1.25rem;margin-bottom:1rem;border:1px solid var(--border)">
+                                    <h4 style="margin-bottom:1rem;color:#ff0080">✏️ Change Display Name</h4>
+                                    <div style="display:flex;gap:0.75rem">
+                                        <input type="text" id="admin-new-name" placeholder="New display name..." style="flex:1;padding:0.6rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem">
+                                        <button class="btn btn-primary" onclick="adminChangeName()" style="font-size:0.85rem">Change</button>
+                                    </div>
+                                </div>
+
+                                <!-- Badge Assignment -->
+                                <div style="background:var(--bg-panel);border-radius:12px;padding:1.25rem;margin-bottom:1rem;border:1px solid var(--border)">
+                                    <h4 style="margin-bottom:1rem;color:#ff0080">🏅 Assign Badges</h4>
+                                    <div id="admin-badge-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;margin-bottom:0.75rem"></div>
+                                    <div id="admin-player-badges" style="margin-top:0.75rem">
+                                        <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem">Current Badges:</div>
+                                        <div id="admin-current-badges" style="display:flex;flex-wrap:wrap;gap:0.4rem"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Company Control -->
+                                <div style="background:var(--bg-panel);border-radius:12px;padding:1.25rem;border:1px solid var(--border)">
+                                    <h4 style="margin-bottom:1rem;color:#ff0080">🏢 Company Control</h4>
+                                    <div id="admin-companies-list"><div style="color:var(--text-muted);font-size:0.85rem">No companies found</div></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="admin-player-empty" style="display:flex;align-items:center;justify-content:center;background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:3rem;text-align:center;color:var(--text-muted)">
+                            <div>
+                                <div style="font-size:3rem;margin-bottom:1rem">👤</div>
+                                <div>Search for a player to view and control their data</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stock Price Control Sub-Panel -->
+                <div id="admin-panel-stocks" class="admin-sub-panel" style="display:none">
+                    <div class="widget">
+                        <h3 style="margin-bottom:0.5rem;color:#ff0080">📈 Real-Time Stock Price Control</h3>
+                        <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1.5rem">Changes apply globally to all players in real-time via Firebase RTDB.</p>
+                        <div style="display:flex;gap:0.75rem;margin-bottom:1.5rem">
+                            <input type="text" id="admin-stock-search" placeholder="Search ticker or name..." oninput="adminFilterStocks()" style="flex:1;padding:0.6rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem">
+                            <select id="admin-stock-sector-filter" onchange="adminFilterStocks()" style="padding:0.6rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem">
+                                <option value="All">All Sectors</option>
+                            </select>
+                        </div>
+                        <div style="max-height:500px;overflow-y:auto">
+                            <table class="data-table" id="admin-stocks-table">
+                                <thead><tr><th>Ticker</th><th>Name</th><th>Sector</th><th>Current Price</th><th>New Price</th><th>Action</th></tr></thead>
+                                <tbody id="admin-stocks-tbody"></tbody>
+                            </table>
+                        </div>
+                        <div style="margin-top:1.5rem;padding:1rem;background:var(--bg-panel);border-radius:8px;border:1px solid var(--border)">
+                            <h4 style="margin-bottom:0.75rem">Bulk Actions</h4>
+                            <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+                                <button class="btn btn-success" onclick="adminBulkStocks(1.1)" style="font-size:0.85rem">📈 All Stocks +10%</button>
+                                <button class="btn btn-danger" onclick="adminBulkStocks(0.9)" style="font-size:0.85rem">📉 All Stocks -10%</button>
+                                <button class="btn btn-success" onclick="adminBulkStocks(2)" style="font-size:0.85rem">🚀 All Stocks x2</button>
+                                <button class="btn btn-danger" onclick="adminBulkStocks(0.5)" style="font-size:0.85rem">💥 All Stocks Crash -50%</button>
+                                <button class="btn btn-secondary" onclick="adminResetStocks()" style="font-size:0.85rem">🔄 Reset to Base Prices</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Crypto Price Control Sub-Panel -->
+                <div id="admin-panel-crypto" class="admin-sub-panel" style="display:none">
+                    <div class="widget">
+                        <h3 style="margin-bottom:0.5rem;color:#ff0080">🪙 Real-Time Crypto Price Control</h3>
+                        <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1.5rem">Changes apply globally to all players in real-time via Firebase RTDB.</p>
+                        <div style="display:flex;gap:0.75rem;margin-bottom:1.5rem">
+                            <input type="text" id="admin-crypto-search" placeholder="Search ticker or name..." oninput="adminFilterCrypto()" style="flex:1;padding:0.6rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem">
+                            <select id="admin-crypto-sector-filter" onchange="adminFilterCrypto()" style="padding:0.6rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem">
+                                <option value="All">All Sectors</option>
+                            </select>
+                        </div>
+                        <div style="max-height:500px;overflow-y:auto">
+                            <table class="data-table" id="admin-crypto-table">
+                                <thead><tr><th>Ticker</th><th>Name</th><th>Sector</th><th>Current Price</th><th>New Price</th><th>Action</th></tr></thead>
+                                <tbody id="admin-crypto-tbody"></tbody>
+                            </table>
+                        </div>
+                        <div style="margin-top:1.5rem;padding:1rem;background:var(--bg-panel);border-radius:8px;border:1px solid var(--border)">
+                            <h4 style="margin-bottom:0.75rem">Bulk Actions</h4>
+                            <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+                                <button class="btn btn-success" onclick="adminBulkCrypto(1.1)" style="font-size:0.85rem">📈 All Crypto +10%</button>
+                                <button class="btn btn-danger" onclick="adminBulkCrypto(0.9)" style="font-size:0.85rem">📉 All Crypto -10%</button>
+                                <button class="btn btn-success" onclick="adminBulkCrypto(2)" style="font-size:0.85rem">🚀 All Crypto x2</button>
+                                <button class="btn btn-danger" onclick="adminBulkCrypto(0.5)" style="font-size:0.85rem">💥 All Crypto Crash -50%</button>
+                                <button class="btn btn-secondary" onclick="adminResetCrypto()" style="font-size:0.85rem">🔄 Reset to Base Prices</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- News Ticker -->
             <div class="news-ticker"><div class="news-ticker-inner" id="news-ticker-text">Loading news...</div></div>
@@ -2892,6 +3128,13 @@ What is your experience?"></textarea></div>
             startNotificationListener();
             // Start listening for global notifications (nukes, jobs, etc.)
             startGlobalNotificationListener();
+            // Admin: check access and start announcement listener
+            checkAdminAccess();
+            startAnnouncementListener();
+            // Start RTDB market sync (picks up admin price changes in real-time)
+            startAdminMarketSync();
+            // Render profile badges
+            setTimeout(renderProfileBadges, 2000);
         }
 
         // ===================== SEARCH & VISIT PLAYERS =====================
@@ -3097,6 +3340,21 @@ What is your experience?"></textarea></div>
 
                 const giveBtn = document.getElementById('visit-give-btn');
                 giveBtn.onclick = () => openGiveMoneyModal(uid, profile.username || username);
+
+                // Render badges in visit modal
+                const badgesDiv = document.getElementById('visit-badges');
+                const playerBadges = profile.badges || [];
+                if (badgesDiv) {
+                    if (playerBadges.length === 0) {
+                        badgesDiv.innerHTML = '<div style="font-size:0.85rem;color:var(--text-muted)">No badges</div>';
+                    } else {
+                        badgesDiv.innerHTML = playerBadges.map(bid => {
+                            const b = (typeof ADMIN_BADGES !== 'undefined' ? ADMIN_BADGES : []).find(x => x.id === bid);
+                            if (!b) return `<span style="padding:0.2rem 0.5rem;border-radius:12px;background:var(--bg-panel);font-size:0.8rem;border:1px solid var(--border)">${bid}</span>`;
+                            return `<span class="admin-badge-pill" style="color:${b.color};background:${b.bg};border-color:${b.border}">${b.emoji} ${b.label}</span>`;
+                        }).join('');
+                    }
+                }
 
                 document.getElementById('visit-modal').classList.remove('hidden');
             } catch (e) {
@@ -3837,7 +4095,7 @@ What is your experience?"></textarea></div>
             });
             document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
             document.getElementById(tab).classList.add('active');
-            const titles = { dashboard:'Dashboard', market:'Stock Market', portfolio:'Portfolio', career:'Career', company:'Company Management', properties:'Real Estate', lifestyle:'Lifestyle', banking:'Banking', blackmarket:'Black Market', crypto:'Cryptocurrency', education:'Education', achievements:'Achievements', aibot:'AI Invest Bot', club:'The Club', search:'Search Players', leaderboard:'Leaderboard', profile:'Profile & Settings' };
+            const titles = { dashboard:'Dashboard', market:'Stock Market', portfolio:'Portfolio', career:'Career', company:'Company Management', properties:'Real Estate', lifestyle:'Lifestyle', banking:'Banking', blackmarket:'Black Market', crypto:'Cryptocurrency', education:'Education', achievements:'Achievements', aibot:'AI Invest Bot', club:'The Club', search:'Search Players', leaderboard:'Leaderboard', profile:'Profile & Settings', admin:'⚙️ Admin Panel' };
             document.getElementById('tab-title').textContent = titles[tab] || tab;
             renderAll();
         }
@@ -5823,6 +6081,8 @@ What is your experience?"></textarea></div>
             el('profile-stat-level', state.player.level);
             el('profile-stat-clout', state.player.clout);
             el('profile-stat-xp', formatNum(state.player.exp));
+            // Render badges
+            if (typeof renderProfileBadges === 'function') renderProfileBadges();
         }
 
         function toggleAvatarPicker() {
@@ -7108,6 +7368,602 @@ What is your experience?"></textarea></div>
 
         // ===================== INIT =====================
         // (window.onload is defined above with Firebase auth listener)
+
+        // ===================== ADMIN PANEL =====================
+        const ADMIN_USERNAME = 'PROEDITDUDE';
+        let adminCurrentPlayerUid = null;
+        let adminCurrentPlayerData = null;
+        let adminCurrentSaveData = null;
+
+        const ADMIN_BADGES = [
+            { id: 'founder', label: 'Founder', emoji: '🏆', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)', border: '#f59e0b' },
+            { id: 'og', label: 'OG Player', emoji: '⭐', color: '#a855f7', bg: 'rgba(168,85,247,0.15)', border: '#a855f7' },
+            { id: 'whale', label: 'Whale', emoji: '🐳', color: '#3b82f6', bg: 'rgba(59,130,246,0.15)', border: '#3b82f6' },
+            { id: 'verified', label: 'Verified', emoji: '✅', color: '#10b981', bg: 'rgba(16,185,129,0.15)', border: '#10b981' },
+            { id: 'mod', label: 'Moderator', emoji: '🛡️', color: '#06b6d4', bg: 'rgba(6,182,212,0.15)', border: '#06b6d4' },
+            { id: 'vip', label: 'VIP', emoji: '💎', color: '#ec4899', bg: 'rgba(236,72,153,0.15)', border: '#ec4899' },
+            { id: 'legend', label: 'Legend', emoji: '🔥', color: '#ef4444', bg: 'rgba(239,68,68,0.15)', border: '#ef4444' },
+            { id: 'dev', label: 'Developer', emoji: '⚙️', color: '#ff0080', bg: 'rgba(255,0,128,0.15)', border: '#ff0080' },
+            { id: 'rich', label: 'Billionaire', emoji: '💰', color: '#fbbf24', bg: 'rgba(251,191,36,0.15)', border: '#fbbf24' },
+            { id: 'trader', label: 'Pro Trader', emoji: '📈', color: '#22c55e', bg: 'rgba(34,197,94,0.15)', border: '#22c55e' },
+            { id: 'streamer', label: 'Streamer', emoji: '🎥', color: '#f97316', bg: 'rgba(249,115,22,0.15)', border: '#f97316' },
+            { id: 'bug', label: 'Bug Hunter', emoji: '🐛', color: '#84cc16', bg: 'rgba(132,204,22,0.15)', border: '#84cc16' }
+        ];
+
+        function isAdmin() {
+            return state._currentUsername && state._currentUsername.toUpperCase() === ADMIN_USERNAME.toUpperCase();
+        }
+
+        function checkAdminAccess() {
+            const navItem = document.getElementById('admin-nav-item');
+            if (isAdmin()) {
+                if (navItem) navItem.classList.remove('hidden');
+            } else {
+                if (navItem) navItem.classList.add('hidden');
+            }
+        }
+
+        function switchAdminTab(tab) {
+            ['announce', 'players', 'stocks', 'crypto'].forEach(t => {
+                const panel = document.getElementById('admin-panel-' + t);
+                const btn = document.getElementById('atab-' + t);
+                if (panel) panel.style.display = t === tab ? '' : 'none';
+                if (btn) {
+                    btn.className = t === tab ? 'btn btn-primary' : 'btn btn-secondary';
+                }
+            });
+            if (tab === 'stocks') adminRenderStocksTable();
+            if (tab === 'crypto') adminRenderCryptoTable();
+            if (tab === 'announce') adminLoadAnnouncementHistory();
+        }
+
+        // ---- ANNOUNCEMENTS ----
+        async function adminSendAnnouncement() {
+            if (!isAdmin()) { showToast('Access Denied', 'Admin only', 'danger'); return; }
+            const title = document.getElementById('admin-announce-title').value.trim();
+            const msg = document.getElementById('admin-announce-msg').value.trim();
+            const type = document.getElementById('admin-announce-type').value;
+            if (!title || !msg) { showToast('Error', 'Title and message required', 'danger'); return; }
+            try {
+                const announcementsRef = window.fbMethods.collection(window.fbDb, 'announcements');
+                await window.fbMethods.addDoc(announcementsRef, {
+                    title, message: msg, type,
+                    createdAt: new Date().toISOString(),
+                    createdBy: ADMIN_USERNAME,
+                    active: true
+                });
+                document.getElementById('admin-announce-title').value = '';
+                document.getElementById('admin-announce-msg').value = '';
+                showToast('Sent!', 'Announcement sent to all players', 'success');
+                adminLoadAnnouncementHistory();
+            } catch(e) {
+                showToast('Error', 'Failed: ' + e.message, 'danger');
+            }
+        }
+
+        async function adminLoadAnnouncementHistory() {
+            const container = document.getElementById('admin-announce-history');
+            if (!container) return;
+            try {
+                const ref = window.fbMethods.collection(window.fbDb, 'announcements');
+                const q = window.fbMethods.query(ref, window.fbMethods.orderBy('createdAt', 'desc'), window.fbMethods.limit(10));
+                const snap = await window.fbMethods.getDocs(q);
+                if (snap.empty) { container.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem">No announcements yet</div>'; return; }
+                container.innerHTML = snap.docs.map(d => {
+                    const a = d.data();
+                    const typeColors = { info: '#3b82f6', success: '#10b981', warning: '#f59e0b', danger: '#ef4444', event: '#a855f7' };
+                    const col = typeColors[a.type] || '#3b82f6';
+                    const time = a.createdAt ? new Date(a.createdAt).toLocaleString() : 'Unknown';
+                    return `<div style="background:var(--bg-panel);border:1px solid ${col};border-left:4px solid ${col};border-radius:8px;padding:0.75rem;margin-bottom:0.5rem">
+                        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:0.25rem">
+                            <div style="font-weight:700;color:${col}">${a.title}</div>
+                            <button onclick="adminDeleteAnnouncement('${d.id}')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:0.8rem;padding:0">✕ Delete</button>
+                        </div>
+                        <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.25rem">${a.message}</div>
+                        <div style="font-size:0.75rem;color:var(--text-muted)">${time}</div>
+                    </div>`;
+                }).join('');
+            } catch(e) {
+                container.innerHTML = '<div style="color:var(--danger);font-size:0.85rem">Error loading history</div>';
+            }
+        }
+
+        async function adminDeleteAnnouncement(id) {
+            try {
+                await window.fbMethods.deleteDoc(window.fbMethods.doc(window.fbDb, 'announcements', id));
+                showToast('Deleted', 'Announcement removed', 'success');
+                adminLoadAnnouncementHistory();
+            } catch(e) { showToast('Error', e.message, 'danger'); }
+        }
+
+        // Listen for announcements and show popup to all players
+        let _seenAnnouncements = JSON.parse(localStorage.getItem('_seenAnnouncements') || '[]');
+        function startAnnouncementListener() {
+            if (!window.fbMethods || !window.fbDb) return;
+            const ref = window.fbMethods.collection(window.fbDb, 'announcements');
+            const q = window.fbMethods.query(ref, window.fbMethods.where('active', '==', true));
+            window.fbMethods.onSnapshot(q, (snap) => {
+                snap.docChanges().forEach(change => {
+                    if (change.type === 'added') {
+                        const id = change.doc.id;
+                        if (!_seenAnnouncements.includes(id)) {
+                            _seenAnnouncements.push(id);
+                            localStorage.setItem('_seenAnnouncements', JSON.stringify(_seenAnnouncements));
+                            const data = change.doc.data();
+                            // Small delay so it doesn't fire on initial page load for old announcements
+                            setTimeout(() => showAnnouncementPopup(data), 1500);
+                        }
+                    }
+                });
+            });
+        }
+
+        function showAnnouncementPopup(data) {
+            const typeConfig = {
+                info:    { color: '#3b82f6', border: '#3b82f6', icon: '📢', bg: 'rgba(59,130,246,0.08)' },
+                success: { color: '#10b981', border: '#10b981', icon: '✅', bg: 'rgba(16,185,129,0.08)' },
+                warning: { color: '#f59e0b', border: '#f59e0b', icon: '⚠️', bg: 'rgba(245,158,11,0.08)' },
+                danger:  { color: '#ef4444', border: '#ef4444', icon: '🚨', bg: 'rgba(239,68,68,0.08)' },
+                event:   { color: '#a855f7', border: '#a855f7', icon: '🎉', bg: 'rgba(168,85,247,0.08)' }
+            };
+            const cfg = typeConfig[data.type] || typeConfig.info;
+            const overlay = document.createElement('div');
+            overlay.className = 'announcement-popup-overlay';
+            overlay.innerHTML = `
+                <div class="announcement-popup" style="border:2px solid ${cfg.border};background:var(--bg-surface)">
+                    <div style="font-size:3.5rem;margin-bottom:1rem">${cfg.icon}</div>
+                    <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:${cfg.color};letter-spacing:0.1em;margin-bottom:0.5rem">Official Announcement</div>
+                    <h2 style="color:${cfg.color};margin-bottom:1rem;font-size:1.5rem">${data.title}</h2>
+                    <div style="background:${cfg.bg};border:1px solid ${cfg.border};border-radius:10px;padding:1.25rem;margin-bottom:1.5rem;color:var(--text-main);font-size:1rem;line-height:1.6">${data.message}</div>
+                    <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:1.5rem">From: TradeLife Admin</div>
+                    <button class="btn btn-primary" onclick="this.closest('.announcement-popup-overlay').remove()" style="width:100%;padding:0.9rem;font-size:1rem;background:${cfg.color};border:none">Got it!</button>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        // ---- PLAYER SEARCH (ADMIN) ----
+        async function adminSearchPlayer() {
+            if (!isAdmin()) return;
+            const query = document.getElementById('admin-player-search').value.trim().toLowerCase();
+            if (!query) { showToast('Error', 'Enter a username', 'danger'); return; }
+            const resultsDiv = document.getElementById('admin-player-results');
+            resultsDiv.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem">Searching...</div>';
+            try {
+                const usersCol = window.fbMethods.collection(window.fbDb, 'users');
+                const snap = await window.fbMethods.getDocs(usersCol);
+                const matches = [];
+                snap.forEach(doc => {
+                    const d = doc.data();
+                    const uname = (d.username || '').toLowerCase();
+                    const dname = (d.displayName || '').toLowerCase();
+                    if (uname.includes(query) || dname.includes(query)) {
+                        matches.push({ uid: doc.id, ...d });
+                    }
+                });
+                if (matches.length === 0) {
+                    resultsDiv.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem">No players found</div>';
+                    return;
+                }
+                resultsDiv.innerHTML = matches.map(m => `
+                    <div onclick="adminLoadPlayer('${m.uid}')" style="background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:0.75rem;margin-bottom:0.5rem;cursor:pointer;transition:all 0.2s" onmouseover="this.style.borderColor='#ff0080'" onmouseout="this.style.borderColor='var(--border)'">
+                        <div style="font-weight:700">${m.displayName || m.username || 'Unknown'}</div>
+                        <div style="font-size:0.8rem;color:var(--text-muted)">@${m.username || '?'}</div>
+                    </div>
+                `).join('');
+            } catch(e) {
+                resultsDiv.innerHTML = '<div style="color:var(--danger);font-size:0.85rem">Error: ' + e.message + '</div>';
+            }
+        }
+
+        async function adminLoadPlayer(uid) {
+            adminCurrentPlayerUid = uid;
+            const detail = document.getElementById('admin-player-detail');
+            const empty = document.getElementById('admin-player-empty');
+            if (detail) detail.style.display = 'none';
+            if (empty) empty.style.display = 'flex';
+            try {
+                // Load user doc
+                const userDoc = await window.fbMethods.getDoc(window.fbMethods.doc(window.fbDb, 'users', uid));
+                if (!userDoc.exists()) { showToast('Error', 'User not found', 'danger'); return; }
+                const userData = userDoc.data();
+                // Load save data
+                const savesCol = window.fbMethods.collection(window.fbDb, 'users', uid, 'saves');
+                const savesSnap = await window.fbMethods.getDocs(savesCol);
+                let saveData = null;
+                savesSnap.forEach(d => { if (!saveData || d.id === 'AutoSave') saveData = { id: d.id, ...d.data() }; });
+                adminCurrentPlayerData = userData;
+                adminCurrentSaveData = saveData;
+                // Populate UI
+                const avatar = (saveData && saveData.player && saveData.player.avatar) || '🧑';
+                const name = userData.displayName || userData.username || 'Unknown';
+                const username = userData.username || '?';
+                const cash = (saveData && saveData.player) ? saveData.player.cash : 0;
+                const day = (saveData && saveData.player) ? saveData.player.day : 1;
+                const level = (saveData && saveData.player) ? saveData.player.level : 1;
+                const companies = (saveData && saveData.player && saveData.player.companies) ? saveData.player.companies : [];
+                const badges = userData.badges || [];
+                document.getElementById('admin-pd-avatar').textContent = avatar;
+                document.getElementById('admin-pd-name').textContent = name;
+                document.getElementById('admin-pd-username').textContent = '@' + username;
+                document.getElementById('admin-pd-uid').textContent = 'UID: ' + uid;
+                document.getElementById('admin-pd-cash').textContent = '$' + formatNum(cash);
+                document.getElementById('admin-pd-day').textContent = day;
+                document.getElementById('admin-pd-level').textContent = level;
+                document.getElementById('admin-new-name').value = name;
+                // Render companies
+                const coDiv = document.getElementById('admin-companies-list');
+                if (companies.length === 0) {
+                    coDiv.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem">No companies</div>';
+                } else {
+                    coDiv.innerHTML = companies.map((co, i) => `
+                        <div class="admin-company-row">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
+                                <div style="font-weight:700">${co.name}</div>
+                                <div style="color:var(--brand);font-weight:700">$${formatNum(co.cash)}</div>
+                            </div>
+                            <div style="color:var(--text-muted);font-size:0.8rem;margin-bottom:0.5rem">${co.type} | ${co.stage}</div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;font-size:0.8rem;margin-bottom:0.75rem">
+                                <div>Revenue: <span style="color:var(--success)">$${formatNum(co.revenue)}/day</span></div>
+                                <div>Expenses: <span style="color:var(--danger)">$${formatNum(co.expenses)}/day</span></div>
+                                <div>Employees: <span style="font-weight:700">${co.employees}</span></div>
+                                <div>Valuation: <span style="color:var(--brand)">$${formatNum(co.valuation || 0)}</span></div>
+                            </div>
+                            <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
+                                <button class="btn btn-success" onclick="adminAddCompanyCash(${i}, 100000)" style="font-size:0.75rem;padding:0.3rem 0.6rem">+$100K</button>
+                                <button class="btn btn-success" onclick="adminAddCompanyCash(${i}, 1000000)" style="font-size:0.75rem;padding:0.3rem 0.6rem">+$1M</button>
+                                <button class="btn btn-danger" onclick="adminRemoveCompanyCash(${i}, 100000)" style="font-size:0.75rem;padding:0.3rem 0.6rem">-$100K</button>
+                                <button class="btn btn-secondary" onclick="adminDeleteCompany(${i})" style="font-size:0.75rem;padding:0.3rem 0.6rem;background:var(--danger);color:white">Delete Co.</button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+                // Render badge grid
+                const badgeGrid = document.getElementById('admin-badge-grid');
+                badgeGrid.innerHTML = ADMIN_BADGES.map(b => {
+                    const owned = badges.includes(b.id);
+                    return `<button onclick="adminToggleBadge('${b.id}')" title="${b.label}" style="padding:0.4rem;border-radius:8px;border:2px solid ${owned ? b.border : 'var(--border)'};background:${owned ? b.bg : 'var(--bg-base)'};cursor:pointer;font-size:1.2rem;transition:all 0.2s" id="admin-badge-btn-${b.id}">${b.emoji}</button>`;
+                }).join('');
+                // Render current badges
+                adminRenderCurrentBadges(badges);
+                if (detail) detail.style.display = '';
+                if (empty) empty.style.display = 'none';
+            } catch(e) {
+                showToast('Error', 'Failed to load player: ' + e.message, 'danger');
+            }
+        }
+
+        function adminRenderCurrentBadges(badges) {
+            const container = document.getElementById('admin-current-badges');
+            if (!container) return;
+            if (!badges || badges.length === 0) {
+                container.innerHTML = '<div style="font-size:0.8rem;color:var(--text-muted)">None assigned</div>';
+                return;
+            }
+            container.innerHTML = badges.map(bid => {
+                const b = ADMIN_BADGES.find(x => x.id === bid);
+                if (!b) return '';
+                return `<span class="admin-badge-pill" style="color:${b.color};background:${b.bg};border-color:${b.border}">${b.emoji} ${b.label}</span>`;
+            }).join('');
+        }
+
+        async function adminToggleBadge(badgeId) {
+            if (!adminCurrentPlayerUid) return;
+            try {
+                const userRef = window.fbMethods.doc(window.fbDb, 'users', adminCurrentPlayerUid);
+                const snap = await window.fbMethods.getDoc(userRef);
+                let badges = (snap.data().badges || []);
+                if (badges.includes(badgeId)) {
+                    badges = badges.filter(b => b !== badgeId);
+                } else {
+                    badges.push(badgeId);
+                }
+                await window.fbMethods.updateDoc(userRef, { badges });
+                adminCurrentPlayerData.badges = badges;
+                // Update button style
+                const b = ADMIN_BADGES.find(x => x.id === badgeId);
+                const btn = document.getElementById('admin-badge-btn-' + badgeId);
+                const owned = badges.includes(badgeId);
+                if (btn && b) {
+                    btn.style.borderColor = owned ? b.border : 'var(--border)';
+                    btn.style.background = owned ? b.bg : 'var(--bg-base)';
+                }
+                adminRenderCurrentBadges(badges);
+                showToast('Badge ' + (owned ? 'Assigned' : 'Removed'), b ? b.label : badgeId, 'success');
+            } catch(e) { showToast('Error', e.message, 'danger'); }
+        }
+
+        // ---- COIN CONTROL ----
+        async function adminModifyCoins(mode) {
+            if (!adminCurrentPlayerUid || !adminCurrentSaveData) { showToast('Error', 'No player loaded', 'danger'); return; }
+            const amount = parseFloat(document.getElementById('admin-coin-amount').value);
+            if (isNaN(amount) || amount <= 0) { showToast('Error', 'Enter a valid amount', 'danger'); return; }
+            try {
+                const saveId = adminCurrentSaveData.id || 'AutoSave';
+                const saveRef = window.fbMethods.doc(window.fbDb, 'users', adminCurrentPlayerUid, 'saves', saveId);
+                const snap = await window.fbMethods.getDoc(saveRef);
+                if (!snap.exists()) { showToast('Error', 'Save not found', 'danger'); return; }
+                const data = snap.data();
+                let currentCash = (data.player && data.player.cash) ? data.player.cash : 0;
+                let newCash;
+                if (mode === 'add') newCash = currentCash + amount;
+                else if (mode === 'remove') newCash = Math.max(0, currentCash - amount);
+                else newCash = amount; // set
+                data.player.cash = newCash;
+                await window.fbMethods.setDoc(saveRef, data);
+                adminCurrentSaveData = { ...data, id: saveId };
+                document.getElementById('admin-pd-cash').textContent = '$' + formatNum(newCash);
+                showToast('Done!', (mode === 'add' ? '+' : mode === 'remove' ? '-' : '=') + '$' + formatNum(amount) + ' applied', 'success');
+            } catch(e) { showToast('Error', e.message, 'danger'); }
+        }
+        function adminAddCoins() { adminModifyCoins('add'); }
+        function adminRemoveCoins() { adminModifyCoins('remove'); }
+        function adminSetCoins() { adminModifyCoins('set'); }
+
+        // ---- NAME CHANGE ----
+        async function adminChangeName() {
+            if (!adminCurrentPlayerUid) { showToast('Error', 'No player loaded', 'danger'); return; }
+            const newName = document.getElementById('admin-new-name').value.trim();
+            if (!newName) { showToast('Error', 'Enter a name', 'danger'); return; }
+            try {
+                const userRef = window.fbMethods.doc(window.fbDb, 'users', adminCurrentPlayerUid);
+                await window.fbMethods.updateDoc(userRef, { displayName: newName });
+                document.getElementById('admin-pd-name').textContent = newName;
+                showToast('Done!', 'Display name changed to: ' + newName, 'success');
+            } catch(e) { showToast('Error', e.message, 'danger'); }
+        }
+
+        // ---- COMPANY CONTROL ----
+        async function adminModifyCompany(companyIndex, field, delta) {
+            if (!adminCurrentPlayerUid || !adminCurrentSaveData) return;
+            try {
+                const saveId = adminCurrentSaveData.id || 'AutoSave';
+                const saveRef = window.fbMethods.doc(window.fbDb, 'users', adminCurrentPlayerUid, 'saves', saveId);
+                const snap = await window.fbMethods.getDoc(saveRef);
+                const data = snap.data();
+                if (!data.player || !data.player.companies || !data.player.companies[companyIndex]) return;
+                data.player.companies[companyIndex][field] = Math.max(0, (data.player.companies[companyIndex][field] || 0) + delta);
+                await window.fbMethods.setDoc(saveRef, data);
+                adminCurrentSaveData = { ...data, id: saveId };
+                showToast('Done!', 'Company updated', 'success');
+                adminLoadPlayer(adminCurrentPlayerUid);
+            } catch(e) { showToast('Error', e.message, 'danger'); }
+        }
+        function adminAddCompanyCash(i, amt) { adminModifyCompany(i, 'cash', amt); }
+        function adminRemoveCompanyCash(i, amt) { adminModifyCompany(i, 'cash', -amt); }
+
+        async function adminDeleteCompany(companyIndex) {
+            if (!adminCurrentPlayerUid || !adminCurrentSaveData) return;
+            if (!confirm('Delete this company? This cannot be undone.')) return;
+            try {
+                const saveId = adminCurrentSaveData.id || 'AutoSave';
+                const saveRef = window.fbMethods.doc(window.fbDb, 'users', adminCurrentPlayerUid, 'saves', saveId);
+                const snap = await window.fbMethods.getDoc(saveRef);
+                const data = snap.data();
+                data.player.companies.splice(companyIndex, 1);
+                await window.fbMethods.setDoc(saveRef, data);
+                adminCurrentSaveData = { ...data, id: saveId };
+                showToast('Deleted', 'Company removed', 'success');
+                adminLoadPlayer(adminCurrentPlayerUid);
+            } catch(e) { showToast('Error', e.message, 'danger'); }
+        }
+
+        // ---- STOCK PRICE CONTROL ----
+        let adminStockFilter = '';
+        let adminStockSectorFilter = 'All';
+
+        function adminRenderStocksTable() {
+            // Populate sector filter
+            const sectorSel = document.getElementById('admin-stock-sector-filter');
+            if (sectorSel && sectorSel.options.length <= 1) {
+                const sectors = [...new Set(STOCKS.map(s => s.sector))].sort();
+                sectors.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; sectorSel.appendChild(o); });
+            }
+            adminFilterStocks();
+        }
+
+        function adminFilterStocks() {
+            adminStockFilter = (document.getElementById('admin-stock-search') || {}).value || '';
+            adminStockSectorFilter = (document.getElementById('admin-stock-sector-filter') || {}).value || 'All';
+            const tbody = document.getElementById('admin-stocks-tbody');
+            if (!tbody) return;
+            const filtered = STOCKS.filter(s => {
+                const matchText = !adminStockFilter || s.ticker.toLowerCase().includes(adminStockFilter.toLowerCase()) || s.name.toLowerCase().includes(adminStockFilter.toLowerCase());
+                const matchSector = adminStockSectorFilter === 'All' || s.sector === adminStockSectorFilter;
+                return matchText && matchSector;
+            });
+            tbody.innerHTML = filtered.map(s => {
+                const cur = state.stockPrices[s.ticker] || s.basePrice;
+                return `<tr>
+                    <td style="font-weight:700;color:var(--brand)">${s.ticker}</td>
+                    <td>${s.name}</td>
+                    <td style="color:var(--text-muted);font-size:0.8rem">${s.sector}</td>
+                    <td style="font-weight:700">$${formatPrice(cur)}</td>
+                    <td><input type="number" id="admin-sp-${s.ticker}" value="${cur.toFixed(2)}" min="0.01" style="width:100px;padding:0.3rem;background:var(--bg-base);border:1px solid var(--border);border-radius:4px;color:var(--text-main);font-size:0.85rem"></td>
+                    <td><button class="btn btn-primary" onclick="adminSetStockPrice('${s.ticker}')" style="font-size:0.75rem;padding:0.3rem 0.6rem">Set</button></td>
+                </tr>`;
+            }).join('');
+        }
+
+        async function adminSetStockPrice(ticker) {
+            const input = document.getElementById('admin-sp-' + ticker);
+            if (!input) return;
+            const newPrice = parseFloat(input.value);
+            if (isNaN(newPrice) || newPrice <= 0) { showToast('Error', 'Invalid price', 'danger'); return; }
+            // Update local state
+            state.stockPrices[ticker] = newPrice;
+            // Push to Firebase RTDB for real-time global sync
+            try {
+                const priceRef = window.fbMethods.rtdbRef(window.fbRtdb, 'globalMarket/stocks/' + ticker);
+                await window.fbMethods.rtdbSet(priceRef, { price: newPrice, updatedAt: Date.now(), updatedBy: ADMIN_USERNAME });
+                showToast('Updated!', ticker + ' set to $' + formatPrice(newPrice), 'success');
+                if (state.currentTab === 'market') renderMarket();
+            } catch(e) { showToast('Error', e.message, 'danger'); }
+        }
+
+        async function adminBulkStocks(multiplier) {
+            STOCKS.forEach(s => {
+                state.stockPrices[s.ticker] = Math.max(0.01, (state.stockPrices[s.ticker] || s.basePrice) * multiplier);
+            });
+            try {
+                const writePromises = STOCKS.map(s => {
+                    const ref = window.fbMethods.rtdbRef(window.fbRtdb, 'globalMarket/stocks/' + s.ticker);
+                    return window.fbMethods.rtdbSet(ref, { price: state.stockPrices[s.ticker], updatedAt: Date.now(), updatedBy: ADMIN_USERNAME });
+                });
+                await Promise.all(writePromises);
+            } catch(e) { console.warn('RTDB bulk write error', e); }
+            showToast('Done!', 'All stocks updated x' + multiplier, 'success');
+            adminFilterStocks();
+            if (state.currentTab === 'market') renderMarket();
+        }
+
+        async function adminResetStocks() {
+            STOCKS.forEach(s => { state.stockPrices[s.ticker] = s.basePrice; });
+            try {
+                const writePromises = STOCKS.map(s => {
+                    const ref = window.fbMethods.rtdbRef(window.fbRtdb, 'globalMarket/stocks/' + s.ticker);
+                    return window.fbMethods.rtdbSet(ref, { price: s.basePrice, updatedAt: Date.now(), updatedBy: ADMIN_USERNAME });
+                });
+                await Promise.all(writePromises);
+            } catch(e) { console.warn('RTDB reset error', e); }
+            showToast('Reset!', 'All stocks reset to base prices', 'success');
+            adminFilterStocks();
+            if (state.currentTab === 'market') renderMarket();
+        }
+
+        // ---- CRYPTO PRICE CONTROL ----
+        let adminCryptoFilter = '';
+        let adminCryptoSectorFilter = 'All';
+
+        function adminRenderCryptoTable() {
+            const sectorSel = document.getElementById('admin-crypto-sector-filter');
+            if (sectorSel && sectorSel.options.length <= 1) {
+                const sectors = [...new Set(CRYPTO_COINS.map(c => c.sector))].sort();
+                sectors.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; sectorSel.appendChild(o); });
+            }
+            adminFilterCrypto();
+        }
+
+        function adminFilterCrypto() {
+            adminCryptoFilter = (document.getElementById('admin-crypto-search') || {}).value || '';
+            adminCryptoSectorFilter = (document.getElementById('admin-crypto-sector-filter') || {}).value || 'All';
+            const tbody = document.getElementById('admin-crypto-tbody');
+            if (!tbody) return;
+            const filtered = CRYPTO_COINS.filter(c => {
+                const matchText = !adminCryptoFilter || c.ticker.toLowerCase().includes(adminCryptoFilter.toLowerCase()) || c.name.toLowerCase().includes(adminCryptoFilter.toLowerCase());
+                const matchSector = adminCryptoSectorFilter === 'All' || c.sector === adminCryptoSectorFilter;
+                return matchText && matchSector;
+            });
+            tbody.innerHTML = filtered.map(c => {
+                const cur = state.cryptoPrices[c.ticker] || c.basePrice;
+                return `<tr>
+                    <td style="font-weight:700;color:var(--brand)">${c.ticker}</td>
+                    <td>${c.name}</td>
+                    <td style="color:var(--text-muted);font-size:0.8rem">${c.sector}</td>
+                    <td style="font-weight:700">$${formatPrice(cur)}</td>
+                    <td><input type="number" id="admin-cp-${c.ticker}" value="${cur}" min="0.000000001" step="any" style="width:120px;padding:0.3rem;background:var(--bg-base);border:1px solid var(--border);border-radius:4px;color:var(--text-main);font-size:0.85rem"></td>
+                    <td><button class="btn btn-primary" onclick="adminSetCryptoPrice('${c.ticker}')" style="font-size:0.75rem;padding:0.3rem 0.6rem">Set</button></td>
+                </tr>`;
+            }).join('');
+        }
+
+        async function adminSetCryptoPrice(ticker) {
+            const input = document.getElementById('admin-cp-' + ticker);
+            if (!input) return;
+            const newPrice = parseFloat(input.value);
+            if (isNaN(newPrice) || newPrice <= 0) { showToast('Error', 'Invalid price', 'danger'); return; }
+            state.cryptoPrices[ticker] = newPrice;
+            try {
+                const priceRef = window.fbMethods.rtdbRef(window.fbRtdb, 'globalMarket/crypto/' + ticker);
+                await window.fbMethods.rtdbSet(priceRef, { price: newPrice, updatedAt: Date.now(), updatedBy: ADMIN_USERNAME });
+                showToast('Updated!', ticker + ' set to $' + formatPrice(newPrice), 'success');
+                if (state.currentTab === 'crypto') renderCrypto();
+            } catch(e) { showToast('Error', e.message, 'danger'); }
+        }
+
+        async function adminBulkCrypto(multiplier) {
+            CRYPTO_COINS.forEach(c => {
+                state.cryptoPrices[c.ticker] = Math.max(0.000000001, (state.cryptoPrices[c.ticker] || c.basePrice) * multiplier);
+            });
+            try {
+                const writePromises = CRYPTO_COINS.map(c => {
+                    const ref = window.fbMethods.rtdbRef(window.fbRtdb, 'globalMarket/crypto/' + c.ticker);
+                    return window.fbMethods.rtdbSet(ref, { price: state.cryptoPrices[c.ticker], updatedAt: Date.now(), updatedBy: ADMIN_USERNAME });
+                });
+                await Promise.all(writePromises);
+            } catch(e) { console.warn('RTDB bulk crypto write error', e); }
+            showToast('Done!', 'All crypto updated x' + multiplier, 'success');
+            adminFilterCrypto();
+            if (state.currentTab === 'crypto') renderCrypto();
+        }
+
+        async function adminResetCrypto() {
+            CRYPTO_COINS.forEach(c => { state.cryptoPrices[c.ticker] = c.basePrice; });
+            try {
+                const writePromises = CRYPTO_COINS.map(c => {
+                    const ref = window.fbMethods.rtdbRef(window.fbRtdb, 'globalMarket/crypto/' + c.ticker);
+                    return window.fbMethods.rtdbSet(ref, { price: c.basePrice, updatedAt: Date.now(), updatedBy: ADMIN_USERNAME });
+                });
+                await Promise.all(writePromises);
+            } catch(e) { console.warn('RTDB reset crypto error', e); }
+            showToast('Reset!', 'All crypto reset to base prices', 'success');
+            adminFilterCrypto();
+            if (state.currentTab === 'crypto') renderCrypto();
+        }
+
+        // ---- BADGES DISPLAY IN PROFILE & VISIT MODAL ----
+        function renderProfileBadges() {
+            const user = window.fbAuth ? window.fbAuth.currentUser : null;
+            if (!user) return;
+            window.fbMethods.getDoc(window.fbMethods.doc(window.fbDb, 'users', user.uid)).then(snap => {
+                if (!snap.exists()) return;
+                const badges = snap.data().badges || [];
+                const container = document.getElementById('profile-badges-display');
+                if (!container) return;
+                if (badges.length === 0) {
+                    container.innerHTML = '<div style="font-size:0.85rem;color:var(--text-muted)">No badges yet</div>';
+                } else {
+                    container.innerHTML = badges.map(bid => {
+                        const b = ADMIN_BADGES.find(x => x.id === bid);
+                        if (!b) return '';
+                        return `<span class="admin-badge-pill" style="color:${b.color};background:${b.bg};border-color:${b.border}">${b.emoji} ${b.label}</span>`;
+                    }).join('');
+                }
+            }).catch(() => {});
+        }
+
+        // ---- SYNC GLOBAL MARKET PRICES FROM RTDB (for all players) ----
+        // This listens to admin-controlled prices in RTDB and applies them globally
+        function startAdminMarketSync() {
+            if (!window.fbRtdb || !window.fbMethods) {
+                // Retry after Firebase is ready
+                setTimeout(startAdminMarketSync, 2000);
+                return;
+            }
+            const marketRef = window.fbMethods.rtdbRef(window.fbRtdb, 'globalMarket');
+            window.fbMethods.rtdbOnValue(marketRef, (snapshot) => {
+                const data = snapshot.val();
+                if (!data) return;
+                // Sync stock prices
+                if (data.stocks) {
+                    Object.keys(data.stocks).forEach(ticker => {
+                        if (data.stocks[ticker] && data.stocks[ticker].price) {
+                            state.stockPrices[ticker] = data.stocks[ticker].price;
+                        }
+                    });
+                }
+                // Sync crypto prices
+                if (data.crypto) {
+                    Object.keys(data.crypto).forEach(ticker => {
+                        if (data.crypto[ticker] && data.crypto[ticker].price) {
+                            state.cryptoPrices[ticker] = data.crypto[ticker].price;
+                        }
+                    });
+                }
+                if (state.currentTab === 'market') renderMarket();
+                if (state.currentTab === 'crypto') renderCrypto();
+            });
+        }
 
     </script>
 </body>
