@@ -622,6 +622,22 @@
                     <div id="companies-list" class="widget-grid"></div>
                 </div>
 
+                <!-- Job Posting Modal -->
+                <div id="post-job-modal" class="modal-overlay hidden">
+                    <div class="modal-content" style="max-width:400px">
+                        <h3 id="post-job-title">Post a Job Opening</h3>
+                        <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem">This job will be visible to all real players in their Career tab.</p>
+                        <div class="input-group"><input type="text" id="job-post-title" placeholder="Job Title (e.g. Senior Developer)"></div>
+                        <div class="input-group"><input type="number" id="job-post-salary" placeholder="Daily Salary ($)"><span>$</span></div>
+                        <div class="input-group"><input type="number" id="job-post-exp" placeholder="Required XP"><span>XP</span></div>
+                        <div class="input-group"><input type="number" id="job-post-clout" placeholder="Required Clout"><span>Clout</span></div>
+                        <div class="button-row">
+                            <button class="btn btn-secondary" onclick="document.getElementById('post-job-modal').classList.add('hidden')">Cancel</button>
+                            <button id="confirm-post-job-btn" class="btn btn-primary">Post Job</button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Properties Tab -->
                 <div id="properties" class="tab-panel">
                     <h2>Real Estate</h2>
@@ -3033,7 +3049,13 @@
                 if (co.employees.length > 0) {
                     const rev = co.employees.reduce((s, e) => s + e.salary * 2, 0);
                     co.cash += rev;
-                    co.cash = Math.max(0, co.cash - co.expenses);
+                    co.cash -= co.expenses;
+                    addActivity(`Day ${state.player.day}`, `${co.name}: Revenue $${formatNum(rev)} | Expenses $${formatNum(co.expenses)}`, 'info');
+                    
+                    // Bankruptcy check
+                    if (co.cash < 0) {
+                        addActivity(`Day ${state.player.day}`, `${co.name} is in DEBT! -$${formatNum(Math.abs(co.cash))}`, 'danger');
+                    }
                     
                     // Employee turnover: 3% chance per employee to leave each day
                     const leaving = [];
@@ -3080,9 +3102,20 @@
         // ===================== MARKET TICK =====================
         function tickMarket() {
             STOCKS.forEach(s => {
-                // Use per-stock volatility if defined, otherwise default 2-8%
-                const baseVol = s.volatility ? s.volatility : (0.02 + Math.random() * 0.06);
-                const volatility = baseVol * (0.5 + Math.random());
+                // 30% chance of EXTREME volatility (10-50% swings)
+                const isExtreme = Math.random() < 0.30;
+                let volatility;
+                
+                if (isExtreme) {
+                    // Extreme volatility: 10% to 50% change
+                    volatility = 0.10 + Math.random() * 0.40;
+                    if (!s.isVolatile) s.isVolatile = true; // Mark as volatile for UI
+                } else {
+                    // Normal volatility: 2-8% change
+                    const baseVol = s.volatility ? s.volatility : (0.02 + Math.random() * 0.06);
+                    volatility = baseVol * (0.5 + Math.random());
+                }
+                
                 const direction = Math.random() > 0.5 ? 1 : -1;
                 const change = state.stockPrices[s.ticker] * volatility * direction;
                 state.stockPrices[s.ticker] = Math.max(0.01, state.stockPrices[s.ticker] + change);
@@ -3091,9 +3124,21 @@
                 if (state.stockHistory[s.ticker].length > 30) state.stockHistory[s.ticker].shift();
             });
             CRYPTO_COINS.forEach(c => {
-                const vol = c.volatility || 0.05;
+                // 30% chance of EXTREME volatility (10-50% swings)
+                const isExtreme = Math.random() < 0.30;
+                let vol;
+                
+                if (isExtreme) {
+                    // Extreme volatility: 10% to 50% change
+                    vol = 0.10 + Math.random() * 0.40;
+                    if (!c.isVolatile) c.isVolatile = true; // Mark as volatile for UI
+                } else {
+                    // Normal volatility
+                    vol = c.volatility || 0.05;
+                }
+                
                 const direction = Math.random() > 0.5 ? 1 : -1;
-                const change = state.cryptoPrices[c.ticker] * (vol + Math.random() * vol) * direction;
+                const change = state.cryptoPrices[c.ticker] * vol * direction;
                 state.cryptoPrices[c.ticker] = Math.max(0.000000001, state.cryptoPrices[c.ticker] + change);
                 if (!state.cryptoHistory[c.ticker]) state.cryptoHistory[c.ticker] = [];
                 state.cryptoHistory[c.ticker].push(state.cryptoPrices[c.ticker]);
@@ -3107,9 +3152,19 @@
             state.priceTickerInterval = setInterval(() => {
                 // Update stock prices
                 STOCKS.forEach(s => {
-                    // High-volatility stocks get bigger per-second swings
-                    const baseVol = s.volatility ? s.volatility * 0.08 : (0.001 + Math.random() * 0.003);
-                    const volatility = baseVol * (0.5 + Math.random());
+                    // 30% chance of EXTREME per-second swings (2-10% per second)
+                    const isExtreme = Math.random() < 0.30;
+                    let volatility;
+                    
+                    if (isExtreme) {
+                        // Extreme per-second volatility: 2-10% change
+                        volatility = 0.02 + Math.random() * 0.08;
+                    } else {
+                        // Normal per-second volatility
+                        const baseVol = s.volatility ? s.volatility * 0.08 : (0.001 + Math.random() * 0.003);
+                        volatility = baseVol * (0.5 + Math.random());
+                    }
+                    
                     const direction = Math.random() > 0.5 ? 1 : -1;
                     const change = state.stockPrices[s.ticker] * volatility * direction;
                     state.stockPrices[s.ticker] = Math.max(0.01, state.stockPrices[s.ticker] + change);
@@ -3121,9 +3176,19 @@
                 });
                 // Update crypto prices
                 CRYPTO_COINS.forEach(c => {
-                    // Meme coins (volatility >= 0.20) get extra wild swings
-                    const scaleFactor = (c.volatility || 0.05) >= 0.20 ? 0.05 : 0.02;
-                    const vol = (c.volatility || 0.05) * scaleFactor;
+                    // 30% chance of EXTREME per-second swings (2-10% per second)
+                    const isExtreme = Math.random() < 0.30;
+                    let vol;
+                    
+                    if (isExtreme) {
+                        // Extreme per-second volatility: 2-10% change
+                        vol = 0.02 + Math.random() * 0.08;
+                    } else {
+                        // Normal per-second volatility
+                        const scaleFactor = (c.volatility || 0.05) >= 0.20 ? 0.05 : 0.02;
+                        vol = (c.volatility || 0.05) * scaleFactor;
+                    }
+                    
                     const direction = Math.random() > 0.5 ? 1 : -1;
                     const change = state.cryptoPrices[c.ticker] * vol * direction;
                     state.cryptoPrices[c.ticker] = Math.max(0.000000001, state.cryptoPrices[c.ticker] + change);
@@ -3375,12 +3440,12 @@
         }
 
         // ===================== RENDER ALL =====================
-        function renderAll() {
+        async function renderAll() {
             updateUI();
             if (state.currentTab === 'dashboard') renderDashboard();
             else if (state.currentTab === 'market') renderMarket();
             else if (state.currentTab === 'portfolio') renderPortfolio();
-            else if (state.currentTab === 'career') renderCareer();
+            else if (state.currentTab === 'career') await renderCareer();
             else if (state.currentTab === 'company') renderCompanies();
             else if (state.currentTab === 'properties') renderRealEstate();
             else if (state.currentTab === 'lifestyle') renderLifestyle();
@@ -3389,7 +3454,7 @@
             else if (state.currentTab === 'crypto') renderCrypto();
             else if (state.currentTab === 'achievements') renderAchievements();
             else if (state.currentTab === 'education') renderEducation();
-            else if (state.currentTab === 'leaderboard') renderLeaderboard();
+            else if (state.currentTab === 'leaderboard') await renderLeaderboard();
             else if (state.currentTab === 'profile') renderProfile();
             else if (state.currentTab === 'aibot') renderAIBot();
             else if (state.currentTab === 'club') renderClub();
@@ -3553,9 +3618,10 @@
                 const change = ((price - prev) / prev) * 100;
                 const owned = state.player.portfolio[s.ticker] ? state.player.portfolio[s.ticker].shares : 0;
                 const isActive = state.selectedStock === s.ticker;
-                return `<div class="stock-row ${isActive ? 'active' : ''}" onclick="selectStock('${s.ticker}')">
+                const isVolatile = s.isVolatile || Math.abs(change) > 15;
+                return `<div class="stock-row ${isActive ? 'active' : ''}" onclick="selectStock('${s.ticker}')" style="${isVolatile ? 'border-left:4px solid var(--warning);background:rgba(245,158,11,0.1);' : ''}">
                     <div>
-                        <div style="font-weight:700;font-size:0.9rem">${s.ticker}</div>
+                        <div style="font-weight:700;font-size:0.9rem">${s.ticker}${isVolatile ? ' 🔥' : ''}</div>
                         <div style="color:var(--text-muted);font-size:0.75rem">${s.name}</div>
                     </div>
                     <div style="text-align:right;font-weight:700;font-size:0.9rem">${formatPrice(price)}</div>
@@ -3797,7 +3863,7 @@
         }
 
         // ===================== CAREER =====================
-        function renderCareer() {
+        async function renderCareer() {
             document.getElementById('career-job').textContent = state.player.career ? state.player.career.title : '—';
             document.getElementById('career-salary').textContent = '$' + (state.player.salary || 0).toLocaleString() + '/day';
             document.getElementById('career-exp').textContent = formatNum(state.player.exp) + ' XP';
@@ -3821,9 +3887,10 @@
                         </div>`;
                     }).join('') + `</div>`;
             }
-            // Career list
+            
+            // Career list (NPC + Player Jobs)
             const tbody = document.getElementById('career-list');
-            tbody.innerHTML = CAREERS.map(c => {
+            let html = CAREERS.map(c => {
                 const canApply = state.player.exp >= c.reqExp && state.player.clout >= c.reqClout;
                 const isCurrent = state.player.career && state.player.career.id === c.id;
                 return `<tr>
@@ -3836,6 +3903,55 @@
                     }</td>
                 </tr>`;
             }).join('');
+
+            // Fetch Global Player Jobs
+            try {
+                const jobsCol = window.fbMethods.collection(window.fbDb, "global_jobs");
+                const q = window.fbMethods.query(jobsCol, window.fbMethods.orderBy("createdAt", "desc"), window.fbMethods.limit(10));
+                const snap = await window.fbMethods.getDocs(q);
+                
+                if (!snap.empty) {
+                    html += `<tr><td colspan="5" style="background:var(--bg-panel);text-align:center;font-weight:700;font-size:0.75rem;color:var(--brand);padding:0.5rem">PLAYER POSTED JOBS</td></tr>`;
+                    snap.forEach(doc => {
+                        const j = doc.data();
+                        if (j.ownerUid === window.fbAuth.currentUser.uid) return; // Don't show own jobs
+                        const canApply = state.player.exp >= j.reqExp && state.player.clout >= j.reqClout;
+                        const isCurrent = state.player.career && state.player.career.id === j.id;
+                        html += `<tr>
+                            <td><strong>${j.title}</strong><br><span style="font-size:0.7rem;color:var(--text-muted)">at ${j.companyName}</span></td>
+                            <td style="color:var(--success)">$${j.salary.toLocaleString()}/day</td>
+                            <td style="color:var(--text-muted)">${j.reqExp.toLocaleString()} XP</td>
+                            <td style="color:var(--text-muted)">${j.reqClout.toLocaleString()}</td>
+                            <td>${isCurrent ? '<span style="color:var(--success)">Current</span>' :
+                                `<button class="btn ${canApply ? 'btn-primary' : 'btn-secondary'}" onclick="applyPlayerJob('${j.id}')" style="font-size:0.8rem" ${!canApply ? 'disabled' : ''}>Apply</button>`
+                            }</td>
+                        </tr>`;
+                    });
+                }
+            } catch (e) { console.error("Failed to fetch player jobs", e); }
+            
+            tbody.innerHTML = html;
+        }
+
+        async function applyPlayerJob(jobId) {
+            try {
+                showToast('Applying', 'Submitting application...', 'info');
+                const jobDoc = window.fbMethods.doc(window.fbDb, "global_jobs", jobId);
+                const jobSnap = await window.fbMethods.getDoc(jobDoc);
+                if (!jobSnap.exists()) { showToast('Error', 'Job no longer exists', 'danger'); return; }
+                const job = jobSnap.data();
+
+                // Set as current career
+                state.player.career = { id: job.id, title: job.title, companyName: job.companyName, isPlayerJob: true, ownerUid: job.ownerUid };
+                state.player.salary = job.salary;
+                
+                addActivity(`Day ${state.player.day}`, `Started player job: ${job.title} at ${job.companyName}`, 'success');
+                saveGame();
+                renderCareer();
+                showToast('Hired!', `You are now working for ${job.companyName}!`, 'success');
+            } catch (e) {
+                showToast('Error', 'Failed to apply', 'danger');
+            }
         }
 
         function applyCareer(id) {
@@ -4085,7 +4201,8 @@
                         </div>
                     ` : ''}
                     <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
-                        <button class="btn btn-primary" onclick="showJobApplications('${co.id}')" style="font-size:0.8rem;flex:1">Hire</button>
+                        <button class="btn btn-primary" onclick="openPostJobModal('${co.id}')" style="font-size:0.8rem;flex:1">Hire Players</button>
+                        <button class="btn btn-secondary" onclick="showJobApplications('${co.id}')" style="font-size:0.8rem;flex:1">Hire NPCs</button>
                         <button class="btn btn-secondary" onclick="showEmployees('${co.id}')" style="font-size:0.8rem;flex:1">Team</button>
                         <button class="btn btn-success" onclick="showProjects('${co.id}')" style="font-size:0.8rem;flex:1">Projects</button>
                         <button class="btn btn-secondary" onclick="investInCompany('${co.id}')" style="font-size:0.8rem;flex:1">Invest</button>
@@ -4094,6 +4211,51 @@
                     </div>
                 </div>
             `).join('');
+        }
+
+        function openPostJobModal(coId) {
+            const co = state.player.companies.find(c => c.id === coId);
+            document.getElementById('post-job-title').textContent = `Hire for ${co.name}`;
+            document.getElementById('confirm-post-job-btn').onclick = () => postJobOpening(coId);
+            document.getElementById('post-job-modal').classList.remove('hidden');
+        }
+
+        async function postJobOpening(coId) {
+            const co = state.player.companies.find(c => c.id === coId);
+            const title = document.getElementById('job-post-title').value.trim();
+            const salary = parseInt(document.getElementById('job-post-salary').value);
+            const reqExp = parseInt(document.getElementById('job-post-exp').value) || 0;
+            const reqClout = parseInt(document.getElementById('job-post-clout').value) || 0;
+
+            if (!title || !salary || salary <= 0) { showToast('Error', 'Enter valid title and salary', 'danger'); return; }
+            
+            try {
+                showToast('Posting', 'Uploading job opening...', 'info');
+                const jobId = 'job_' + Date.now();
+                const jobData = {
+                    id: jobId,
+                    companyId: coId,
+                    companyName: co.name,
+                    ownerUid: window.fbAuth.currentUser.uid,
+                    ownerName: state._currentUsername,
+                    title: title,
+                    salary: salary,
+                    reqExp: reqExp,
+                    reqClout: reqClout,
+                    createdAt: new Date().toISOString()
+                };
+
+                // Save to Global Jobs collection
+                const jobDoc = window.fbMethods.doc(window.fbDb, "global_jobs", jobId);
+                await window.fbMethods.setDoc(jobDoc, jobData);
+
+                document.getElementById('post-job-modal').classList.add('hidden');
+                showToast('Success', 'Job posted to Global Career board!', 'success');
+                addActivity(`Day ${state.player.day}`, `Posted job: ${title} at ${co.name}`, 'success');
+            } catch (e) {
+                console.error("Job post failed", e);
+                showToast('Error', 'Failed to post job', 'danger');
+            }
         }
 
         function createCompany() {
@@ -4801,9 +4963,10 @@
                 const holding = state.player.cryptoPortfolio[c.ticker];
                 const owned = holding ? holding.amount : 0;
                 const isActive = state.selectedCrypto === c.ticker;
-                return `<div class="stock-row ${isActive ? 'active' : ''}" onclick="selectCrypto('${c.ticker}')">
+                const isVolatile = c.isVolatile || Math.abs(change) > 15;
+                return `<div class="stock-row ${isActive ? 'active' : ''}" onclick="selectCrypto('${c.ticker}')" style="${isVolatile ? 'border-left:4px solid var(--warning);background:rgba(245,158,11,0.1);' : ''}">
                     <div>
-                        <div style="font-weight:700;font-size:0.9rem;color:${c.color || 'var(--brand)'}">${c.ticker}</div>
+                        <div style="font-weight:700;font-size:0.9rem;color:${c.color || 'var(--brand)'}">${c.ticker}${isVolatile ? ' 🔥' : ''}</div>
                         <div style="color:var(--text-muted);font-size:0.75rem">${c.name}</div>
                     </div>
                     <div style="text-align:right;font-weight:700;font-size:0.9rem">${formatPrice(price)}</div>
