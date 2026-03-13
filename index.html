@@ -835,7 +835,7 @@
                 <div class="widget" style="max-width:600px;margin-bottom:2rem">
                     <p style="color:var(--text-muted);margin-bottom:1rem;font-size:0.9rem">Find other players by their username to visit their profile or send them money.</p>
                     <div style="display:flex;gap:0.75rem">
-                        <input type="text" id="search-player-input" placeholder="Enter username..." style="flex:1;padding:0.75rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:1rem">
+                        <input type="text" id="search-player-input" placeholder="Enter username..." onkeyup="if(event.key==='Enter')searchPlayer()" style="flex:1;padding:0.75rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:1rem">
                         <button class="btn btn-primary" onclick="searchPlayer()">Search</button>
                     </div>
                     <div id="search-results" style="margin-top:1.5rem"></div>
@@ -2551,59 +2551,74 @@
         }
 
         async function searchPlayer() {
-            const username = document.getElementById('search-player-input').value.trim();
-            if (!username) { showToast('Error', 'Enter a username to search', 'danger'); return; }
-            if (username.toLowerCase() === (state._currentUsername || '').toLowerCase()) {
-                showToast('Info', 'That is you!', 'warning');
-                return;
-            }
+            const query = document.getElementById('search-player-input').value.trim().toLowerCase();
+            if (!query) { showToast('Error', 'Enter a username to search', 'danger'); return; }
 
             const resultsDiv = document.getElementById('search-results');
             resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--text-muted)">Searching...</div>';
 
             try {
-                // Look up username in Firestore
-                const usernameDoc = window.fbMethods.doc(window.fbDb, 'usernames', username.toLowerCase());
-                const snap = await window.fbMethods.getDoc(usernameDoc);
+                // Use RTDB for partial/fuzzy search as it's easier to fetch all and filter
+                if (!window.fbRtdb || !window.fbMethods) {
+                    resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--danger)">Database not ready</div>';
+                    return;
+                }
+
+                const rtdbUsersRef = window.fbMethods.rtdbRef(window.fbRtdb, 'users');
+                const snap = await window.fbMethods.rtdbGet(rtdbUsersRef);
                 
                 if (!snap.exists()) {
-                    resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--danger)">Player not found</div>';
+                    resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--danger)">No players found in database</div>';
                     return;
                 }
 
-                const userData = snap.data();
-                const uid = userData.uid;
-
-                // Get full user profile
-                const userDoc = window.fbMethods.doc(window.fbDb, 'users', uid);
-                const userSnap = await window.fbMethods.getDoc(userDoc);
+                const usersObj = snap.val();
+                const matches = [];
                 
-                if (!userSnap.exists()) {
-                    resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--danger)">Profile data missing</div>';
+                Object.entries(usersObj).forEach(([uid, data]) => {
+                    const username = (data.username || '').toLowerCase();
+                    const displayName = (data.displayName || '').toLowerCase();
+                    
+                    // Partial match check
+                    if (username.includes(query) || displayName.includes(query)) {
+                        // Don't include self in results
+                        if (uid !== (window.fbAuth.currentUser ? window.fbAuth.currentUser.uid : '')) {
+                            matches.push({ uid, ...data });
+                        }
+                    }
+                });
+
+                if (matches.length === 0) {
+                    resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--danger)">No matching players found</div>';
                     return;
                 }
 
-                const profile = userSnap.data();
-                // Get the latest AutoSave for detailed stats
-                const saveDoc = window.fbMethods.doc(window.fbDb, 'users', uid, 'saves', 'AutoSave');
-                const saveSnap = await window.fbMethods.getDoc(saveDoc);
-                const saveData = saveSnap.exists() ? saveSnap.data() : null;
+                // Limit to top 10 matches
+                const topMatches = matches.slice(0, 10);
 
                 resultsDiv.innerHTML = `
-                    <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;display:flex;align-items:center;gap:1rem">
-                        <div style="width:50px;height:50px;border-radius:50%;background:var(--bg-panel);display:flex;align-items:center;justify-content:center;font-size:2rem;overflow:hidden">
-                            ${profile.avatar_img ? `<img src="${profile.avatar_img}" style="width:100%;height:100%;object-fit:cover">` : (profile.avatar || '🧑')}
-                        </div>
-                        <div style="flex:1">
-                            <div style="font-weight:700">${profile.displayName || username}</div>
-                            <div style="font-size:0.8rem;color:var(--text-muted)">@${username}</div>
-                        </div>
-                        <button class="btn btn-primary" onclick="visitPlayer('${uid}', '${username}')">Visit Profile</button>
+                    <div style="display:flex;flex-direction:column;gap:0.75rem">
+                        ${topMatches.map(m => `
+                            <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:1rem;display:flex;align-items:center;gap:1rem">
+                                <div style="width:45px;height:45px;border-radius:50%;background:var(--bg-panel);display:flex;align-items:center;justify-content:center;font-size:1.8rem;overflow:hidden;border:1px solid var(--border)">
+                                    ${m.avatar_img ? `<img src="${m.avatar_img}" style="width:100%;height:100%;object-fit:cover">` : (m.avatar || '🧑')}
+                                </div>
+                                <div style="flex:1">
+                                    <div style="font-weight:700;font-size:0.95rem">${m.displayName || m.username || 'Player'}</div>
+                                    <div style="font-size:0.75rem;color:var(--text-muted)">@${m.username || 'unknown'}</div>
+                                </div>
+                                <div style="text-align:right;margin-right:0.5rem">
+                                    <div style="font-size:0.7rem;color:var(--text-muted)">Net Worth</div>
+                                    <div style="font-weight:700;color:var(--success);font-size:0.85rem">$${formatNum(m.netWorth || 0)}</div>
+                                </div>
+                                <button class="btn btn-primary" style="padding:0.4rem 0.8rem;font-size:0.8rem" onclick="visitPlayer('${m.uid}', '${m.username || 'player'}')">Visit</button>
+                            </div>
+                        `).join('')}
                     </div>
                 `;
             } catch (e) {
                 console.error(e);
-                resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--danger)">Search failed. Are you logged in?</div>';
+                resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--danger)">Search failed. Please try again.</div>';
             }
         }
 
