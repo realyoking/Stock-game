@@ -629,11 +629,47 @@
                         <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem">This job will be visible to all real players in their Career tab.</p>
                         <div class="input-group"><input type="text" id="job-post-title" placeholder="Job Title (e.g. Senior Developer)"></div>
                         <div class="input-group"><input type="number" id="job-post-salary" placeholder="Daily Salary ($)"><span>$</span></div>
-                        <div class="input-group"><input type="number" id="job-post-exp" placeholder="Required XP"><span>XP</span></div>
-                        <div class="input-group"><input type="number" id="job-post-clout" placeholder="Required Clout"><span>Clout</span></div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">
+                            <div class="input-group"><input type="number" id="job-post-exp" placeholder="Req. XP"><span>XP</span></div>
+                            <div class="input-group"><input type="number" id="job-post-clout" placeholder="Req. Clout"><span>Clout</span></div>
+                        </div>
+                        <div class="input-group"><input type="number" id="job-post-vacancies" placeholder="Number of Vacancies" value="1"><span>Slots</span></div>
+                        <div style="margin-bottom:1rem">
+                            <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem">Application Question (Optional)</label>
+                            <textarea id="job-post-question" placeholder="e.g. Why should we hire you?" style="width:100%;padding:0.75rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem;min-height:60px;resize:vertical"></textarea>
+                        </div>
                         <div class="button-row">
                             <button class="btn btn-secondary" onclick="document.getElementById('post-job-modal').classList.add('hidden')">Cancel</button>
                             <button id="confirm-post-job-btn" class="btn btn-primary">Post Job</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Job Application Modal (For Applicants) -->
+                <div id="apply-job-modal" class="modal-overlay hidden">
+                    <div class="modal-content" style="max-width:400px">
+                        <h3 id="apply-job-title">Apply for Job</h3>
+                        <div id="apply-job-info" style="margin-bottom:1rem;font-size:0.9rem;color:var(--text-muted)"></div>
+                        <div id="apply-job-question-container" style="margin-bottom:1rem">
+                            <label id="apply-job-question-label" style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem"></label>
+                            <textarea id="apply-job-answer" placeholder="Your answer..." style="width:100%;padding:0.75rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem;min-height:80px;resize:vertical"></textarea>
+                        </div>
+                        <div class="button-row">
+                            <button class="btn btn-secondary" onclick="document.getElementById('apply-job-modal').classList.add('hidden')">Cancel</button>
+                            <button id="confirm-apply-job-btn" class="btn btn-primary">Submit Application</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View Applications Modal (For Owners) -->
+                <div id="view-apps-modal" class="modal-overlay hidden">
+                    <div class="modal-content" style="max-width:600px">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+                            <h3>Job Applications</h3>
+                            <button onclick="document.getElementById('view-apps-modal').classList.add('hidden')" class="btn btn-secondary" style="padding:0.25rem 0.5rem">×</button>
+                        </div>
+                        <div id="apps-list" style="max-height:400px;overflow-y:auto;display:flex;flex-direction:column;gap:1rem">
+                            <p style="color:var(--text-muted);text-align:center">No applications yet.</p>
                         </div>
                     </div>
                 </div>
@@ -972,7 +1008,10 @@
                             </div>
                         </div>
                         <!-- Save -->
-                        <button class="btn btn-success" onclick="openSaveModal()" style="width:100%;margin-bottom:0.75rem">💾 Save Game to Cloud</button>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem">
+                            <button class="btn btn-success" onclick="openSaveModal()" style="width:100%">💾 Save to Cloud</button>
+                            <button class="btn btn-primary" onclick="syncSavesFromCloud(true)" style="width:100%">🔄 Sync from Cloud</button>
+                        </div>
                         <!-- Logout -->
                         <button class="btn btn-danger" onclick="handleLogout()" style="width:100%;margin-bottom:0.75rem">🚪 Logout</button>
                         <!-- Reset -->
@@ -2260,9 +2299,11 @@
             }
         }
 
-        async function syncSavesFromCloud() {
+        async function syncSavesFromCloud(manual = false) {
             const user = window.fbAuth.currentUser;
             if (!user) return;
+            
+            if (manual) showToast('Syncing', 'Fetching latest cloud data...', 'info');
             
             // Clear local saves first to prevent data leaking between accounts
             localStorage.removeItem('tradelife_saves');
@@ -2293,16 +2334,17 @@
             } catch (e) {
                 console.error("RTDB sync failed", e);
             }
-            
-            // Save cloud data to local storage for this specific account
+                        // Save cloud data to local storage for this specific account
             localStorage.setItem('tradelife_saves', JSON.stringify(cloudSaves));
             
-            checkSaveExists();
-            if (Object.keys(cloudSaves).length > 0) {
+            if (manual) {
+                showToast('Sync Complete', 'Cloud data restored to this device!', 'success');
+                renderCharacters(); // Refresh the character selection if on that screen
+            } else if (Object.keys(cloudSaves).length > 0) {
                 showToast('Cloud Sync', 'Saves restored from cloud ✓', 'success');
-            } else {
-                showToast('Cloud Sync', 'No cloud saves found for this account', 'info');
             }
+            checkSaveExists();
+        }
         }
 
         function loadGame(name) {
@@ -2459,7 +2501,51 @@
             }
         }
 
-        window.onload = () => {
+        async function checkNotifications() {
+            const user = window.fbAuth.currentUser;
+            if (!user) return;
+            
+            try {
+                const notifCol = window.fbMethods.collection(window.fbDb, "notifications");
+                const q = window.fbMethods.query(notifCol, 
+                    window.fbMethods.where("uid", "==", user.uid),
+                    window.fbMethods.where("read", "==", false)
+                );
+                const snap = await window.fbMethods.getDocs(q);
+                
+                snap.forEach(async (doc) => {
+                    const n = doc.data();
+                    if (n.type === 'job_accepted') {
+                        state.player.career = { 
+                            id: n.jobId, 
+                            title: n.jobTitle, 
+                            companyName: n.companyName, 
+                            isPlayerJob: true, 
+                            ownerUid: n.ownerUid 
+                        };
+                        state.player.salary = n.salary;
+                        showToast('Hired!', `Your application for ${n.jobTitle} at ${n.companyName} was accepted!`, 'success');
+                        addActivity(`Day ${state.player.day}`, `Hired by ${n.companyName} as ${n.jobTitle}`, 'success');
+                        
+                        // Mark as read
+                        await window.fbMethods.updateDoc(doc.ref, { read: true });
+                        renderAll();
+                    }
+                });
+            } catch (e) {
+                console.error("Failed to check notifications", e);
+            }
+        }
+
+        window.onload = async () => {
+            // Sync from cloud on load if logged in
+            if (window.fbAuth) {
+                window.fbAuth.onAuthStateChanged(user => {
+                    if (user) {
+                        syncSavesFromCloud();
+                    }
+                });
+            }
             // Apply saved theme
             const savedTheme = localStorage.getItem('tradelife_theme');
             if (savedTheme === 'light') {
@@ -3087,6 +3173,8 @@
             autoSaveLocally();
             // Also do a cloud save
             saveGame();
+            // Check for notifications (like job acceptance)
+            checkNotifications();
             // Restart timers
             startDayTimer();
             startPriceTicker();
@@ -3907,7 +3995,7 @@
             // Fetch Global Player Jobs
             try {
                 const jobsCol = window.fbMethods.collection(window.fbDb, "global_jobs");
-                const q = window.fbMethods.query(jobsCol, window.fbMethods.orderBy("createdAt", "desc"), window.fbMethods.limit(10));
+                const q = window.fbMethods.query(jobsCol, window.fbMethods.orderBy("createdAt", "desc"), window.fbMethods.limit(20));
                 const snap = await window.fbMethods.getDocs(q);
                 
                 if (!snap.empty) {
@@ -3917,11 +4005,16 @@
                         if (j.ownerUid === window.fbAuth.currentUser.uid) return; // Don't show own jobs
                         const canApply = state.player.exp >= j.reqExp && state.player.clout >= j.reqClout;
                         const isCurrent = state.player.career && state.player.career.id === j.id;
+                        const slots = j.vacancies || 1;
                         html += `<tr>
-                            <td><strong>${j.title}</strong><br><span style="font-size:0.7rem;color:var(--text-muted)">at ${j.companyName}</span></td>
+                            <td>
+                                <strong>${j.title}</strong><br>
+                                <span style="font-size:0.7rem;color:var(--text-muted)">at ${j.companyName}</span>
+                                ${j.question ? '<br><span style="font-size:0.65rem;color:var(--warning)">📝 Requires Application</span>' : ''}
+                            </td>
                             <td style="color:var(--success)">$${j.salary.toLocaleString()}/day</td>
                             <td style="color:var(--text-muted)">${j.reqExp.toLocaleString()} XP</td>
-                            <td style="color:var(--text-muted)">${j.reqClout.toLocaleString()}</td>
+                            <td style="color:var(--text-muted)">${slots} Slots</td>
                             <td>${isCurrent ? '<span style="color:var(--success)">Current</span>' :
                                 `<button class="btn ${canApply ? 'btn-primary' : 'btn-secondary'}" onclick="applyPlayerJob('${j.id}')" style="font-size:0.8rem" ${!canApply ? 'disabled' : ''}>Apply</button>`
                             }</td>
@@ -3935,22 +4028,63 @@
 
         async function applyPlayerJob(jobId) {
             try {
-                showToast('Applying', 'Submitting application...', 'info');
                 const jobDoc = window.fbMethods.doc(window.fbDb, "global_jobs", jobId);
                 const jobSnap = await window.fbMethods.getDoc(jobDoc);
                 if (!jobSnap.exists()) { showToast('Error', 'Job no longer exists', 'danger'); return; }
                 const job = jobSnap.data();
 
-                // Set as current career
-                state.player.career = { id: job.id, title: job.title, companyName: job.companyName, isPlayerJob: true, ownerUid: job.ownerUid };
-                state.player.salary = job.salary;
+                // Show application modal
+                document.getElementById('apply-job-title').textContent = `Apply for ${job.title}`;
+                document.getElementById('apply-job-info').textContent = `Company: ${job.companyName} | Salary: $${formatNum(job.salary)}/day`;
                 
-                addActivity(`Day ${state.player.day}`, `Started player job: ${job.title} at ${job.companyName}`, 'success');
-                saveGame();
-                renderCareer();
-                showToast('Hired!', `You are now working for ${job.companyName}!`, 'success');
+                const qContainer = document.getElementById('apply-job-question-container');
+                if (job.question) {
+                    qContainer.style.display = 'block';
+                    document.getElementById('apply-job-question-label').textContent = job.question;
+                } else {
+                    qContainer.style.display = 'none';
+                }
+                
+                document.getElementById('apply-job-answer').value = '';
+                document.getElementById('apply-job-modal').classList.remove('hidden');
+                
+                document.getElementById('confirm-apply-job-btn').onclick = async () => {
+                    const answer = document.getElementById('apply-job-answer').value.trim();
+                    if (job.question && !answer) {
+                        showToast('Error', 'Please answer the question', 'danger');
+                        return;
+                    }
+                    
+                    try {
+                        showToast('Applying', 'Sending application...', 'info');
+                        const appData = {
+                            jobId: jobId,
+                            jobTitle: job.title,
+                            companyId: job.companyId,
+                            companyName: job.companyName,
+                            ownerUid: job.ownerUid,
+                            applicantUid: window.fbAuth.currentUser.uid,
+                            applicantName: state.player.displayName || state._currentUsername,
+                            applicantXp: state.player.xp,
+                            applicantClout: state.player.clout,
+                            answer: answer,
+                            status: 'pending',
+                            createdAt: new Date().toISOString()
+                        };
+                        
+                        const appCol = window.fbMethods.collection(window.fbDb, "job_applications");
+                        await window.fbMethods.addDoc(appCol, appData);
+                        
+                        document.getElementById('apply-job-modal').classList.add('hidden');
+                        showToast('Applied!', 'Your application has been sent to the owner.', 'success');
+                    } catch (e) {
+                        console.error("Application submission failed", e);
+                        showToast('Error', 'Failed to submit application', 'danger');
+                    }
+                };
             } catch (e) {
-                showToast('Error', 'Failed to apply', 'danger');
+                console.error("Job fetch failed", e);
+                showToast('Error', 'Failed to fetch job details', 'danger');
             }
         }
 
@@ -4201,8 +4335,9 @@
                         </div>
                     ` : ''}
                     <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
-                        <button class="btn btn-primary" onclick="openPostJobModal('${co.id}')" style="font-size:0.8rem;flex:1">Hire Players</button>
-                        <button class="btn btn-secondary" onclick="showJobApplications('${co.id}')" style="font-size:0.8rem;flex:1">Hire NPCs</button>
+                        <button class="btn btn-primary" onclick="openPostJobModal('${co.id}')" style="font-size:0.8rem;flex:1">Post Job</button>
+                        <button class="btn btn-secondary" onclick="showJobApplications('${co.id}')" style="font-size:0.8rem;flex:1">Apps</button>
+                        <button class="btn btn-secondary" onclick="showNPCJobApplications('${co.id}')" style="font-size:0.8rem;flex:1">Hire NPCs</button>
                         <button class="btn btn-secondary" onclick="showEmployees('${co.id}')" style="font-size:0.8rem;flex:1">Team</button>
                         <button class="btn btn-success" onclick="showProjects('${co.id}')" style="font-size:0.8rem;flex:1">Projects</button>
                         <button class="btn btn-secondary" onclick="investInCompany('${co.id}')" style="font-size:0.8rem;flex:1">Invest</button>
@@ -4226,6 +4361,8 @@
             const salary = parseInt(document.getElementById('job-post-salary').value);
             const reqExp = parseInt(document.getElementById('job-post-exp').value) || 0;
             const reqClout = parseInt(document.getElementById('job-post-clout').value) || 0;
+            const vacancies = parseInt(document.getElementById('job-post-vacancies').value) || 1;
+            const question = document.getElementById('job-post-question').value.trim();
 
             if (!title || !salary || salary <= 0) { showToast('Error', 'Enter valid title and salary', 'danger'); return; }
             
@@ -4242,6 +4379,8 @@
                     salary: salary,
                     reqExp: reqExp,
                     reqClout: reqClout,
+                    vacancies: vacancies,
+                    question: question,
                     createdAt: new Date().toISOString()
                 };
 
@@ -4495,7 +4634,122 @@
             } catch (e) {
                 console.error("Global market sync failed", e);
             }
-        }        function showJobApplications(coId) {
+                async function showJobApplications(coId) {
+            const co = state.player.companies.find(c => c.id === coId);
+            if (!co) return;
+            
+            try {
+                showToast('Loading', 'Fetching applications...', 'info');
+                const appCol = window.fbMethods.collection(window.fbDb, "job_applications");
+                const q = window.fbMethods.query(appCol, 
+                    window.fbMethods.where("companyId", "==", coId),
+                    window.fbMethods.where("status", "==", "pending")
+                );
+                const snap = await window.fbMethods.getDocs(q);
+                
+                const list = document.getElementById('apps-list');
+                list.innerHTML = '';
+                
+                if (snap.empty) {
+                    list.innerHTML = '<p style="color:var(--text-muted);text-align:center">No pending applications.</p>';
+                } else {
+                    snap.forEach(doc => {
+                        const app = doc.data();
+                        const appId = doc.id;
+                        const div = document.createElement('div');
+                        div.className = 'widget';
+                        div.style.background = 'var(--bg-base)';
+                        div.style.marginBottom = '1rem';
+                        div.innerHTML = `
+                            <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem">
+                                <strong>${app.applicantName}</strong>
+                                <span style="font-size:0.8rem;color:var(--text-muted)">${app.jobTitle}</span>
+                            </div>
+                            <div style="font-size:0.85rem;margin-bottom:0.75rem">
+                                <div>XP: ${app.applicantXp} | Clout: ${app.applicantClout}</div>
+                                ${app.answer ? `<div style="margin-top:0.5rem;padding:0.5rem;background:var(--bg-panel);border-radius:4px;font-style:italic">"${app.answer}"</div>` : ''}
+                            </div>
+                            <div style="display:flex;gap:0.5rem">
+                                <button class="btn btn-success" onclick="processApplication('${appId}', 'accept')" style="flex:1;font-size:0.8rem">Accept</button>
+                                <button class="btn btn-danger" onclick="processApplication('${appId}', 'reject')" style="flex:1;font-size:0.8rem">Reject</button>
+                            </div>
+                        `;
+                        list.appendChild(div);
+                    });
+                }
+                
+                document.getElementById('view-apps-modal').classList.remove('hidden');
+            } catch (e) {
+                console.error("Failed to load applications", e);
+                showToast('Error', 'Failed to load applications', 'danger');
+            }
+        }
+
+        async function processApplication(appId, action) {
+            try {
+                showToast('Processing', 'Updating application...', 'info');
+                const appDoc = window.fbMethods.doc(window.fbDb, "job_applications", appId);
+                const appSnap = await window.fbMethods.getDoc(appDoc);
+                if (!appSnap.exists()) return;
+                const app = appSnap.data();
+                
+                if (action === 'accept') {
+                    // 1. Update application status
+                    await window.fbMethods.updateDoc(appDoc, { status: 'accepted' });
+                    
+                    // 2. Add to company employees (as a special player employee)
+                    const co = state.player.companies.find(c => c.id === app.companyId);
+                    if (co) {
+                        const newEmp = {
+                            id: 'p_' + app.applicantUid,
+                            name: app.applicantName,
+                            salary: 0, 
+                            role: app.jobTitle,
+                            isPlayer: true,
+                            uid: app.applicantUid
+                        };
+                        // Find the job to get the salary
+                        const jobDoc = window.fbMethods.doc(window.fbDb, "global_jobs", app.jobId);
+                        const jobSnap = await window.fbMethods.getDoc(jobDoc);
+                        if (jobSnap.exists()) {
+                            newEmp.salary = jobSnap.data().salary;
+                        }
+                        
+                        co.employees.push(newEmp);
+                        co.expenses += newEmp.salary;
+                        addActivity(`Day ${state.player.day}`, `Hired ${app.applicantName} as ${app.jobTitle}`, 'success');
+                    }
+                    
+                    // 3. Notify the player
+                    const notifCol = window.fbMethods.collection(window.fbDb, "notifications");
+                    await window.fbMethods.addDoc(notifCol, {
+                        uid: app.applicantUid,
+                        type: 'job_accepted',
+                        jobTitle: app.jobTitle,
+                        companyName: app.companyName,
+                        salary: app.salary || 0,
+                        jobId: app.jobId,
+                        companyId: app.companyId,
+                        ownerUid: app.ownerUid,
+                        read: false,
+                        createdAt: new Date().toISOString()
+                    });
+                    
+                    showToast('Accepted', `${app.applicantName} has been hired!`, 'success');
+                } else {
+                    await window.fbMethods.updateDoc(appDoc, { status: 'rejected' });
+                    showToast('Rejected', 'Application declined.', 'info');
+                }
+                
+                document.getElementById('view-apps-modal').classList.add('hidden');
+                renderCompanies();
+            } catch (e) {
+                console.error("Failed to process application", e);
+                showToast('Error', 'Failed to process application', 'danger');
+            }
+        }
+
+        function showNPCJobApplications(coId) {
             const co = state.player.companies.find(c => c.id === coId);
             // Show all applicants
             const applicants = JOB_APPLICANTS;
@@ -4511,7 +4765,8 @@
                     <button class="btn btn-success" onclick="hireApplicantDirect('${coId}','${app.name}',${app.salary})" style="width:100%;font-size:0.85rem">Hire</button>
                 </div>
             `).join('');
-            document.getElementById('job-modal-title').textContent = `${co.name} - Job Applications`;
+            document.getElementById('job-modal').classList.remove('hidden');
+        }    document.getElementById('job-modal-title').textContent = `${co.name} - Job Applications`;
             document.getElementById('job-modal').classList.remove('hidden');
         }
 
