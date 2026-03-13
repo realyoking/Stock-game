@@ -16,7 +16,7 @@
             apiKey: "AIzaSyBPCIAisCWASmMkad10K9qJnRReKNsnLe4",
             authDomain: "stock-game-c4432.firebaseapp.com",
             projectId: "stock-game-c4432",
-            storageBucket: "stock-game-c4432.firebasestorage.app",
+            storageBucket: "stock-game-c4432.appspot.com",
             messagingSenderId: "1039361432275",
             appId: "1:1039361432275:web:faf30708d4c8e9c27a1226",
             measurementId: "G-4RYVBLRCSQ",
@@ -80,7 +80,7 @@
 
         button { cursor: pointer; border: none; outline: none; font-weight: 600; transition: all 0.2s; }
         input { outline: none; font-family: inherit; }
-        .hidden { display: none !important; pointer-events: none !important; }
+        .hidden { display: none !important; }
         svg { width: 20px; height: 20px; display: inline-block; vertical-align: middle; }
 
         /* SETUP SCREEN */
@@ -291,32 +291,32 @@
                     <h1 class="setup-title" style="font-size:2rem">TradeLife Cloud</h1>
                     <p class="setup-subtitle">Login to sync your progress</p>
                 </div>
-                
                 <div id="auth-form">
                     <div id="auth-tabs" style="display:flex;gap:0;margin-bottom:1.5rem;border:1px solid var(--border);border-radius:8px;overflow:hidden">
-                        <button id="tab-login" type="button" onclick="switchAuthTab('login')" style="flex:1;padding:0.8rem;background:var(--brand);color:white;border:none;font-weight:700;cursor:pointer;display:block">Login</button>
-                        <button id="tab-signup" type="button" onclick="switchAuthTab('signup')" style="flex:1;padding:0.8rem;background:transparent;color:var(--text-muted);border:none;font-weight:700;cursor:pointer;display:block">Sign Up</button>
+                        <button id="tab-login" onclick="switchAuthTab('login')" style="flex:1;padding:0.6rem;background:var(--brand);color:white;border:none;font-weight:700;cursor:pointer">Login</button>
+                        <button id="tab-signup" onclick="switchAuthTab('signup')" style="flex:1;padding:0.6rem;background:transparent;color:var(--text-muted);border:none;font-weight:700;cursor:pointer">Sign Up</button>
                     </div>
-                    <div class="input-group" style="margin-bottom:1rem"><input type="text" id="auth-username" placeholder="Username" style="text-align:left;width:100%;padding:0.8rem" autocomplete="username"></div>
-                    <div class="input-group" id="auth-email-group" style="margin-bottom:1rem;display:none"><input type="email" id="auth-email-field" placeholder="Email (for sign up)" style="text-align:left;width:100%;padding:0.8rem" autocomplete="email"></div>
-                    <div class="input-group" style="margin-bottom:1.5rem"><input type="password" id="auth-password" placeholder="Password" style="text-align:left;width:100%;padding:0.8rem" autocomplete="current-password"></div>
-                    <div class="button-group" style="flex-direction:column;gap:0.75rem;display:flex">
-                        <button class="btn btn-primary" id="auth-submit-btn" type="button" onclick="handleAuth()" style="width:100%;padding:1rem;cursor:pointer;display:block;z-index:3000">Login</button>
-                        <button class="btn btn-secondary" type="button" onclick="startGuestMode()" style="width:100%;margin-top:0.5rem;padding:1rem;cursor:pointer;display:block;z-index:3000">Play as Guest (No Save)</button>
+                    <div class="input-group" style="margin-bottom:1rem"><input type="text" id="auth-username" placeholder="Username" style="text-align:left" autocomplete="username"></div>
+                    <div class="input-group" id="auth-email-group" style="margin-bottom:1rem;display:none"><input type="email" id="auth-email-field" placeholder="Email (for sign up)" style="text-align:left" autocomplete="email"></div>
+                    <div class="input-group" style="margin-bottom:1.5rem"><input type="password" id="auth-password" placeholder="Password" style="text-align:left" autocomplete="current-password"></div>
+                    <div class="button-group" style="flex-direction:column;gap:0.75rem">
+                        <button class="btn btn-primary" id="auth-submit-btn" onclick="handleAuth(state._authTab||'login')" style="width:100%">Login</button>
                         <div style="display:flex;align-items:center;gap:0.75rem;margin:0.25rem 0">
                             <div style="flex:1;height:1px;background:var(--border)"></div>
                             <span style="color:var(--text-muted);font-size:0.85rem">or</span>
                             <div style="flex:1;height:1px;background:var(--border)"></div>
                         </div>
-                        <button class="btn btn-secondary" type="button" onclick="handleGoogleSignIn()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:0.75rem;padding:1rem;cursor:pointer;z-index:3000">
+                        <button class="btn btn-secondary" onclick="handleGoogleSignIn()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:0.75rem">
                             <svg viewBox="0 0 24 24" width="20" height="20"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
                             Sign in with Google
                         </button>
                     </div>
                 </div>
+                <div id="auth-loading" class="hidden" style="text-align:center;padding:1rem">
+                    <div style="margin-bottom:1rem">Connecting to Cloud...</div>
+                    <div style="width:30px;height:30px;border:3px solid var(--brand);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto"></div>
                 </div>
             </div>
-        </div>
         </div>
 
         <div class="setup-container">
@@ -625,7 +625,7 @@
                     <h3>Your Properties</h3>
                     <table class="data-table" style="margin-bottom: 2rem;">
                         <thead><tr><th>Property</th><th>Buy Price</th><th>Market Price</th><th>Monthly Yield</th><th>Action</th></tr></thead>
-                        <tbody id="properties-owned"><tr><td colspan="6" style="text-align:center;color:var(--text-muted)">No properties</td></tr></tbody>
+                        <tbody id="properties-owned"><tr><td colspan="5" style="text-align:center;color:var(--text-muted)">No properties</td></tr></tbody>
                     </table>
                     <h3>Available Properties</h3>
                     <div id="properties-shop" class="widget-grid"></div>
@@ -652,7 +652,7 @@
                     <h3>Active Loans</h3>
                     <table class="data-table" style="margin-bottom: 2rem;">
                         <thead><tr><th>Amount</th><th>Interest Rate</th><th>Remaining</th><th>Monthly Payment</th><th>Action</th></tr></thead>
-                        <tbody id="loans-list"><tr><td colspan="6" style="text-align:center;color:var(--text-muted)">No active loans</td></tr></tbody>
+                        <tbody id="loans-list"><tr><td colspan="5" style="text-align:center;color:var(--text-muted)">No active loans</td></tr></tbody>
                     </table>
                     <h3>Take a Loan</h3>
                     <div class="widget">
@@ -1912,22 +1912,9 @@
         function nextPage() { if ((state.characterPage + 1) * CHARS_PER_PAGE < CHARACTERS.length) { state.characterPage++; renderCharacters(); } }
 
         function selectCharacter(id) {
-            console.log('Selecting character:', id);
             state.selectedCharacter = id;
             renderCharacters();
-            const startBtn = document.getElementById('start-btn');
-            if (startBtn) {
-                startBtn.disabled = false;
-                startBtn.style.opacity = '1';
-                startBtn.style.cursor = 'pointer';
-                startBtn.classList.remove('disabled');
-            }
-        }
-        // Original function was:
-        function _old_selectCharacter(id) {
-            state.selectedCharacter = id;
-            renderCharacters();
-            const startBtn = document.getElementById('start-btn'); startBtn.disabled = false; startBtn.style.opacity = '1'; startBtn.style.cursor = 'pointer';
+            document.getElementById('start-btn').disabled = false;
         }
 
         function startGame() {
@@ -2035,6 +2022,7 @@
         }
 
         async function saveToSlot(name) {
+            if (state._isGuest) { showToast('Guest Mode', 'Saving is disabled in guest mode', 'warning'); return; }
             const user = window.fbAuth ? window.fbAuth.currentUser : null;
             if (!user) {
                 // Offline: save locally only
@@ -2216,141 +2204,159 @@
             }
         }
 
-        
-        
-        let isGuestMode = false;
-        function startGuestMode() {
-            console.log('Guest mode started');
-            isGuestMode = true;
-            const overlay = document.getElementById('auth-overlay');
-            if (overlay) overlay.classList.add('hidden');
-            showToast('Guest Mode', 'Playing as guest. Progress will not be saved.', 'warning');
+        async function saveGame() {
+            // Auto-save to the last used slot if possible
+            await saveToSlot('QuickSave');
+        }
+
+        function resetGame() {
+            localStorage.removeItem('tradelife_save');
+            location.reload();
+        }
+
+        function checkSaveExists() {
+            const saves = getSaves();
+            if (Object.keys(saves).length > 0) {
+                document.getElementById('resume-btn').style.display = 'inline-flex';
+            }
+        }
+
+        window.onload = () => {
+            // Apply saved theme
+            const savedTheme = localStorage.getItem('tradelife_theme');
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-theme');
+                ['theme-text','profile-theme-text'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = 'Light'; });
+            }
+            // Apply saved avatar (image or emoji)
+            const savedAvatarImgOnLoad = localStorage.getItem('tradelife_avatar_img');
+            const savedAvatarOnLoad = localStorage.getItem('tradelife_avatar');
+            const avatarElOnLoad = document.getElementById('profile-avatar-display');
+            if (avatarElOnLoad) {
+                if (savedAvatarImgOnLoad) {
+                    avatarElOnLoad.textContent = '';
+                    avatarElOnLoad.style.fontSize = '0';
+                    avatarElOnLoad.innerHTML = `<img src="${savedAvatarImgOnLoad}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+                } else if (savedAvatarOnLoad) {
+                    avatarElOnLoad.style.fontSize = '4rem';
+                    avatarElOnLoad.textContent = savedAvatarOnLoad;
+                }
+            }
+            // Initialize Firebase Auth Listener
+            if (window.fbMethods) {
+                window.fbMethods.onAuthStateChanged(window.fbAuth, (user) => {
+                    if (user) {
+                        document.getElementById('auth-overlay').classList.add('hidden');
+                        const displayName = user.displayName || user.email.replace('@tradelife.game','') || 'Player';
+                        document.getElementById('user-email').textContent = displayName;
+                        state._currentUsername = displayName;
+                        // Load cloud saves after login
+                        syncSavesFromCloud();
+                    } else {
+                        document.getElementById('auth-overlay').classList.remove('hidden');
+                    }
+                });
+            }
+            checkSaveExists();
+            renderCharacters();
+        };
+
+        async function handleGoogleSignIn() {
+            document.getElementById('auth-form').classList.add('hidden');
+            document.getElementById('auth-loading').classList.remove('hidden');
+            try {
+                await window.fbMethods.signInWithPopup(window.fbAuth, window.fbGoogleProvider);
+                showToast('Success', 'Signed in with Google!', 'success');
+            } catch (e) {
+                document.getElementById('auth-form').classList.remove('hidden');
+                document.getElementById('auth-loading').classList.add('hidden');
+                showToast('Google Sign-In Error', e.message, 'danger');
+            }
         }
 
         function switchAuthTab(tab) {
-            console.log('Switching auth tab to:', tab);
             state._authTab = tab;
             const loginBtn = document.getElementById('tab-login');
             const signupBtn = document.getElementById('tab-signup');
             const submitBtn = document.getElementById('auth-submit-btn');
             const emailGroup = document.getElementById('auth-email-group');
-            
             if (tab === 'signup') {
-                if (loginBtn) { loginBtn.style.background = 'transparent'; loginBtn.style.color = 'var(--text-muted)'; }
-                if (signupBtn) { signupBtn.style.background = 'var(--brand)'; signupBtn.style.color = 'white'; }
-                if (submitBtn) submitBtn.textContent = 'Create Account';
-                if (emailGroup) emailGroup.style.display = 'flex';
+                loginBtn.style.background = 'transparent';
+                loginBtn.style.color = 'var(--text-muted)';
+                signupBtn.style.background = 'var(--brand)';
+                signupBtn.style.color = 'white';
+                submitBtn.textContent = 'Create Account';
+                submitBtn.onclick = () => handleAuth('signup');
+                emailGroup.style.display = 'flex';
             } else {
-                if (loginBtn) { loginBtn.style.background = 'var(--brand)'; loginBtn.style.color = 'white'; }
-                if (signupBtn) { signupBtn.style.background = 'transparent'; signupBtn.style.color = 'var(--text-muted)'; }
-                if (submitBtn) submitBtn.textContent = 'Login';
-                if (emailGroup) emailGroup.style.display = 'none';
+                loginBtn.style.background = 'var(--brand)';
+                loginBtn.style.color = 'white';
+                signupBtn.style.background = 'transparent';
+                signupBtn.style.color = 'var(--text-muted)';
+                submitBtn.textContent = 'Login';
+                submitBtn.onclick = () => handleAuth('login');
+                emailGroup.style.display = 'none';
             }
         }
 
         async function handleAuth(type) {
-            console.log('handleAuth called with type:', type);
-            if (!type) type = state._authTab || 'login';
+            const username = document.getElementById('auth-username').value.trim();
+            const password = document.getElementById('auth-password').value;
+            if (!username || !password) { showToast('Error', 'Enter username and password', 'danger'); return; }
+            if (username.length < 3) { showToast('Error', 'Username must be at least 3 characters', 'danger'); return; }
+            // Convert username to a fake email for Firebase Auth
+            const fakeEmail = username.toLowerCase().replace(/[^a-z0-9]/g, '') + '@tradelife.game';
             
-            if (!window.fbMethods) {
-                showToast('Error', 'Firebase is still loading. Please wait a moment...', 'warning');
-                return;
-            }
-
-            const usernameInput = document.getElementById('auth-username');
-            const passwordInput = document.getElementById('auth-password');
-            const emailInput = document.getElementById('auth-email-field');
-
-            if (!usernameInput || !passwordInput) {
-                console.error('Auth inputs not found');
-                return;
-            }
-
-            const username = usernameInput.value.trim();
-            const password = passwordInput.value;
-            const emailField = emailInput ? emailInput.value.trim() : '';
-
-            if (!username || !password) { 
-                showToast('Error', 'Enter username and password', 'danger'); 
-                return; 
-            }
-            
-            if (type === 'signup' && !emailField) {
-                showToast('Error', 'Enter an email for sign up', 'danger');
-                return;
-            }
-
-            if (username.length < 3) { 
-                showToast('Error', 'Username must be at least 3 characters', 'danger'); 
-                return; 
-            }
-            
-            let emailToUse = username.toLowerCase().replace(/[^a-z0-9]/g, '') + '@tradelife.game';
-            if (type === 'signup') emailToUse = emailField;
-            
-            const authForm = document.getElementById('auth-form');
-            const authLoading = document.getElementById('auth-loading');
-            if (authForm) authForm.classList.add('hidden');
-            if (authLoading) authLoading.classList.remove('hidden');
+            document.getElementById('auth-form').classList.add('hidden');
+            document.getElementById('auth-loading').classList.remove('hidden');
             
             try {
                 if (type === 'signup') {
+                    // Check if username is taken by trying to look it up in Firestore
                     try {
                         const usernameDoc = window.fbMethods.doc(window.fbDb, 'usernames', username.toLowerCase());
                         const snap = await window.fbMethods.getDoc(usernameDoc);
                         if (snap.exists()) {
-                            throw new Error('Username already taken');
+                            document.getElementById('auth-form').classList.remove('hidden');
+                            document.getElementById('auth-loading').classList.add('hidden');
+                            showToast('Username Taken', 'Please choose a different username', 'danger');
+                            return;
                         }
-                    } catch(e) { 
-                        if (e.message === 'Username already taken') throw e;
-                    }
-
-                    const cred = await window.fbMethods.createUserWithEmailAndPassword(window.fbAuth, emailToUse, password);
-                    await window.fbMethods.updateProfile(cred.user, { displayName: username });
-                    
-                    const usernameDoc = window.fbMethods.doc(window.fbDb, 'usernames', username.toLowerCase());
-                    await window.fbMethods.setDoc(usernameDoc, { uid: cred.user.uid, username, email: emailToUse });
-                    
+                    } catch(e) { /* Firestore check failed, proceed */ }
+                    const cred = await window.fbMethods.createUserWithEmailAndPassword(window.fbAuth, fakeEmail, password);
+                    // Store username mapping
+                    try {
+                        await window.fbMethods.updateProfile(cred.user, { displayName: username });
+                        const usernameDoc = window.fbMethods.doc(window.fbDb, 'usernames', username.toLowerCase());
+                        await window.fbMethods.setDoc(usernameDoc, { uid: cred.user.uid, username });
+                    } catch(e) { console.warn('Profile update failed', e); }
                     showToast('Success', 'Account created! Welcome, ' + username + '!', 'success');
+                    document.getElementById('auth-username').value = '';
+                    document.getElementById('auth-password').value = '';
                 } else {
+                    // Login: try username-based email first
+                    let emailToUse = fakeEmail;
+                    // Also try looking up username in Firestore to get exact uid mapping
                     try {
                         const usernameDoc = window.fbMethods.doc(window.fbDb, 'usernames', username.toLowerCase());
                         const snap = await window.fbMethods.getDoc(usernameDoc);
-                        if (snap.exists() && snap.data().email) {
-                            emailToUse = snap.data().email;
+                        if (snap.exists() && snap.data().username) {
+                            emailToUse = snap.data().username.toLowerCase().replace(/[^a-z0-9]/g, '') + '@tradelife.game';
                         }
-                    } catch(e) {}
-                    
+                    } catch(e) { /* use fakeEmail */ }
                     await window.fbMethods.signInWithEmailAndPassword(window.fbAuth, emailToUse, password);
                     showToast('Success', 'Welcome back, ' + username + '!', 'success');
+                    document.getElementById('auth-username').value = '';
+                    document.getElementById('auth-password').value = '';
                 }
-                if (usernameInput) usernameInput.value = '';
-                if (passwordInput) passwordInput.value = '';
-                if (emailInput) emailInput.value = '';
             } catch (e) {
-                if (authForm) authForm.classList.remove('hidden');
-                if (authLoading) authLoading.classList.add('hidden');
+                document.getElementById('auth-form').classList.remove('hidden');
+                document.getElementById('auth-loading').classList.add('hidden');
                 let msg = e.message;
                 if (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') msg = 'Invalid username or password';
-                if (e.code === 'auth/email-already-in-use') msg = 'Email already in use';
+                if (e.code === 'auth/email-already-in-use') msg = 'Username already taken';
                 if (e.code === 'auth/weak-password') msg = 'Password must be at least 6 characters';
                 showToast('Auth Error', msg, 'danger');
-            }
-        }
-
-        async function handleGoogleSignIn() {
-            console.log('handleGoogleSignIn called');
-            const authForm = document.getElementById('auth-form');
-            const authLoading = document.getElementById('auth-loading');
-            if (authForm) authForm.classList.add('hidden');
-            if (authLoading) authLoading.classList.remove('hidden');
-            try {
-                await window.fbMethods.signInWithPopup(window.fbAuth, window.fbGoogleProvider);
-                showToast('Success', 'Signed in with Google!', 'success');
-            } catch (e) {
-                if (authForm) authForm.classList.remove('hidden');
-                if (authLoading) authLoading.classList.add('hidden');
-                showToast('Google Sign-In Error', e.message, 'danger');
             }
         }
 
@@ -2363,11 +2369,7 @@
             }
         }
 
-        async function saveGame() {
-            if (isGuestMode) return;
-            await saveToSlot('QuickSave');
-        }
-\n        function initPrices() {
+        function initPrices() {
             STOCKS.forEach(s => {
                 state.stockPrices[s.ticker] = s.basePrice;
                 // Generate 20 data points of realistic history so chart shows from Day 1
@@ -2422,19 +2424,6 @@
             updateTimerDisplay();
             state.dayTimerInterval = setInterval(() => {
                 state.dayTimer--;
-                // Update individual loan timers
-                if (state.player.loans && state.player.loans.length > 0) {
-                    state.player.loans.forEach(loan => {
-                        if (loan.timer > 0) {
-                            loan.timer--;
-                            if (loan.timer <= 0) {
-                                triggerDebtLock();
-                            }
-                        }
-                    });
-                    if (state.currentTab === 'banking') renderBanking();
-                }
-
                 updateTimerDisplay();
                 if (state.dayTimer <= 0) {
                     endDay();
@@ -2443,14 +2432,6 @@
         }
 
         function endDay(isSkip = false) {
-            if (isSkip && state.player.cash <= 0) {
-                showToast('Cannot Skip', 'You need cash to pay the skip fee!', 'warning');
-                return;
-            }
-            if (isSkip && state.player.cash <= 0) {
-                showToast('Cannot Skip', 'You need cash to pay the skip fee!', 'warning');
-                return;
-            }
             if (isSkip) {
                 // Deduct 10% fee BEFORE processing end of day
                 const fee = Math.round(state.player.cash * 0.10);
@@ -2481,10 +2462,6 @@
             else fill.style.background = 'var(--danger)';
             // Update skip day cost
             const skipCostEl = document.getElementById('skip-day-cost');
-            const skipBtn = document.getElementById('skip-day-btn');
-            if (skipBtn) skipBtn.disabled = state.player.cash <= 0;
-            const skipBtn = document.getElementById('skip-day-btn');
-            if (skipBtn) skipBtn.disabled = state.player.cash <= 0;
             if (skipCostEl) {
                 const fee = Math.round(state.player.cash * 0.10);
                 skipCostEl.textContent = '$' + formatNum(fee);
@@ -2628,98 +2605,21 @@
         }
 
         // ===================== PER-SECOND PRICE TICKER =====================
-        
-        // ===================== PER-SECOND PRICE TICKER =====================
         function startPriceTicker() {
             if (state.priceTickerInterval) clearInterval(state.priceTickerInterval);
             state.priceTickerInterval = setInterval(() => {
-                // 1. Update stock prices
+                // Update stock prices
                 STOCKS.forEach(s => {
-                    const volatility = 0.001 + Math.random() * 0.003;
+                    const volatility = 0.001 + Math.random() * 0.003; // 0.1-0.4% per second
                     const direction = Math.random() > 0.5 ? 1 : -1;
                     const change = state.stockPrices[s.ticker] * volatility * direction;
                     state.stockPrices[s.ticker] = Math.max(0.01, state.stockPrices[s.ticker] + change);
+                    
+                    // Update history for charts
                     if (!state.stockHistory[s.ticker]) state.stockHistory[s.ticker] = [];
                     state.stockHistory[s.ticker].push(state.stockPrices[s.ticker]);
                     if (state.stockHistory[s.ticker].length > 30) state.stockHistory[s.ticker].shift();
                 });
-
-                // 2. Update crypto prices
-                CRYPTO_COINS.forEach(c => {
-                    const vol = (c.volatility || 0.05) * 0.02;
-                    const direction = Math.random() > 0.5 ? 1 : -1;
-                    const change = state.cryptoPrices[c.ticker] * vol * direction;
-                    state.cryptoPrices[c.ticker] = Math.max(0.000000001, state.cryptoPrices[c.ticker] + change);
-                    if (!state.cryptoHistory[c.ticker]) state.cryptoHistory[c.ticker] = [];
-                    state.cryptoHistory[c.ticker].push(state.cryptoPrices[c.ticker]);
-                    if (state.cryptoHistory[c.ticker].length > 30) state.cryptoHistory[c.ticker].shift();
-                });
-
-                // 3. Update individual loan timers
-                if (state.player.loans && state.player.loans.length > 0) {
-                    state.player.loans.forEach(loan => {
-                        if (loan.timer > 0) {
-                            loan.timer--;
-                            if (loan.timer <= 0) triggerDebtLock();
-                        }
-                    });
-                    if (state.currentTab === 'banking') renderBanking();
-                }
-
-                // 4. Update UI - Top Bar & Active Panels
-                updateUI();
-                const activeTab = state.currentTab;
-                if (activeTab === 'market' && state.selectedStock) { updateTradePanel(); renderTradeChart(); }
-                if (activeTab === 'crypto' && state.selectedCrypto) { updateCryptoPanel(); renderCryptoChart(); }
-                if (activeTab === 'portfolio') renderPortfolio();
-                if (activeTab === 'dashboard') renderDashboard();
-
-                // 5. ALWAYS update the left-side lists (Market & Crypto)
-                // Market List
-                const marketRows = document.querySelectorAll('#market-scroll .stock-row');
-                if (marketRows.length > 0) {
-                    const filtered = state.marketFilter === 'All' ? STOCKS : STOCKS.filter(s => s.sector === state.marketFilter);
-                    filtered.forEach((s, i) => {
-                        const row = marketRows[i];
-                        if (row) {
-                            const price = state.stockPrices[s.ticker];
-                            const hist = state.stockHistory[s.ticker] || [price];
-                            const prev = hist.length >= 2 ? hist[hist.length - 2] : price;
-                            const change = ((price - prev) / prev) * 100;
-                            const pEl = row.querySelector('div:nth-child(2)');
-                            const cEl = row.querySelector('div:nth-child(3)');
-                            if (pEl) pEl.textContent = formatPrice(price);
-                            if (cEl) {
-                                cEl.textContent = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
-                                cEl.style.color = change >= 0 ? 'var(--success)' : 'var(--danger)';
-                            }
-                        }
-                    });
-                }
-
-                // Crypto List
-                const cryptoRows = document.querySelectorAll('#crypto-market-scroll .stock-row');
-                if (cryptoRows.length > 0) {
-                    CRYPTO_COINS.forEach((c, i) => {
-                        const row = cryptoRows[i];
-                        if (row) {
-                            const price = state.cryptoPrices[c.ticker];
-                            const hist = state.cryptoHistory[c.ticker] || [price];
-                            const prev = hist.length >= 2 ? hist[hist.length - 2] : price;
-                            const change = ((price - prev) / prev) * 100;
-                            const pEl = row.querySelector('div:nth-child(2)');
-                            const cEl = row.querySelector('div:nth-child(3)');
-                            if (pEl) pEl.textContent = formatPrice(price);
-                            if (cEl) {
-                                cEl.textContent = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
-                                cEl.style.color = change >= 0 ? 'var(--success)' : 'var(--danger)';
-                            }
-                        }
-                    });
-                }
-            }, 1000);
-        }
-);
                 // Update crypto prices
                 CRYPTO_COINS.forEach(c => {
                     const vol = (c.volatility || 0.05) * 0.02; // Scale down for per-second updates
@@ -2795,6 +2695,13 @@
                 } else if (activeTab === 'dashboard') {
                     updateUI(); // Updates net worth and cash display
                 }
+
+                // Update Sidebar Stats (Left Panel)
+                const sidebarCash = document.getElementById('stat-cash');
+                const sidebarNW = document.getElementById('stat-networth');
+                if (sidebarCash) sidebarCash.textContent = '$' + formatNum(state.player.cash);
+                if (sidebarNW) sidebarNW.textContent = '$' + formatNum(calcNetWorth());
+
                 // ALWAYS update market/crypto lists even when not on those tabs (for live price updates)
                 // This ensures prices update in real-time when you switch tabs
                 const marketRows = document.querySelectorAll('#market-scroll .stock-row');
@@ -3001,10 +2908,6 @@
             }
             // Update skip day cost span
             const skipCostEl = document.getElementById('skip-day-cost');
-            const skipBtn = document.getElementById('skip-day-btn');
-            if (skipBtn) skipBtn.disabled = state.player.cash <= 0;
-            const skipBtn = document.getElementById('skip-day-btn');
-            if (skipBtn) skipBtn.disabled = state.player.cash <= 0;
             if (skipCostEl) {
                 const fee = Math.round(cash * 0.10);
                 skipCostEl.textContent = '$' + formatNum(fee);
@@ -3885,42 +3788,6 @@
             } catch (e) {
                 console.error("Firestore leaderboard failed", e);
             }
-            
-            // Final fallback to Mock Data if Firebase is absolutely not working
-            if (fbWaitMs >= 6000) {
-                const mockUsers = [
-                    { username: 'Whale_Watcher', netWorth: 5000000000, day: 150 },
-                    { username: 'CryptoKing', netWorth: 2500000000, day: 120 },
-                    { username: 'StockMaster', netWorth: 1200000000, day: 95 },
-                    { username: 'PaperHands', netWorth: 500000, day: 10 }
-                ];
-                let html = '<tr><td colspan="4" style="text-align:center;color:var(--warning);font-size:0.8rem;padding:0.5rem">Offline Mode - Showing Local Rankings</td></tr>';
-                mockUsers.forEach((data, i) => {
-                    const rank = i + 1;
-                    html += `<tr><td>${rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank}</td><td>${data.username}</td><td style="color:var(--success);font-weight:700">$${formatNum(data.netWorth)}</td><td>Day ${data.day}</td></tr>`;
-                });
-                body.innerHTML = html;
-                return;
-            }
-
-            
-            // Final fallback to Mock Data if Firebase is absolutely not working
-            if (fbWaitMs >= 6000) {
-                const mockUsers = [
-                    { username: 'Whale_Watcher', netWorth: 5000000000, day: 150 },
-                    { username: 'CryptoKing', netWorth: 2500000000, day: 120 },
-                    { username: 'StockMaster', netWorth: 1200000000, day: 95 },
-                    { username: 'PaperHands', netWorth: 500000, day: 10 }
-                ];
-                let html = '<tr><td colspan="4" style="text-align:center;color:var(--warning);font-size:0.8rem;padding:0.5rem">Offline Mode - Showing Local Rankings</td></tr>';
-                mockUsers.forEach((data, i) => {
-                    const rank = i + 1;
-                    html += `<tr><td>${rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank}</td><td>${data.username}</td><td style="color:var(--success);font-weight:700">$${formatNum(data.netWorth)}</td><td>Day ${data.day}</td></tr>`;
-                });
-                body.innerHTML = html;
-                return;
-            }
-
             // Both sources failed - show retry button
             if (!state.leaderboardCache) {
                 body.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:1.5rem;color:var(--text-muted)">Could not load leaderboard. <button class="btn btn-secondary" onclick="renderLeaderboard()" style="margin-left:0.5rem;font-size:0.8rem;padding:0.3rem 0.8rem">&#x21bb; Retry</button></td></tr>';
@@ -4092,7 +3959,7 @@
         function renderRealEstate() {
             const owned = document.getElementById('properties-owned');
             if (state.player.properties.length === 0) {
-                owned.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">No properties</td></tr>';
+                owned.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">No properties</td></tr>';
             } else {
                 owned.innerHTML = state.player.properties.map(p => {
                     const prop = REAL_ESTATE.find(r => r.id === p.id);
@@ -4214,7 +4081,7 @@
             // Loans list
             const tbody = document.getElementById('loans-list');
             if (state.player.loans.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">No active loans</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">No active loans</td></tr>';
             } else {
                 tbody.innerHTML = state.player.loans.map((loan, i) => `
                     <tr>
@@ -4222,8 +4089,6 @@
                         <td>${(loan.rate * 100).toFixed(1)}%</td>
                         <td style="color:var(--danger)">$${formatNum(loan.remaining)}</td>
                         <td>$${formatNum(loan.monthly)}/day</td>
-                        <td style="color:var(--warning)">${Math.floor(loan.timer/60)}:${(loan.timer%60).toString().padStart(2,'0')}</td>
-                        <td style="color:var(--warning)">${Math.floor(loan.timer/60)}:${(loan.timer%60).toString().padStart(2,'0')}</td>
                         <td><button class="btn btn-success" onclick="openLoanPayment(${i})" style="font-size:0.8rem">Pay</button></td>
                     </tr>
                 `).join('');
@@ -4258,7 +4123,7 @@
             const dueIn = Math.max(10, Math.floor(amt / monthly));
             state.player.cash += amt;
             state.player.debt += amt;
-            state.player.loans.push({ amount: amt, rate, remaining: amt, monthly, dueTriggerDay: state.player.day + dueIn, timer: 300 });
+            state.player.loans.push({ amount: amt, rate, remaining: amt, monthly, dueTriggerDay: state.player.day + dueIn });
             state.player.credit = Math.max(300, state.player.credit - 15);
             addActivity(`Day ${state.player.day}`, `Took loan: $${formatNum(amt)}`, 'warning');
             saveGame();
