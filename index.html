@@ -9,7 +9,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, onSnapshot, updateDoc, arrayUnion, where, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, onSnapshot, updateDoc, arrayUnion, where, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getDatabase, ref as rtdbRef, set as rtdbSet, get as rtdbGet, onValue as rtdbOnValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         const firebaseConfig = {
@@ -37,7 +37,7 @@
         window.fbMethods = { 
             createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut,
             signInWithPopup, updateProfile,
-            doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, onSnapshot, updateDoc, arrayUnion, where, addDoc,
+            doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, onSnapshot, updateDoc, arrayUnion, where, addDoc, deleteDoc,
             rtdbRef, rtdbSet, rtdbGet, rtdbOnValue
         };
     </script>
@@ -510,7 +510,8 @@
                 </div>
                 <div style="flex:1;background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:0.75rem;font-size:0.8rem">
                     <div style="font-weight:700;margin-bottom:0.25rem">☁️ Cloud Save</div>
-                    <div style="color:var(--text-muted)" id="cloud-save-status">Saves below are cloud-synced</div>
+                    <div style="color:var(--text-muted)" id="cloud-save-status">Checking...</div>
+                    <button class="btn btn-secondary" onclick="syncSavesFromCloud().then(()=>openSaveModal(false))" style="margin-top:0.4rem;font-size:0.7rem;padding:0.25rem 0.6rem">🔄 Sync from Cloud</button>
                 </div>
             </div>
             <div id="save-modal-list" style="margin-bottom:1.5rem;max-height:300px;overflow-y:auto"></div>
@@ -563,7 +564,7 @@
                 <h2 class="top-bar-title" id="tab-title">Dashboard</h2>
                 <div class="top-bar-right">
                     <button class="btn btn-secondary" onclick="endDay(true)" id="skip-day-btn" style="font-size:0.7rem;padding:0.3rem 0.6rem;background:var(--warning);color:#000;border:none;">⏭ Skip Day — 💵 <span id="skip-day-cost">$0</span></button>
-                    <button class="btn btn-success" onclick="openSaveModal()" style="font-size: 0.8rem;">Save Game</button>
+                    <button class="btn btn-success" onclick="openSaveModal()" style="font-size: 0.8rem;">☁️ Save Game</button>
 
                     <div class="info-item"><span class="info-label">BTC</span><span class="info-value" id="info-btc-price">—</span></div>
                     <div class="info-item"><span class="info-label">Role</span><span class="info-value" id="info-role">—</span></div>
@@ -806,7 +807,14 @@ What is your experience?"></textarea></div>
                                         <div style="display:flex;justify-content:space-between;font-size:0.9rem"><span style="color:var(--text-muted)">Unrealized P/L</span><span style="font-weight:700" id="crypto-trade-pl">$0.00</span></div>
                                     </div>
                                 </div>
-                                <div class="input-group"><input type="number" id="crypto-qty" value="0.01" min="0.000001" step="0.01"><span>Qty</span></div>
+                                <div class="input-group">
+                                    <input type="number" id="crypto-qty" value="0.01" min="0.000001" step="0.01">
+                                    <span>Qty</span>
+                                </div>
+                                <div style="display:flex;gap:0.5rem;margin-bottom:1rem">
+                                    <button class="btn btn-secondary" onclick="setCryptoMaxBuy()" style="flex:1;font-size:0.75rem;padding:0.4rem">Max Buy</button>
+                                    <button class="btn btn-secondary" onclick="setCryptoMaxSell()" style="flex:1;font-size:0.75rem;padding:0.4rem">Max Sell</button>
+                                </div>
                                 <div class="button-row">
                                     <button class="btn btn-success" onclick="buyCrypto(state.selectedCrypto)">Buy</button>
                                     <button class="btn btn-danger" onclick="sellCrypto(state.selectedCrypto)">Sell</button>
@@ -828,7 +836,10 @@ What is your experience?"></textarea></div>
                                 <div id="map-owned-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:0.75rem"></div>
                             </div>
                             <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem">
-                                <h3 style="margin-bottom:1rem">Available Countries</h3>
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+                                    <h3 style="margin:0">Available Countries</h3>
+                                    <input type="text" id="map-search-input" oninput="renderMap()" placeholder="Search countries..." style="padding:0.5rem;background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;color:var(--text-main);font-size:0.85rem;width:200px">
+                                </div>
                                 <div id="map-countries-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.75rem"></div>
                             </div>
                         </div>
@@ -916,7 +927,7 @@ What is your experience?"></textarea></div>
                             <div style="font-size:1.5rem;font-weight:700;color:var(--danger)">$1,000,000,000,000</div>
                         </div>
                         <div id="club-pay-section" style="margin-bottom:1rem">
-                            <button class="btn btn-primary" onclick="payClubEntry()" style="font-size:1rem;padding:0.75rem 2rem">💳 Pay $1T & Enter The Club</button>
+                            <button class="btn btn-primary" id="club-pay-btn" onclick="payClubEntry()" style="font-size:1rem;padding:0.75rem 2rem">💳 Pay $1T & Enter The Club</button>
                         </div>
                         <p style="color:var(--text-muted);font-size:0.85rem">You need $1 Trillion in cash to enter!</p>
                     </div>
@@ -2080,24 +2091,26 @@ What is your experience?"></textarea></div>
 
         // ===================== WORLD COUNTRIES DATA =====================
         const WORLD_COUNTRIES = [
-            'United States', 'China', 'Japan', 'Germany', 'United Kingdom', 'France', 'India', 'Italy', 'Brazil', 'Canada',
-            'South Korea', 'Russia', 'Spain', 'Australia', 'Mexico', 'Netherlands', 'Saudi Arabia', 'Turkey', 'Switzerland', 'Sweden',
-            'Poland', 'Belgium', 'Argentina', 'Austria', 'Norway', 'Nigeria', 'Ireland', 'Israel', 'Singapore', 'Denmark',
-            'Malaysia', 'Philippines', 'Thailand', 'Indonesia', 'Vietnam', 'Pakistan', 'Bangladesh', 'Egypt', 'South Africa', 'Kenya',
-            'Greece', 'Portugal', 'Czech Republic', 'Hungary', 'Romania', 'Ukraine', 'New Zealand', 'Peru', 'Colombia', 'Chile',
-            'Finland', 'Qatar', 'United Arab Emirates', 'Hong Kong', 'Taiwan', 'Cambodia', 'Laos', 'Myanmar', 'Sri Lanka', 'Nepal',
-            'Mongolia', 'Kazakhstan', 'Uzbekistan', 'Turkmenistan', 'Tajikistan', 'Kyrgyzstan', 'Georgia', 'Armenia', 'Azerbaijan', 'Belarus',
-            'Moldova', 'Lithuania', 'Latvia', 'Estonia', 'Slovenia', 'Croatia', 'Bosnia', 'Serbia', 'Montenegro', 'Albania',
-            'North Macedonia', 'Bulgaria', 'Slovakia', 'Iceland', 'Luxembourg', 'Malta', 'Cyprus', 'Lebanon', 'Jordan', 'Iraq',
-            'Iran', 'Kuwait', 'Bahrain', 'Oman', 'Yemen', 'Morocco', 'Algeria', 'Tunisia', 'Libya', 'Sudan',
-            'Ethiopia', 'Somalia', 'Tanzania', 'Uganda', 'Rwanda', 'Burundi', 'Zambia', 'Zimbabwe', 'Botswana', 'Namibia',
-            'Angola', 'Mozambique', 'Malawi', 'Lesotho', 'Eswatini', 'Madagascar', 'Mauritius', 'Seychelles', 'Comoros', 'Djibouti',
-            'Eritrea', 'Ghana', 'Ivory Coast', 'Senegal', 'Mali', 'Burkina Faso', 'Niger', 'Chad', 'Cameroon', 'Gabon',
-            'Republic of Congo', 'Democratic Republic of Congo', 'Central African Republic', 'Benin', 'Togo', 'Sierra Leone',
-            'Liberia', 'Guinea', 'Guinea-Bissau', 'Gambia', 'Cape Verde', 'Mauritania', 'Costa Rica', 'Panama', 'Nicaragua', 'Honduras',
-            'El Salvador', 'Guatemala', 'Belize', 'Jamaica', 'Trinidad and Tobago', 'Bahamas', 'Barbados', 'Dominican Republic', 'Haiti', 'Cuba',
-            'Puerto Rico', 'Greenland', 'Faroe Islands', 'Fiji', 'Samoa', 'Vanuatu', 'Solomon Islands', 'Kiribati', 'Nauru', 'Palau',
-            'Marshall Islands', 'Micronesia', 'Papua New Guinea', 'Timor-Leste', 'Brunei', 'Maldives', 'Mauritius', 'Seychelles', 'Comoros'
+            'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Antigua and Barbuda', 'Argentina', 'Armenia', 'Australia', 'Austria',
+            'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados', 'Belarus', 'Belgium', 'Belize', 'Benin', 'Bhutan',
+            'Bolivia', 'Bosnia and Herzegovina', 'Botswana', 'Brazil', 'Brunei', 'Bulgaria', 'Burkina Faso', 'Burundi', 'Cabo Verde', 'Cambodia',
+            'Cameroon', 'Canada', 'Central African Republic', 'Chad', 'Chile', 'China', 'Colombia', 'Comoros', 'Congo (Congo-Brazzaville)', 'Costa Rica',
+            'Croatia', 'Cuba', 'Cyprus', 'Czechia (Czech Republic)', 'Democratic Republic of the Congo', 'Denmark', 'Djibouti', 'Dominica', 'Dominican Republic', 'Ecuador',
+            'Egypt', 'El Salvador', 'Equatorial Guinea', 'Eritrea', 'Estonia', 'Eswatini', 'Ethiopia', 'Fiji', 'Finland', 'France',
+            'Gabon', 'Gambia', 'Georgia', 'Germany', 'Ghana', 'Greece', 'Grenada', 'Guatemala', 'Guinea', 'Guinea-Bissau',
+            'Guyana', 'Haiti', 'Holy See', 'Honduras', 'Hungary', 'Iceland', 'India', 'Indonesia', 'Iran', 'Iraq',
+            'Ireland', 'Israel', 'Italy', 'Ivory Coast', 'Jamaica', 'Japan', 'Jordan', 'Kazakhstan', 'Kenya', 'Kiribati',
+            'Kuwait', 'Kyrgyzstan', 'Laos', 'Latvia', 'Lebanon', 'Lesotho', 'Liberia', 'Libya', 'Liechtenstein', 'Lithuania',
+            'Luxembourg', 'Madagascar', 'Malawi', 'Malaysia', 'Maldives', 'Mali', 'Malta', 'Marshall Islands', 'Mauritania', 'Mauritius',
+            'Mexico', 'Micronesia', 'Moldova', 'Monaco', 'Mongolia', 'Montenegro', 'Morocco', 'Mozambique', 'Myanmar (formerly Burma)', 'Namibia',
+            'Nauru', 'Nepal', 'Netherlands', 'New Zealand', 'Nicaragua', 'Niger', 'Nigeria', 'North Korea', 'North Macedonia', 'Norway',
+            'Oman', 'Pakistan', 'Palau', 'Palestine State', 'Panama', 'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines', 'Poland',
+            'Portugal', 'Qatar', 'Romania', 'Russia', 'Rwanda', 'Saint Kitts and Nevis', 'Saint Lucia', 'Saint Vincent and the Grenadines', 'Samoa', 'San Marino',
+            'Sao Tome and Principe', 'Saudi Arabia', 'Senegal', 'Serbia', 'Seychelles', 'Sierra Leone', 'Singapore', 'Slovakia', 'Slovenia', 'Solomon Islands',
+            'Somalia', 'South Africa', 'South Korea', 'South Sudan', 'Spain', 'Sri Lanka', 'Sudan', 'Suriname', 'Sweden', 'Switzerland',
+            'Syria', 'Tajikistan', 'Tanzania', 'Thailand', 'Timor-Leste', 'Togo', 'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkey',
+            'Turkmenistan', 'Tuvalu', 'Uganda', 'Ukraine', 'United Arab Emirates', 'United Kingdom', 'United States of America', 'Uruguay', 'Uzbekistan', 'Vanuatu',
+            'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe'
         ];
 
         // ===================== DUAL SAVE CONSTANTS =====================
@@ -2226,8 +2239,7 @@ What is your experience?"></textarea></div>
             return saves ? JSON.parse(saves) : {};
         }
 
-        function openSaveModal(isResume = false) {
-            const saves = getSaves();
+        async function openSaveModal(isResume = false) {
             const list = document.getElementById('save-modal-list');
             const title = document.getElementById('save-modal-title');
             const newSaveGroup = document.getElementById('new-save-group');
@@ -2236,6 +2248,8 @@ What is your experience?"></textarea></div>
             title.textContent = isResume ? "Select Save to Resume" : "Save Game";
             newSaveGroup.style.display = isResume ? "none" : "flex";
             if (saveInfoBar) saveInfoBar.style.display = isResume ? 'none' : 'flex';
+            document.getElementById('save-modal').classList.remove('hidden');
+
             // Show local auto-save status
             const localSaveEl = document.getElementById('local-save-status');
             if (localSaveEl) {
@@ -2251,7 +2265,37 @@ What is your experience?"></textarea></div>
                     localSaveEl.textContent = 'No local save yet';
                 }
             }
-            
+
+            // Update cloud status indicator
+            const cloudStatusEl = document.getElementById('cloud-save-status');
+            const user = window.fbAuth ? window.fbAuth.currentUser : null;
+            if (!user) {
+                if (cloudStatusEl) { cloudStatusEl.textContent = 'Not logged in'; cloudStatusEl.style.color = 'var(--danger)'; }
+            } else {
+                if (cloudStatusEl) { cloudStatusEl.textContent = 'Fetching cloud saves...'; cloudStatusEl.style.color = 'var(--text-muted)'; }
+                // Fetch cloud saves and merge into localStorage
+                try {
+                    const savesCol = window.fbMethods.collection(window.fbDb, 'users', user.uid, 'saves');
+                    const snapshot = await window.fbMethods.getDocs(savesCol);
+                    const cloudSaves = {};
+                    snapshot.forEach(docSnap => { cloudSaves[docSnap.id] = docSnap.data(); });
+                    // Merge with any local saves (cloud wins)
+                    const localSaves = getSaves();
+                    const merged = { ...localSaves, ...cloudSaves };
+                    localStorage.setItem('tradelife_saves', JSON.stringify(merged));
+                    const count = Object.keys(cloudSaves).length;
+                    if (cloudStatusEl) {
+                        cloudStatusEl.textContent = count > 0 ? count + ' cloud save(s) loaded ✓' : 'No cloud saves yet';
+                        cloudStatusEl.style.color = count > 0 ? 'var(--success)' : 'var(--text-muted)';
+                    }
+                } catch(e) {
+                    console.error('Failed to fetch cloud saves', e);
+                    if (cloudStatusEl) { cloudStatusEl.textContent = 'Cloud fetch failed'; cloudStatusEl.style.color = 'var(--danger)'; }
+                }
+            }
+
+            const saves = getSaves();
+
             // When resuming, also show local auto-save as an option
             let localAutoSaveHtml = '';
             if (isResume) {
@@ -2273,52 +2317,77 @@ What is your experience?"></textarea></div>
             }
 
             if (Object.keys(saves).length === 0 && !localAutoSaveHtml) {
-                list.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:1rem">No saves found. Your cloud saves will appear here after logging in.</div>';
+                list.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:1rem">No saves found. Create a new save or sync from cloud.</div>';
             } else {
-                list.innerHTML = localAutoSaveHtml + Object.entries(saves).map(([name, data]) => `
+                list.innerHTML = localAutoSaveHtml + Object.entries(saves).map(([saveName, data]) => `
                     <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;margin-bottom:0.75rem;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
                         <div>
-                            <div style="font-weight:700">${name}</div>
-                            <div style="font-size:0.75rem;color:var(--text-muted)">Day ${data.player.day} | $${formatNum(data.player.cash)}</div>
+                            <div style="font-weight:700">${saveName} <span style="font-size:0.7rem;color:var(--success)">☁️</span></div>
+                            <div style="font-size:0.75rem;color:var(--text-muted)">Day ${data.player ? data.player.day : '?'} | $${data.player ? formatNum(data.player.cash) : '?'} — ${data.updatedAt ? new Date(data.updatedAt).toLocaleString() : ''}</div>
                         </div>
                         <div style="display:flex;gap:0.5rem">
-                            <button class="btn btn-primary" onclick="${isResume ? `loadGame('${name}')` : `updateSave('${name}')`}" style="font-size:0.75rem">${isResume ? 'Load' : 'Update'}</button>
-                            <button class="btn btn-danger" onclick="deleteSave('${name}', ${isResume})" style="font-size:0.75rem">Delete</button>
+                            <button class="btn btn-primary" onclick="${isResume ? `loadGame('${saveName}')` : `updateSave('${saveName}')`}" style="font-size:0.75rem">${isResume ? 'Load' : 'Update ☁️'}</button>
+                            <button class="btn btn-danger" onclick="deleteSave('${saveName}', ${isResume})" style="font-size:0.75rem">Delete</button>
                         </div>
                     </div>
                 `).join('');
             }
-            document.getElementById('save-modal').classList.remove('hidden');
         }
 
-        function createNewSave() {
+        async function createNewSave() {
             const name = document.getElementById('new-save-name').value.trim();
             if (!name) { showToast('Error', 'Enter a save name', 'danger'); return; }
             const saves = getSaves();
             if (saves[name]) { showToast('Error', 'Save name already exists', 'danger'); return; }
-            
-            saveToSlot(name);
-            document.getElementById('new-save-name').value = '';
+            const btn = document.querySelector('#new-save-group button');
+            if (btn) { btn.disabled = true; btn.textContent = '☁️ Saving...'; }
+            try {
+                await saveToSlot(name);
+                document.getElementById('new-save-name').value = '';
+                showToast('Saved', `☁️ "${name}" saved to cloud!`, 'success');
+            } catch(e) {
+                showToast('Error', 'Save failed: ' + e.message, 'danger');
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = '☁️ Create & Upload'; }
+            }
             openSaveModal(false);
-            showToast('Saved', `New save "${name}" created`, 'success');
         }
 
-        function updateSave(name) {
-            saveToSlot(name);
+        async function updateSave(name) {
+            showToast('Saving', `☁️ Uploading "${name}" to cloud...`, 'info');
+            try {
+                await saveToSlot(name);
+                showToast('Saved', `☁️ "${name}" updated in cloud!`, 'success');
+            } catch(e) {
+                showToast('Error', 'Cloud update failed: ' + e.message, 'danger');
+            }
             openSaveModal(false);
-            showToast('Saved', `Save "${name}" updated`, 'success');
         }
 
-        function deleteSave(name, isResume) {
-            if (!confirm(`Delete save "${name}"?`)) return;
+        async function deleteSave(name, isResume) {
+            if (!confirm(`Delete save "${name}" from cloud and locally?`)) return;
+            // Remove locally
             const saves = getSaves();
             delete saves[name];
             localStorage.setItem('tradelife_saves', JSON.stringify(saves));
-            openSaveModal(isResume);
-            showToast('Deleted', `Save "${name}" removed`, 'warning');
-            
-            // Update resume button visibility
+            // Remove from Firestore
+            const user = window.fbAuth ? window.fbAuth.currentUser : null;
+            if (user && window.fbMethods && window.fbMethods.deleteDoc) {
+                try {
+                    const savesDoc = window.fbMethods.doc(window.fbDb, 'users', user.uid, 'saves', name);
+                    await window.fbMethods.deleteDoc(savesDoc);
+                } catch(e) { console.warn('Cloud delete failed', e); }
+            }
+            // Remove from RTDB
+            if (user && window.fbRtdb && window.fbMethods.rtdbRef && window.fbMethods.rtdbSet) {
+                try {
+                    const rtdbSaveRef = window.fbMethods.rtdbRef(window.fbRtdb, 'saves/' + user.uid + '/' + name);
+                    await window.fbMethods.rtdbSet(rtdbSaveRef, null);
+                } catch(e) { console.warn('RTDB delete failed', e); }
+            }
+            showToast('Deleted', `"❌ ${name}" removed from cloud`, 'warning');
             checkSaveExists();
+            openSaveModal(isResume);
         }
 
         async function saveToSlot(name) {
@@ -2399,7 +2468,8 @@ What is your experience?"></textarea></div>
                 }
             } catch (e) {
                 console.error("Cloud save failed", e);
-                showToast('Cloud Error', 'Failed to sync with cloud', 'warning');
+                showToast('Cloud Error', 'Failed to sync with cloud: ' + (e.code || e.message), 'danger');
+                throw e; // Re-throw so callers can handle it
             }
         }
 
@@ -2590,8 +2660,13 @@ What is your experience?"></textarea></div>
         }
 
         async function saveGame() {
-            // Auto-save to the last used slot if possible
-            await saveToSlot('QuickSave');
+            // Auto-save to QuickSave slot (cloud + local)
+            try {
+                await saveToSlot('QuickSave');
+            } catch(e) {
+                // Silently fail for background auto-saves; error already shown in saveToSlot
+                console.warn('Auto-save failed', e);
+            }
         }
 
         function resetGame() {
@@ -2642,8 +2717,8 @@ What is your experience?"></textarea></div>
                         const displayName = user.displayName || user.email.replace('@tradelife.game','') || 'Player';
                         document.getElementById('user-email').textContent = displayName;
                         state._currentUsername = displayName;
-                        // Load cloud saves after login
-                        syncSavesFromCloud();
+                        // Load cloud saves after login, then update resume button
+                        syncSavesFromCloud().then(() => checkSaveExists());
                     } else {
                         document.getElementById('auth-overlay').classList.remove('hidden');
                     }
@@ -5484,6 +5559,21 @@ What is your experience?"></textarea></div>
             showToast('Sold!', `${qty} ${ticker} for $${formatNum(total)}`, 'success');
         }
 
+        function setCryptoMaxBuy() {
+            if (!state.selectedCrypto) return;
+            const price = state.cryptoPrices[state.selectedCrypto];
+            if (!price) return;
+            const maxQty = Math.floor((state.player.cash / price) * 1000000) / 1000000;
+            document.getElementById('crypto-qty').value = maxQty;
+        }
+
+        function setCryptoMaxSell() {
+            if (!state.selectedCrypto) return;
+            const h = state.player.cryptoPortfolio[state.selectedCrypto];
+            if (!h) { document.getElementById('crypto-qty').value = 0; return; }
+            document.getElementById('crypto-qty').value = h.amount;
+        }
+
         // ===================== EDUCATION =====================
         const COURSES = [
             { id: 'ed1', name: 'Finance 101', cost: 500, xp: 200, clout: 0, cert: 'Finance Basics' },
@@ -5504,9 +5594,12 @@ What is your experience?"></textarea></div>
             const completion = Math.round((ownedCount / totalCountries) * 100);
             
             // Update stats
-            document.getElementById('map-owned-count').textContent = ownedCount;
-            document.getElementById('map-completion').textContent = completion + '%';
-            document.getElementById('map-progress-bar').style.width = completion + '%';
+            const countEl = document.getElementById('map-owned-count');
+            if (countEl) countEl.textContent = ownedCount;
+            const compEl = document.getElementById('map-completion');
+            if (compEl) compEl.textContent = completion + '%';
+            const barEl = document.getElementById('map-progress-bar');
+            if (barEl) barEl.style.width = completion + '%';
             
             // Show/hide planet section
             const planetSection = document.getElementById('map-planet-section');
@@ -5522,29 +5615,41 @@ What is your experience?"></textarea></div>
                 if (planetOwned) planetOwned.style.display = 'none';
             }
             
+            // Search filter
+            const searchInput = document.getElementById('map-search-input');
+            const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+
             // Render owned countries
             const ownedList = document.getElementById('map-owned-list');
-            ownedList.innerHTML = state.player.countriesOwned.length === 0 ? 
-                '<div style="grid-column:1/-1;color:var(--text-muted);text-align:center;padding:2rem">No countries owned yet</div>' :
-                state.player.countriesOwned.map(c => `
-                    <div style="background:linear-gradient(135deg,#10b981,#059669);border-radius:8px;padding:1rem;text-align:center;color:#fff;font-weight:700">
-                        ${c}
-                    </div>
-                `).join('');
+            if (ownedList) {
+                const filteredOwned = state.player.countriesOwned.filter(c => c.toLowerCase().includes(searchTerm));
+                ownedList.innerHTML = filteredOwned.length === 0 ? 
+                    '<div style="grid-column:1/-1;color:var(--text-muted);text-align:center;padding:2rem">No matching countries owned</div>' :
+                    filteredOwned.map(c => `
+                        <div style="background:linear-gradient(135deg,#10b981,#059669);border-radius:8px;padding:1rem;text-align:center;color:#fff;font-weight:700">
+                            ${c}
+                        </div>
+                    `).join('');
+            }
             
             // Render available countries
             const countriesGrid = document.getElementById('map-countries-grid');
-            countriesGrid.innerHTML = WORLD_COUNTRIES.map(country => {
-                const isOwned = state.player.countriesOwned.includes(country);
-                const canAfford = state.player.cash >= 10000000000000; // 10T
-                return `
-                    <div style="background:${isOwned ? 'var(--success)' : 'var(--bg-panel)'};border:1px solid var(--border);border-radius:8px;padding:1rem;text-align:center;cursor:${isOwned ? 'default' : canAfford ? 'pointer' : 'not-allowed'};opacity:${isOwned ? 0.6 : 1}" onclick="${isOwned ? '' : canAfford ? `buyCountry('${country}')` : ''}">
-                        <div style="font-weight:700;margin-bottom:0.5rem;font-size:0.9rem">${country}</div>
-                        <div style="font-size:0.75rem;color:${isOwned ? '#fff' : 'var(--text-muted)'};margin-bottom:0.5rem">${isOwned ? '✓ Owned' : '10T'}</div>
-                        ${!isOwned ? `<button class="btn ${canAfford ? 'btn-primary' : 'btn-secondary'}" style="width:100%;font-size:0.7rem;padding:0.4rem" ${!canAfford ? 'disabled' : ''}>Buy</button>` : ''}
-                    </div>
-                `;
-            }).join('');
+            if (countriesGrid) {
+                const filteredAvailable = WORLD_COUNTRIES.filter(c => c.toLowerCase().includes(searchTerm));
+                countriesGrid.innerHTML = filteredAvailable.length === 0 ?
+                    '<div style="grid-column:1/-1;color:var(--text-muted);text-align:center;padding:2rem">No countries found</div>' :
+                    filteredAvailable.map(country => {
+                        const isOwned = state.player.countriesOwned.includes(country);
+                        const canAfford = state.player.cash >= 10000000000000; // 10T
+                        return `
+                            <div style="background:${isOwned ? 'var(--success)' : 'var(--bg-panel)'};border:1px solid var(--border);border-radius:8px;padding:1rem;text-align:center;cursor:${isOwned ? 'default' : canAfford ? 'pointer' : 'not-allowed'};opacity:${isOwned ? 0.6 : 1}" onclick="${isOwned ? '' : canAfford ? `buyCountry('${country}')` : ''}">
+                                <div style="font-weight:700;margin-bottom:0.5rem;font-size:0.9rem">${country}</div>
+                                <div style="font-size:0.75rem;color:${isOwned ? '#fff' : 'var(--text-muted)'};margin-bottom:0.5rem">${isOwned ? '✓ Owned' : '10T'}</div>
+                                ${!isOwned ? `<button class="btn ${canAfford ? 'btn-primary' : 'btn-secondary'}" style="width:100%;font-size:0.7rem;padding:0.4rem" ${!canAfford ? 'disabled' : ''}>Buy</button>` : ''}
+                            </div>
+                        `;
+                    }).join('');
+            }
         }
 
         function buyCountry(country) {
@@ -5590,14 +5695,14 @@ What is your experience?"></textarea></div>
             document.getElementById('edu-certs').textContent = state.player.certifications.length;
             const list = document.getElementById('education-list');
             list.innerHTML = COURSES.map(c => {
-                const done = state.player.certifications.includes(c.cert);
+                const canAfford = state.player.cash >= c.cost;
                 return `<div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem">
                     <h4 style="margin-bottom:0.5rem">${c.name}</h4>
                     <div style="color:var(--brand);font-weight:700;margin-bottom:0.5rem">$${c.cost.toLocaleString()}</div>
                     <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.25rem">+${c.xp.toLocaleString()} XP | +${c.clout} Clout</div>
                     <div style="font-size:0.8rem;color:var(--warning);margin-bottom:1rem">Cert: ${c.cert}</div>
-                    <button class="btn ${done ? 'btn-secondary' : state.player.cash >= c.cost ? 'btn-primary' : 'btn-secondary'}" onclick="buyCourse('${c.id}')" style="width:100%;font-size:0.85rem" ${done || state.player.cash < c.cost ? 'disabled' : ''}>
-                        ${done ? '✓ Completed' : 'Enroll'}
+                    <button class="btn ${canAfford ? 'btn-primary' : 'btn-secondary'}" onclick="buyCourse('${c.id}')" style="width:100%;font-size:0.85rem" ${!canAfford ? 'disabled' : ''}>
+                        Enroll Again
                     </button>
                 </div>`;
             }).join('');
@@ -5606,17 +5711,20 @@ What is your experience?"></textarea></div>
         function buyCourse(id) {
             const course = COURSES.find(c => c.id === id);
             if (!course || state.player.cash < course.cost) { showToast('Insufficient Funds', '', 'danger'); return; }
-            if (state.player.certifications.includes(course.cert)) { showToast('Already Completed', '', 'warning'); return; }
+            // Multiple purchases allowed - we don't check for existence in certifications
             state.player.cash = Math.max(0, state.player.cash - course.cost);
             state.player.exp += course.xp;
             state.player.clout += course.clout;
-            state.player.certifications.push(course.cert);
+            // Only add unique certs to the list for counting purposes, but allow multiple purchases for XP/Clout
+            if (!state.player.certifications.includes(course.cert)) {
+                state.player.certifications.push(course.cert);
+            }
             addActivity(`Day ${state.player.day}`, `Completed course: ${course.name}`, 'success');
             checkLevelUp();
             saveGame();
             updateUI();
             renderEducation();
-            showToast('Course Complete!', `+${course.xp} XP | Cert: ${course.cert}`, 'success');
+            showToast('Course Complete!', `+${course.xp} XP | +${course.clout} Clout`, 'success');
         }
 
         // ===================== ACHIEVEMENTS =====================
@@ -6101,14 +6209,15 @@ What is your experience?"></textarea></div>
         }
 
         function payClubEntry() {
-            if (state.player.cash < CLUB_ENTRY_FEE) {
-                showToast('Insufficient Cash', 'You need $1T cash to pay the membership fee', 'danger'); return;
-            }
-            state.player.cash -= CLUB_ENTRY_FEE;
+            const FEE = 1000000000000; // 1T
+            if (state.player.cash < FEE) { showToast('Insufficient Funds', 'You need $1T to enter The Club', 'danger'); return; }
+            state.player.cash -= FEE;
             state.player.clubPaid = true;
             if (!state.player.clubBalance) state.player.clubBalance = 0;
             addActivity(`Day ${state.player.day}`, 'Paid $1T membership fee to join The Club!', 'success');
             showToast('Welcome to The Club!', 'You are now a VIP member!', 'success');
+            const navItem = document.getElementById('club-nav-item');
+            if (navItem) { navItem.textContent = 'The Club 🎰'; navItem.style.color = 'var(--warning)'; }
             saveGame(); updateUI(); renderClub();
         }
 
