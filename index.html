@@ -1139,7 +1139,7 @@ What is your experience?"></textarea></div>
             </div>       </div>
 
             <!-- Admin Panel Tab -->
-            <div id="admin" class="tab-panel">
+            <div id="admin" class="tab-panel" style="max-height:calc(100vh - 150px);overflow-y:auto;padding-right:10px">
                 <div style="display:flex;align-items:center;gap:1rem;margin-bottom:2rem">
                     <div style="font-size:2.5rem">⚙️</div>
                     <div>
@@ -1253,7 +1253,24 @@ What is your experience?"></textarea></div>
                                     <div id="admin-badge-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;margin-bottom:0.75rem"></div>
                                     <div id="admin-player-badges" style="margin-top:0.75rem">
                                         <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem">Current Badges:</div>
-                                        <div id="admin-current-badges" style="display:flex;flex-wrap:wrap;gap:0.4rem"></div>
+                                        <div id="admin-current-badges" style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:1rem"></div>
+                                    </div>
+                                    <!-- Custom Badge Upload -->
+                                    <div style="border-top:1px solid var(--border);padding-top:1rem;margin-top:1rem">
+                                        <h5 style="margin-bottom:0.75rem;color:var(--text-muted);font-size:0.8rem;text-transform:uppercase">✨ Add Custom Badge</h5>
+                                        <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem">
+                                            <input type="text" id="admin-custom-badge-name" placeholder="Badge Name (e.g. MVP)" style="flex:1;padding:0.5rem;background:var(--bg-base);border:1px solid var(--border);border-radius:6px;color:var(--text-main);font-size:0.85rem">
+                                            <label class="btn btn-secondary" style="font-size:0.75rem;padding:0.5rem;cursor:pointer;margin:0;display:flex;align-items:center;gap:0.3rem">
+                                                🖼️ Img
+                                                <input type="file" id="admin-custom-badge-file" accept="image/*" style="display:none" onchange="adminHandleCustomBadgePreview(event)">
+                                            </label>
+                                        </div>
+                                        <div id="admin-custom-badge-preview" style="display:none;margin-bottom:0.5rem;align-items:center;gap:0.5rem;background:var(--bg-base);padding:0.4rem;border-radius:6px;border:1px solid var(--border)">
+                                            <img id="admin-cb-img-preview" src="" style="width:24px;height:24px;object-fit:cover;border-radius:4px">
+                                            <span id="admin-cb-name-preview" style="font-size:0.8rem;font-weight:700"></span>
+                                            <button onclick="adminClearCustomBadgePreview()" style="margin-left:auto;background:none;border:none;color:var(--danger);cursor:pointer;font-size:1rem">✕</button>
+                                        </div>
+                                        <button class="btn btn-primary" onclick="adminAddCustomBadge()" style="width:100%;font-size:0.8rem;padding:0.5rem">Add Custom Badge</button>
                                     </div>
                                 </div>
 
@@ -3348,10 +3365,17 @@ What is your experience?"></textarea></div>
                     if (playerBadges.length === 0) {
                         badgesDiv.innerHTML = '<div style="font-size:0.85rem;color:var(--text-muted)">No badges</div>';
                     } else {
-                        badgesDiv.innerHTML = playerBadges.map(bid => {
-                            const b = (typeof ADMIN_BADGES !== 'undefined' ? ADMIN_BADGES : []).find(x => x.id === bid);
-                            if (!b) return `<span style="padding:0.2rem 0.5rem;border-radius:12px;background:var(--bg-panel);font-size:0.8rem;border:1px solid var(--border)">${bid}</span>`;
-                            return `<span class="admin-badge-pill" style="color:${b.color};background:${b.bg};border-color:${b.border}">${b.emoji} ${b.label}</span>`;
+                        badgesDiv.innerHTML = playerBadges.map(b => {
+                            if (typeof b === 'string') {
+                                const badge = (typeof ADMIN_BADGES !== 'undefined' ? ADMIN_BADGES : []).find(x => x.id === b);
+                                if (!badge) return `<span style="padding:0.2rem 0.5rem;border-radius:12px;background:var(--bg-panel);font-size:0.8rem;border:1px solid var(--border)">${b}</span>`;
+                                return `<span class="admin-badge-pill" style="color:${badge.color};background:${badge.bg};border-color:${badge.border}">${badge.emoji} ${badge.label}</span>`;
+                            } else if (typeof b === 'object' && b.isCustom) {
+                                return `<span class="admin-badge-pill" style="color:var(--brand);background:rgba(var(--brand-rgb),0.1);border-color:var(--brand);display:inline-flex;align-items:center;gap:0.3rem">
+                                    <img src="${b.img}" style="width:14px;height:14px;object-fit:cover;border-radius:2px"> ${b.label}
+                                </span>`;
+                            }
+                            return '';
                         }).join('');
                     }
                 }
@@ -7640,11 +7664,72 @@ What is your experience?"></textarea></div>
                 container.innerHTML = '<div style="font-size:0.8rem;color:var(--text-muted)">None assigned</div>';
                 return;
             }
-            container.innerHTML = badges.map(bid => {
-                const b = ADMIN_BADGES.find(x => x.id === bid);
-                if (!b) return '';
-                return `<span class="admin-badge-pill" style="color:${b.color};background:${b.bg};border-color:${b.border}">${b.emoji} ${b.label}</span>`;
+            container.innerHTML = badges.map(b => {
+                if (typeof b === 'string') {
+                    const badge = ADMIN_BADGES.find(x => x.id === b);
+                    if (!badge) return '';
+                    return `<span class="admin-badge-pill" style="color:${badge.color};background:${badge.bg};border-color:${badge.border}">${badge.emoji} ${badge.label}</span>`;
+                } else if (typeof b === 'object' && b.isCustom) {
+                    return `<span class="admin-badge-pill" style="color:var(--brand);background:rgba(var(--brand-rgb),0.1);border-color:var(--brand);display:inline-flex;align-items:center;gap:0.3rem">
+                        <img src="${b.img}" style="width:14px;height:14px;object-fit:cover;border-radius:2px"> ${b.label}
+                        <button onclick="adminRemoveCustomBadge('${b.id}')" style="background:none;border:none;color:var(--danger);cursor:pointer;padding:0;margin-left:0.2rem;font-size:0.8rem">✕</button>
+                    </span>`;
+                }
+                return '';
             }).join('');
+        }
+
+        let adminCustomBadgeData = null;
+        function adminHandleCustomBadgePreview(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                adminCustomBadgeData = e.target.result;
+                document.getElementById('admin-cb-img-preview').src = adminCustomBadgeData;
+                document.getElementById('admin-cb-name-preview').textContent = document.getElementById('admin-custom-badge-name').value || 'Badge';
+                document.getElementById('admin-custom-badge-preview').style.display = 'flex';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function adminClearCustomBadgePreview() {
+            adminCustomBadgeData = null;
+            document.getElementById('admin-custom-badge-file').value = '';
+            document.getElementById('admin-custom-badge-preview').style.display = 'none';
+        }
+
+        async function adminAddCustomBadge() {
+            if (!adminCurrentPlayerUid) { showToast('Error', 'No player loaded', 'danger'); return; }
+            const name = document.getElementById('admin-custom-badge-name').value.trim();
+            if (!name || !adminCustomBadgeData) { showToast('Error', 'Name and image required', 'danger'); return; }
+            try {
+                const userRef = window.fbMethods.doc(window.fbDb, 'users', adminCurrentPlayerUid);
+                const snap = await window.fbMethods.getDoc(userRef);
+                let badges = (snap.data().badges || []);
+                const newBadge = { id: 'custom_' + Date.now(), label: name, img: adminCustomBadgeData, isCustom: true };
+                badges.push(newBadge);
+                await window.fbMethods.updateDoc(userRef, { badges });
+                adminCurrentPlayerData.badges = badges;
+                adminRenderCurrentBadges(badges);
+                adminClearCustomBadgePreview();
+                document.getElementById('admin-custom-badge-name').value = '';
+                showToast('Success', 'Custom badge added!', 'success');
+            } catch(e) { showToast('Error', e.message, 'danger'); }
+        }
+
+        async function adminRemoveCustomBadge(badgeId) {
+            if (!adminCurrentPlayerUid) return;
+            try {
+                const userRef = window.fbMethods.doc(window.fbDb, 'users', adminCurrentPlayerUid);
+                const snap = await window.fbMethods.getDoc(userRef);
+                let badges = (snap.data().badges || []);
+                badges = badges.filter(b => (typeof b === 'string' ? b : b.id) !== badgeId);
+                await window.fbMethods.updateDoc(userRef, { badges });
+                adminCurrentPlayerData.badges = badges;
+                adminRenderCurrentBadges(badges);
+                showToast('Removed', 'Custom badge removed', 'warning');
+            } catch(e) { showToast('Error', e.message, 'danger'); }
         }
 
         async function adminToggleBadge(badgeId) {
@@ -7923,11 +8008,18 @@ What is your experience?"></textarea></div>
                 if (badges.length === 0) {
                     container.innerHTML = '<div style="font-size:0.85rem;color:var(--text-muted)">No badges yet</div>';
                 } else {
-                    container.innerHTML = badges.map(bid => {
-                        const b = ADMIN_BADGES.find(x => x.id === bid);
-                        if (!b) return '';
-                        return `<span class="admin-badge-pill" style="color:${b.color};background:${b.bg};border-color:${b.border}">${b.emoji} ${b.label}</span>`;
-                    }).join('');
+                container.innerHTML = badges.map(b => {
+                    if (typeof b === 'string') {
+                        const badge = ADMIN_BADGES.find(x => x.id === b);
+                        if (!badge) return '';
+                        return `<span class="admin-badge-pill" style="color:${badge.color};background:${badge.bg};border-color:${badge.border}">${badge.emoji} ${badge.label}</span>`;
+                    } else if (typeof b === 'object' && b.isCustom) {
+                        return `<span class="admin-badge-pill" style="color:var(--brand);background:rgba(var(--brand-rgb),0.1);border-color:var(--brand);display:inline-flex;align-items:center;gap:0.3rem">
+                            <img src="${b.img}" style="width:14px;height:14px;object-fit:cover;border-radius:2px"> ${b.label}
+                        </span>`;
+                    }
+                    return '';
+                }).join('');
                 }
             }).catch(() => {});
         }
