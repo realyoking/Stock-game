@@ -499,6 +499,7 @@
                 <div class="nav-item" onclick="switchTab('aibot')" style="color:#a855f7">AI Invest Bot</div>
                 <div class="nav-item" id="club-nav-item" onclick="switchTab('club')" style="color:#f59e0b">The Club 🔒</div>
                 <div class="nav-item" onclick="switchTab('leaderboard')" style="color:var(--warning)">Leaderboard</div>
+                <div class="nav-item" onclick="switchTab('search')" style="color:#38bdf8">Search Players</div>
                 <div class="nav-item" onclick="switchTab('profile')" style="color:var(--brand);border-top:1px solid var(--border);margin-top:auto;padding-top:1rem">Profile</div>
             </div>
             <div class="sidebar-stats">
@@ -827,6 +828,52 @@
                         <div id="club-game-area"></div>
                     </div>
                 </div>
+
+            <!-- Search Player Tab -->
+            <div id="search" class="tab-panel">
+                <h2 style="margin-bottom:1.5rem">Search Players</h2>
+                <div class="widget" style="max-width:600px;margin-bottom:2rem">
+                    <p style="color:var(--text-muted);margin-bottom:1rem;font-size:0.9rem">Find other players by their username to visit their profile or send them money.</p>
+                    <div style="display:flex;gap:0.75rem">
+                        <input type="text" id="search-player-input" placeholder="Enter username..." style="flex:1;padding:0.75rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:1rem">
+                        <button class="btn btn-primary" onclick="searchPlayer()">Search</button>
+                    </div>
+                    <div id="search-results" style="margin-top:1.5rem"></div>
+                </div>
+            </div>
+
+            <!-- Visit Profile Modal -->
+            <div id="visit-modal" class="modal-overlay hidden">
+                <div class="modal-content" style="max-width:450px;padding:0;overflow:hidden">
+                    <div style="background:linear-gradient(135deg,var(--brand),#4f46e5);padding:2rem 1.5rem;text-align:center;position:relative">
+                        <button onclick="document.getElementById('visit-modal').classList.add('hidden')" style="position:absolute;top:1rem;right:1rem;background:rgba(0,0,0,0.2);border:none;color:white;width:30px;height:30px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:bold">×</button>
+                        <div id="visit-pfp" style="width:100px;height:100px;border-radius:50%;background:white;margin:0 auto 1rem;border:4px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;font-size:4rem;overflow:hidden">🧑</div>
+                        <h2 id="visit-display-name" style="color:white;margin-bottom:0.25rem">Display Name</h2>
+                        <div id="visit-username" style="color:rgba(255,255,255,0.8);font-size:0.9rem">@username</div>
+                    </div>
+                    <div style="padding:1.5rem">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem">
+                            <div style="background:var(--bg-panel);padding:0.75rem;border-radius:10px;border:1px solid var(--border);text-align:center">
+                                <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;margin-bottom:0.25rem">Cash</div>
+                                <div id="visit-cash" style="font-weight:800;color:var(--success);font-size:1.1rem">$0</div>
+                            </div>
+                            <div style="background:var(--bg-panel);padding:0.75rem;border-radius:10px;border:1px solid var(--border);text-align:center">
+                                <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;margin-bottom:0.25rem">Day</div>
+                                <div id="visit-day" style="font-weight:800;color:var(--brand);font-size:1.1rem">1</div>
+                            </div>
+                        </div>
+                        <div style="margin-bottom:1.5rem">
+                            <h4 style="margin-bottom:0.75rem;font-size:0.85rem;color:var(--text-muted);text-transform:uppercase">Companies</h4>
+                            <div id="visit-companies" style="display:flex;flex-wrap:wrap;gap:0.5rem">
+                                <div style="font-size:0.85rem;color:var(--text-muted)">No companies found</div>
+                            </div>
+                        </div>
+                        <button class="btn btn-success" id="visit-give-btn" style="width:100%;padding:0.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.5rem">
+                            💸 Give Money
+                        </button>
+                    </div>
+                </div>
+            </div>
 
             <!-- Profile Tab -->
             <div id="profile" class="tab-panel">
@@ -2494,6 +2541,212 @@
             syncGlobalMarket();
             // Sync any pending local saves to cloud
             setTimeout(syncLocalToCloud, 3000);
+            // Start listening for money transfers
+            startNotificationListener();
+        }
+
+        // ===================== SEARCH & VISIT PLAYERS =====================
+        function renderSearch() {
+            // No specific render logic needed for search tab itself
+        }
+
+        async function searchPlayer() {
+            const username = document.getElementById('search-player-input').value.trim();
+            if (!username) { showToast('Error', 'Enter a username to search', 'danger'); return; }
+            if (username.toLowerCase() === (state._currentUsername || '').toLowerCase()) {
+                showToast('Info', 'That is you!', 'warning');
+                return;
+            }
+
+            const resultsDiv = document.getElementById('search-results');
+            resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--text-muted)">Searching...</div>';
+
+            try {
+                // Look up username in Firestore
+                const usernameDoc = window.fbMethods.doc(window.fbDb, 'usernames', username.toLowerCase());
+                const snap = await window.fbMethods.getDoc(usernameDoc);
+                
+                if (!snap.exists()) {
+                    resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--danger)">Player not found</div>';
+                    return;
+                }
+
+                const userData = snap.data();
+                const uid = userData.uid;
+
+                // Get full user profile
+                const userDoc = window.fbMethods.doc(window.fbDb, 'users', uid);
+                const userSnap = await window.fbMethods.getDoc(userDoc);
+                
+                if (!userSnap.exists()) {
+                    resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--danger)">Profile data missing</div>';
+                    return;
+                }
+
+                const profile = userSnap.data();
+                // Get the latest AutoSave for detailed stats
+                const saveDoc = window.fbMethods.doc(window.fbDb, 'users', uid, 'saves', 'AutoSave');
+                const saveSnap = await window.fbMethods.getDoc(saveDoc);
+                const saveData = saveSnap.exists() ? saveSnap.data() : null;
+
+                resultsDiv.innerHTML = `
+                    <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;display:flex;align-items:center;gap:1rem">
+                        <div style="width:50px;height:50px;border-radius:50%;background:var(--bg-panel);display:flex;align-items:center;justify-content:center;font-size:2rem;overflow:hidden">
+                            ${profile.avatar_img ? `<img src="${profile.avatar_img}" style="width:100%;height:100%;object-fit:cover">` : (profile.avatar || '🧑')}
+                        </div>
+                        <div style="flex:1">
+                            <div style="font-weight:700">${profile.displayName || username}</div>
+                            <div style="font-size:0.8rem;color:var(--text-muted)">@${username}</div>
+                        </div>
+                        <button class="btn btn-primary" onclick="visitPlayer('${uid}', '${username}')">Visit Profile</button>
+                    </div>
+                `;
+            } catch (e) {
+                console.error(e);
+                resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--danger)">Search failed. Are you logged in?</div>';
+            }
+        }
+
+        async function visitPlayer(uid, username) {
+            try {
+                showToast('Loading', 'Fetching player profile...', 'info');
+                const userDoc = window.fbMethods.doc(window.fbDb, 'users', uid);
+                const userSnap = await window.fbMethods.getDoc(userDoc);
+                const profile = userSnap.data();
+
+                const saveDoc = window.fbMethods.doc(window.fbDb, 'users', uid, 'saves', 'AutoSave');
+                const saveSnap = await window.fbMethods.getDoc(saveDoc);
+                const saveData = saveSnap.exists() ? saveSnap.data() : null;
+                const player = saveData ? saveData.player : null;
+
+                // Update Modal UI
+                const pfpEl = document.getElementById('visit-pfp');
+                if (profile.avatar_img) {
+                    pfpEl.innerHTML = `<img src="${profile.avatar_img}" style="width:100%;height:100%;object-fit:cover">`;
+                } else {
+                    pfpEl.textContent = profile.avatar || '🧑';
+                }
+
+                document.getElementById('visit-display-name').textContent = profile.displayName || username;
+                document.getElementById('visit-username').textContent = '@' + username;
+                document.getElementById('visit-cash').textContent = '$' + formatNum(player ? player.cash : (profile.netWorth || 0));
+                document.getElementById('visit-day').textContent = player ? player.day : (profile.day || 1);
+
+                const compDiv = document.getElementById('visit-companies');
+                if (player && player.companies && player.companies.length > 0) {
+                    compDiv.innerHTML = player.companies.map(c => `
+                        <div style="background:rgba(56,189,248,0.1);color:#38bdf8;padding:0.3rem 0.6rem;border-radius:6px;font-size:0.75rem;font-weight:700;border:1px solid rgba(56,189,248,0.2)">
+                            ID: ${c.id.substring(0,8)}...
+                        </div>
+                    `).join('');
+                } else {
+                    compDiv.innerHTML = '<div style="font-size:0.85rem;color:var(--text-muted)">No companies found</div>';
+                }
+
+                const giveBtn = document.getElementById('visit-give-btn');
+                giveBtn.onclick = () => openGiveMoneyModal(uid, username);
+
+                document.getElementById('visit-modal').classList.remove('hidden');
+            } catch (e) {
+                showToast('Error', 'Failed to load profile', 'danger');
+            }
+        }
+
+        function openGiveMoneyModal(uid, username) {
+            document.getElementById('amount-modal-title').textContent = `Give Money to ${username}`;
+            document.getElementById('amount-modal-desc').textContent = `Your cash: $${formatNum(state.player.cash)}. The recipient will be notified.`;
+            document.getElementById('amount-modal-input').value = '';
+            const btn = document.getElementById('amount-modal-confirm');
+            btn.onclick = () => confirmGiveMoney(uid, username);
+            document.getElementById('amount-modal').classList.remove('hidden');
+        }
+
+        async function confirmGiveMoney(uid, username) {
+            const amt = parseFloat(document.getElementById('amount-modal-input').value);
+            if (!amt || amt <= 0) { showToast('Error', 'Enter a valid amount', 'danger'); return; }
+            if (state.player.cash < amt) { showToast('Insufficient Funds', '', 'danger'); return; }
+
+            try {
+                showToast('Sending', 'Processing transaction...', 'info');
+                
+                // 1. Deduct from sender
+                state.player.cash -= amt;
+                updateUI();
+                saveGame();
+
+                // 2. Add to recipient's notification queue in Firestore
+                // We use a "notifications" collection that the game listens to
+                const notifRef = window.fbMethods.collection(window.fbDb, 'users', uid, 'notifications');
+                await window.fbMethods.addDoc(notifRef, {
+                    type: 'money_received',
+                    from: state._currentUsername || 'Anonymous',
+                    amount: amt,
+                    timestamp: new Date().toISOString(),
+                    read: false
+                });
+
+                // 3. Also update their cash in their latest save if possible (optional, but better for real-time)
+                // For simplicity in this architecture, we'll rely on the notification to trigger the add when they are online.
+                
+                document.getElementById('amount-modal').classList.add('hidden');
+                document.getElementById('visit-modal').classList.add('hidden');
+                showToast('Success', `Sent $${formatNum(amt)} to ${username}!`, 'success');
+                addActivity(`Day ${state.player.day}`, `Sent $${formatNum(amt)} to ${username}`, 'warning');
+            } catch (e) {
+                console.error(e);
+                showToast('Error', 'Transaction failed', 'danger');
+            }
+        }
+
+        function startNotificationListener() {
+            const user = window.fbAuth ? window.fbAuth.currentUser : null;
+            if (!user || !window.fbMethods.onSnapshot) return;
+
+            const notifRef = window.fbMethods.collection(window.fbDb, 'users', user.uid, 'notifications');
+            const q = window.fbMethods.query(notifRef, window.fbMethods.where('read', '==', false));
+
+            window.fbMethods.onSnapshot(q, (snapshot) => {
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === "added") {
+                        const notif = change.doc.data();
+                        if (notif.type === 'money_received') {
+                            // Show the GUI popup
+                            showMoneyReceivedPopup(notif.from, notif.amount, change.doc.id);
+                        }
+                    }
+                });
+            });
+        }
+
+        function showMoneyReceivedPopup(from, amount, notifId) {
+            // Create a temporary GUI popup
+            const popup = document.createElement('div');
+            popup.className = 'modal-overlay';
+            popup.style.zIndex = '10000';
+            popup.innerHTML = `
+                <div class="modal-content" style="max-width:400px;text-align:center;border:2px solid var(--success)">
+                    <div style="font-size:4rem;margin-bottom:1rem">💰</div>
+                    <h2 style="color:var(--success);margin-bottom:0.5rem">Money Received!</h2>
+                    <p style="margin-bottom:1.5rem"><strong>${from}</strong> sent you <strong style="color:var(--success);font-size:1.2rem">$${formatNum(amount)}</strong>!</p>
+                    <button class="btn btn-success" id="claim-money-btn" style="width:100%">Claim Cash</button>
+                </div>
+            `;
+            document.body.appendChild(popup);
+
+            document.getElementById('claim-money-btn').onclick = async () => {
+                state.player.cash += amount;
+                updateUI();
+                addActivity(`Day ${state.player.day}`, `Received $${formatNum(amount)} from ${from}`, 'success');
+                showToast('Cash Claimed', `+$${formatNum(amount)} added to wallet`, 'success');
+                
+                // Mark notification as read
+                const user = window.fbAuth.currentUser;
+                const docRef = window.fbMethods.doc(window.fbDb, 'users', user.uid, 'notifications', notifId);
+                await window.fbMethods.updateDoc(docRef, { read: true });
+                
+                document.body.removeChild(popup);
+                saveGame();
+            };
         }
 
         // ===================== DAY TIMER =====================
@@ -2993,6 +3246,7 @@
             else if (state.currentTab === 'profile') renderProfile();
             else if (state.currentTab === 'aibot') renderAIBot();
             else if (state.currentTab === 'club') renderClub();
+            else if (state.currentTab === 'search') renderSearch();
         }
 
         function updateUI() {
@@ -3078,7 +3332,7 @@
             });
             document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
             document.getElementById(tab).classList.add('active');
-            const titles = { dashboard:'Dashboard', market:'Stock Market', portfolio:'Portfolio', career:'Career', company:'Company Management', properties:'Real Estate', lifestyle:'Lifestyle', banking:'Banking', blackmarket:'Black Market', crypto:'Cryptocurrency', education:'Education', achievements:'Achievements', aibot:'AI Invest Bot', club:'The Club', leaderboard:'Leaderboard', profile:'Profile & Settings' };
+            const titles = { dashboard:'Dashboard', market:'Stock Market', portfolio:'Portfolio', career:'Career', company:'Company Management', properties:'Real Estate', lifestyle:'Lifestyle', banking:'Banking', blackmarket:'Black Market', crypto:'Cryptocurrency', education:'Education', achievements:'Achievements', aibot:'AI Invest Bot', club:'The Club', search:'Search Players', leaderboard:'Leaderboard', profile:'Profile & Settings' };
             document.getElementById('tab-title').textContent = titles[tab] || tab;
             renderAll();
         }
