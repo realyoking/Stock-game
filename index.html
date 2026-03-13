@@ -2231,8 +2231,12 @@
             const user = window.fbAuth.currentUser;
             if (!user) return;
             
+            // Clear local saves first to prevent data leaking between accounts
+            localStorage.removeItem('tradelife_saves');
+            document.getElementById('resume-btn').style.display = 'none';
+
             let cloudSaves = {};
-            // Try Firestore first
+            // Try Firestore first (Primary source)
             try {
                 const savesCol = window.fbMethods.collection(window.fbDb, "users", user.uid, "saves");
                 const snapshot = await window.fbMethods.getDocs(savesCol);
@@ -2242,25 +2246,29 @@
             } catch (e) {
                 console.error("Firestore sync failed", e);
             }
-            // Also try RTDB
+            // Also try RTDB (Secondary source)
             try {
-                const rtdbSavesRef = window.fbMethods.rtdbRef(window.fbRtdb, 'saves/' + user.uid);
-                const snap = await window.fbMethods.rtdbGet(rtdbSavesRef);
-                if (snap.exists()) {
-                    const rtdbSaves = snap.val();
-                    // Merge RTDB saves (Firestore wins on conflict if both exist)
-                    cloudSaves = { ...rtdbSaves, ...cloudSaves };
+                if (window.fbRtdb) {
+                    const rtdbSavesRef = window.fbMethods.rtdbRef(window.fbRtdb, 'saves/' + user.uid);
+                    const snap = await window.fbMethods.rtdbGet(rtdbSavesRef);
+                    if (snap.exists()) {
+                        const rtdbSaves = snap.val();
+                        // Merge RTDB saves (Firestore wins on conflict)
+                        cloudSaves = { ...rtdbSaves, ...cloudSaves };
+                    }
                 }
             } catch (e) {
                 console.error("RTDB sync failed", e);
             }
-            // Merge with local saves (Cloud wins on conflict)
-            const localSaves = getSaves();
-            const merged = { ...localSaves, ...cloudSaves };
-            localStorage.setItem('tradelife_saves', JSON.stringify(merged));
             
-            if (Object.keys(merged).length > 0) {
+            // Save cloud data to local storage for this specific account
+            localStorage.setItem('tradelife_saves', JSON.stringify(cloudSaves));
+            
+            if (Object.keys(cloudSaves).length > 0) {
                 document.getElementById('resume-btn').style.display = 'inline-flex';
+                showToast('Cloud Sync', 'Saves restored from cloud', 'success');
+            } else {
+                showToast('Cloud Sync', 'No cloud saves found for this account', 'info');
             }
         }
 
@@ -2563,7 +2571,7 @@
 
             try {
                 // Check if Firebase is ready
-                if (!window.fbMethods || (!window.fbRtdb && !window.fbDb)) {
+                if (!window.fbMethods || !window.fbDb) {
                     resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--danger)">Database not ready. Please wait a few seconds and try again.</div>';
                     return;
                 }
@@ -2571,9 +2579,25 @@
                 let matches = [];
                 const currentUid = window.fbAuth.currentUser ? window.fbAuth.currentUser.uid : '';
 
-                // Primary Search: Realtime Database (RTDB)
-                if (window.fbRtdb) {
-                    try {
+                // Primary Search: Firestore (Consolidated for reliability)
+                try {
+                    const usersCol = window.fbMethods.collection(window.fbDb, "users");
+                    // We fetch all users and filter locally for partial matching since Firestore doesn't support it natively
+                    const snapshot = await window.fbMethods.getDocs(usersCol);
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        const uid = doc.id;
+                        const username = (data.username || '').toLowerCase();
+                        const displayName = (data.displayName || '').toLowerCase();
+                        
+                        if ((username.includes(query) || displayName.includes(query)) && uid !== currentUid) {
+                            matches.push({ uid, ...data });
+                        }
+                    });
+                } catch (fsErr) {
+                    console.error("Firestore search failed", fsErr);
+                    // Fallback to RTDB if Firestore fails
+                    if (window.fbRtdb) {
                         const rtdbUsersRef = window.fbMethods.rtdbRef(window.fbRtdb, 'users');
                         const snap = await window.fbMethods.rtdbGet(rtdbUsersRef);
                         if (snap.exists()) {
@@ -2586,30 +2610,6 @@
                                 }
                             });
                         }
-                    } catch (rtdbErr) {
-                        console.warn("RTDB search failed, falling back to Firestore", rtdbErr);
-                    }
-                }
-
-                // Fallback Search: Firestore (if RTDB failed or returned no matches)
-                if (matches.length === 0 && window.fbDb) {
-                    try {
-                        // Firestore doesn't support partial matches easily without a third-party service,
-                        // so we'll try to find an exact match first as a fallback.
-                        const usernameDoc = window.fbMethods.doc(window.fbDb, 'usernames', query);
-                        const snap = await window.fbMethods.getDoc(usernameDoc);
-                        if (snap.exists()) {
-                            const uid = snap.data().uid;
-                            if (uid !== currentUid) {
-                                const userDoc = window.fbMethods.doc(window.fbDb, 'users', uid);
-                                const userSnap = await window.fbMethods.getDoc(userDoc);
-                                if (userSnap.exists()) {
-                                    matches.push({ uid, ...userSnap.data() });
-                                }
-                            }
-                        }
-                    } catch (fsErr) {
-                        console.error("Firestore fallback search failed", fsErr);
                     }
                 }
 
@@ -4139,12 +4139,45 @@
 
             // Wait for Firebase to be fully ready (up to 6 seconds)
             let fbWaitMs = 0;
-            while ((!window.fbRtdb || !window.fbMethods || !window.fbDb) && fbWaitMs < 6000) {
+            while ((!window.fbMethods || !window.fbDb) && fbWaitMs < 6000) {
                 await new Promise(r => setTimeout(r, 250));
                 fbWaitMs += 250;
             }
 
-            // Try RTDB first (real-time)
+            // Primary: Firestore (Consolidated for reliability)
+            try {
+                if (window.fbDb && window.fbMethods) {
+                    const usersCol = window.fbMethods.collection(window.fbDb, "users");
+                    let users = [];
+                    try {
+                        const q = window.fbMethods.query(usersCol, window.fbMethods.orderBy("netWorth", "desc"), window.fbMethods.limit(20));
+                        const snapshot = await window.fbMethods.getDocs(q);
+                        snapshot.forEach(doc => users.push(doc.data()));
+                    } catch (indexErr) {
+                        console.warn("Firestore index not ready, fetching all and sorting locally");
+                        const snapshot = await window.fbMethods.getDocs(usersCol);
+                        snapshot.forEach(doc => users.push(doc.data()));
+                        users.sort((a, b) => (b.netWorth || 0) - (a.netWorth || 0));
+                        users = users.slice(0, 20);
+                    }
+
+                    let html = '';
+                    users.forEach((data, i) => {
+                        const rank = i + 1;
+                        const name = data.username || (data.email || 'Player').replace('@tradelife.game','').split('@')[0];
+                        html += `<tr><td>${rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank}</td><td>${name}</td><td style="color:var(--success);font-weight:700">$${formatNum(data.netWorth || 0)}</td><td>Day ${data.day || 1}</td></tr>`;
+                    });
+                    
+                    state.leaderboardCache = html || '<tr><td colspan="4" style="text-align:center">No players yet</td></tr>';
+                    state.leaderboardLastFetch = now;
+                    body.innerHTML = state.leaderboardCache;
+                    return;
+                }
+            } catch (e) {
+                console.error("Firestore leaderboard failed", e);
+            }
+
+            // Fallback: RTDB
             try {
                 if (window.fbRtdb && window.fbMethods) {
                     const rtdbUsersRef = window.fbMethods.rtdbRef(window.fbRtdb, 'users');
@@ -4167,27 +4200,7 @@
             } catch (e) {
                 console.error("RTDB leaderboard failed", e);
             }
-            // Fallback to Firestore
-            try {
-                if (window.fbDb && window.fbMethods) {
-                    const q = window.fbMethods.query(window.fbMethods.collection(window.fbDb, "users"), window.fbMethods.orderBy("netWorth", "desc"), window.fbMethods.limit(20));
-                    const snapshot = await window.fbMethods.getDocs(q);
-                    let html = '';
-                    let rank = 1;
-                    snapshot.forEach(doc => {
-                        const data = doc.data();
-                        const name = data.username || (data.email || 'Player').replace('@tradelife.game','').split('@')[0];
-                        html += `<tr><td>${rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank}</td><td>${name}</td><td style="color:var(--success);font-weight:700">$${formatNum(data.netWorth || 0)}</td><td>Day ${data.day || 1}</td></tr>`;
-                        rank++;
-                    });
-                    state.leaderboardCache = html || '<tr><td colspan="4" style="text-align:center">No players yet</td></tr>';
-                    state.leaderboardLastFetch = now;
-                    body.innerHTML = state.leaderboardCache;
-                    return;
-                }
-            } catch (e) {
-                console.error("Firestore leaderboard failed", e);
-            }
+            
             // Both sources failed - show retry button
             if (!state.leaderboardCache) {
                 body.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:1.5rem;color:var(--text-muted)">Could not load leaderboard. <button class="btn btn-secondary" onclick="renderLeaderboard()" style="margin-left:0.5rem;font-size:0.8rem;padding:0.3rem 0.8rem">&#x21bb; Retry</button></td></tr>';
