@@ -421,13 +421,12 @@
                     <label style="display:block;margin-bottom:0.5rem;color:var(--text-muted);font-size:0.85rem;text-transform:uppercase;font-weight:700">Select Target Player</label>
                     <select id="nuke-player-select" style="width:100%;padding:0.75rem;background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem;cursor:pointer">
                         <option value="">-- Choose a player --</option>
-                        <option value="self">-- MYSELF (Self-Destruct) --</option>
                     </select>
                 </div>
                 <div style="margin-bottom:1rem">
-                    <label style="display:block;margin-bottom:0.5rem;color:var(--text-muted);font-size:0.85rem;text-transform:uppercase;font-weight:700">Select Target City/Planet</label>
+                    <label style="display:block;margin-bottom:0.5rem;color:var(--text-muted);font-size:0.85rem;text-transform:uppercase;font-weight:700">Select Target City</label>
                     <select id="nuke-city-select" style="width:100%;padding:0.75rem;background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem;cursor:pointer">
-                        <option value="">-- Choose a target --</option>
+                        <option value="">-- Choose a city --</option>
                     </select>
                 </div>
                 <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;border:1px solid var(--border);font-size:0.85rem;color:var(--text-muted)">
@@ -865,9 +864,7 @@ What is your experience?"></textarea></div>
                                     <div style="font-size:2rem;margin-bottom:0.5rem">👑</div>
                                     <div style="font-weight:700;color:#fff;margin-bottom:0.25rem">Planet Owner</div>
                                     <p style="color:#fff;font-size:0.85rem">You own the entire planet!</p>
-                                    <button class="btn btn-primary" onclick="buyPlanet()" style="width:100%;font-size:0.8rem;background:#fff;color:#ec4899;border:none;margin-top:0.5rem">Buy Another Planet (100T)</button>
                                 </div>
-                                <div id="my-planets-list" style="margin-top:1rem"></div>
                                 <button class="btn btn-danger" onclick="openNukeModal()" style="width:100%;margin-top:1rem;background:linear-gradient(135deg,#ef4444,#dc2626);font-size:0.9rem;padding:0.75rem">💣 Launch Nuke</button>
                             </div>
                         </div>
@@ -998,16 +995,10 @@ What is your experience?"></textarea></div>
                                 <div id="visit-day" style="font-weight:800;color:var(--brand);font-size:1.1rem">1</div>
                             </div>
                         </div>
-                        <div style="margin-bottom:1rem">
+                        <div style="margin-bottom:1.5rem">
                             <h4 style="margin-bottom:0.75rem;font-size:0.85rem;color:var(--text-muted);text-transform:uppercase">Companies</h4>
                             <div id="visit-companies" style="display:flex;flex-wrap:wrap;gap:0.5rem">
                                 <div style="font-size:0.85rem;color:var(--text-muted)">No companies found</div>
-                            </div>
-                        </div>
-                        <div style="margin-bottom:1.5rem">
-                            <h4 style="margin-bottom:0.75rem;font-size:0.85rem;color:var(--text-muted);text-transform:uppercase">Planets</h4>
-                            <div id="visit-planets" style="display:flex;flex-direction:column;gap:0.5rem">
-                                <div style="font-size:0.85rem;color:var(--text-muted)">No planets owned</div>
                             </div>
                         </div>
                         <button class="btn btn-success" id="visit-give-btn" style="width:100%;padding:0.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.5rem">
@@ -2178,8 +2169,7 @@ What is your experience?"></textarea></div>
                 clubBalance: 0,
                 clubPaid: false,
                 countriesOwned: [],
-                planetOwned: false,
-                planets: [] // Array of { id, name, type, color, description, level, population, defense }
+                planetOwned: false
             },
             stockPrices: {},
             cryptoPrices: {},
@@ -3103,20 +3093,6 @@ What is your experience?"></textarea></div>
                     `).join('');
                 } else {
                     compDiv.innerHTML = '<div style="font-size:0.85rem;color:var(--text-muted)">No companies found</div>';
-                }
-
-                const planetsDiv = document.getElementById('visit-planets');
-                if (player && player.planets && player.planets.length > 0) {
-                    planetsDiv.innerHTML = player.planets.map(p => `
-                        <div style="background:var(--bg-panel);padding:0.6rem;border-radius:8px;border:1px solid var(--border);border-left:4px solid ${p.color || 'var(--brand)'}">
-                            <div style="font-weight:700;font-size:0.85rem">${p.name}</div>
-                            <div style="font-size:0.7rem;color:var(--text-muted)">${p.type} | Pop: ${formatNum(p.population || 0)}</div>
-                        </div>
-                    `).join('');
-                } else if (player && player.planetOwned) {
-                    planetsDiv.innerHTML = '<div style="background:var(--bg-panel);padding:0.6rem;border-radius:8px;border:1px solid var(--border);text-align:center;font-size:0.8rem">👑 Ruler of Earth</div>';
-                } else {
-                    planetsDiv.innerHTML = '<div style="font-size:0.85rem;color:var(--text-muted)">No planets owned</div>';
                 }
 
                 const giveBtn = document.getElementById('visit-give-btn');
@@ -5640,7 +5616,8 @@ What is your experience?"></textarea></div>
             const planetSection = document.getElementById('map-planet-section');
             const planetOwned = document.getElementById('map-planet-owned');
             
-            if (state.player.planetOwned || (state.player.planets && state.player.planets.length > 0)) {
+            // Even if planet is owned, we show the countries grid to allow buying missing ones
+            if (state.player.planetOwned) {
                 if (planetSection) planetSection.style.display = 'none';
                 if (planetOwned) planetOwned.style.display = 'block';
             } else if (ownedCount === totalCountries) {
@@ -5649,23 +5626,6 @@ What is your experience?"></textarea></div>
             } else {
                 if (planetSection) planetSection.style.display = 'none';
                 if (planetOwned) planetOwned.style.display = 'none';
-            }
-
-            // Render My Planets
-            const planetsList = document.getElementById('my-planets-list');
-            if (planetsList && state.player.planets) {
-                planetsList.innerHTML = state.player.planets.map(p => `
-                    <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:0.75rem;margin-bottom:0.75rem;border-left:4px solid ${p.color || 'var(--brand)'}">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
-                            <strong style="font-size:0.9rem">${p.name}</strong>
-                            <div style="display:flex;gap:0.25rem">
-                                <button class="btn btn-secondary" onclick="editPlanet('${p.id}')" style="padding:0.2rem 0.4rem;font-size:0.7rem">Edit</button>
-                                <button class="btn btn-danger" onclick="destroySelfPlanet('${p.id}')" style="padding:0.2rem 0.4rem;font-size:0.7rem">Destroy</button>
-                            </div>
-                        </div>
-                        <div style="font-size:0.75rem;color:var(--text-muted)">Type: ${p.type} | Pop: ${formatNum(p.population || 0)}</div>
-                    </div>
-                `).join('');
             }
             
             // Search filter
@@ -5679,9 +5639,8 @@ What is your experience?"></textarea></div>
                 ownedList.innerHTML = filteredOwned.length === 0 ? 
                     '<div style="grid-column:1/-1;color:var(--text-muted);text-align:center;padding:2rem">No matching countries owned</div>' :
                     filteredOwned.map(c => `
-                        <div style="background:linear-gradient(135deg,#10b981,#059669);border-radius:8px;padding:1rem;text-align:center;color:#fff;font-weight:700;position:relative">
+                        <div style="background:linear-gradient(135deg,#10b981,#059669);border-radius:8px;padding:1rem;text-align:center;color:#fff;font-weight:700">
                             ${c}
-                            <button onclick="destroySelfCity('${c}')" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.3);border:none;color:#fff;border-radius:4px;font-size:0.6rem;cursor:pointer;padding:2px 4px">×</button>
                         </div>
                     `).join('');
             }
@@ -5727,66 +5686,18 @@ What is your experience?"></textarea></div>
 
         function buyPlanet() {
             const PLANET_PRICE = 100000000000000; // 100T
+            // Allow buying planet even if not all countries are owned, 
+            // but usually users own all first. Let's make it flexible as requested.
             if (state.player.cash < PLANET_PRICE) {
-                showToast('Insufficient Funds', 'You need 100T to buy a planet', 'danger');
+                showToast('Insufficient Funds', 'You need 100T to buy the planet', 'danger');
                 return;
             }
             state.player.cash -= PLANET_PRICE;
             state.player.planetOwned = true;
-            
-            if (!state.player.planets) state.player.planets = [];
-            const planetId = 'p' + Date.now();
-            const newPlanet = {
-                id: planetId,
-                name: 'Planet ' + (state.player.planets.length + 1),
-                type: 'Terrestrial',
-                color: '#3b82f6',
-                description: 'A newly acquired world.',
-                level: 1,
-                population: 8000000000,
-                defense: 100
-            };
-            state.player.planets.push(newPlanet);
-            
-            addActivity(`Day ${state.player.day}`, `Purchased ${newPlanet.name} for 100T!`, 'success');
-            showToast('New Planet!', `You acquired ${newPlanet.name}! 🪐`, 'success');
+            addActivity(`Day ${state.player.day}`, 'Purchased the entire planet for 100T! You are now the supreme ruler!', 'success');
+            showToast('Planet Owner!', 'You now own the entire planet! 👑', 'success');
             saveGame();
             updateUI();
-            renderMap();
-        }
-
-        function editPlanet(id) {
-            const p = state.player.planets.find(x => x.id === id);
-            if (!p) return;
-            
-            const newName = prompt("Enter new name for your planet:", p.name);
-            if (newName) p.name = newName;
-            
-            const newDesc = prompt("Enter new description:", p.description);
-            if (newDesc) p.description = newDesc;
-            
-            const newColor = prompt("Enter planet theme color (hex):", p.color);
-            if (newColor) p.color = newColor;
-            
-            showToast('Updated', `${p.name} has been modified.`, 'success');
-            saveGame();
-            renderMap();
-        }
-
-        function destroySelfPlanet(id) {
-            if (!confirm("Are you sure you want to DESTROY your own planet? This cannot be undone!")) return;
-            state.player.planets = state.player.planets.filter(x => x.id !== id);
-            if (state.player.planets.length === 0) state.player.planetOwned = false;
-            showToast('Destroyed', 'Planet obliterated.', 'danger');
-            saveGame();
-            renderMap();
-        }
-
-        function destroySelfCity(country) {
-            if (!confirm(`Are you sure you want to abandon/destroy your ownership of ${country}?`)) return;
-            state.player.countriesOwned = state.player.countriesOwned.filter(c => c !== country);
-            showToast('Abandoned', `${country} is no longer yours.`, 'warning');
-            saveGame();
             renderMap();
         }
 
@@ -6831,9 +6742,10 @@ What is your experience?"></textarea></div>
             const citySelect = document.getElementById('nuke-city-select');
             
             modal.classList.remove('hidden');
-            playerSelect.innerHTML = '<option value="">-- Choose a player --</option><option value="self">-- MYSELF (Self-Destruct) --</option>';
-            citySelect.innerHTML = '<option value="">-- Choose a target --</option>';
+            playerSelect.innerHTML = '<option value="">-- Choose a player --</option>';
+            citySelect.innerHTML = '<option value="">-- Choose a city --</option>';
             
+            // Fetch all players from Firestore
             try {
                 if (window.fbDb && window.fbMethods) {
                     const usersCol = window.fbMethods.collection(window.fbDb, "users");
@@ -6848,79 +6760,59 @@ What is your experience?"></textarea></div>
                             const option = document.createElement('option');
                             option.value = uid;
                             option.textContent = name;
+                            option.dataset.playerData = JSON.stringify(data);
                             playerSelect.appendChild(option);
                         }
                     });
                 }
             } catch (e) {
+                console.error('Error loading players for nuke:', e);
                 showToast('Error', 'Could not load player list', 'danger');
             }
             
             playerSelect.onchange = async () => {
-                const val = playerSelect.value;
-                if (!val) {
-                    citySelect.innerHTML = '<option value="">-- Choose a target --</option>';
-                    return;
-                }
-
-                if (val === 'self') {
-                    citySelect.innerHTML = '<option value="">-- Choose your own target --</option>';
-                    state.player.countriesOwned.forEach(c => {
-                        const opt = document.createElement('option');
-                        opt.value = 'city:' + c;
-                        opt.textContent = '🏙 City: ' + c;
-                        citySelect.appendChild(opt);
-                    });
-                    if (state.player.planets) {
-                        state.player.planets.forEach(p => {
-                            const opt = document.createElement('option');
-                            opt.value = 'planet:' + p.id;
-                            opt.textContent = '🪐 Planet: ' + p.name;
-                            citySelect.appendChild(opt);
+                const selectedOption = playerSelect.options[playerSelect.selectedIndex];
+                if (selectedOption.value) {
+                    citySelect.innerHTML = '<option value="">Loading cities...</option>';
+                    try {
+                        // Fetch target's owned countries from their save data
+                        const targetUid = selectedOption.value;
+                        const savesCol = window.fbMethods.collection(window.fbDb, 'users', targetUid, 'saves');
+                        const savesSnapshot = await window.fbMethods.getDocs(savesCol);
+                        let targetSaveData = null;
+                        
+                        // Look for the most recent save or QuickSave
+                        let latestTime = 0;
+                        savesSnapshot.forEach(doc => {
+                            const data = doc.data();
+                            const updateTime = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
+                            if (doc.id === 'QuickSave' || updateTime > latestTime) {
+                                targetSaveData = data;
+                                latestTime = updateTime;
+                            }
                         });
-                    }
-                    return;
-                }
 
-                citySelect.innerHTML = '<option value="">Loading targets...</option>';
-                try {
-                    const targetUid = val;
-                    const savesCol = window.fbMethods.collection(window.fbDb, 'users', targetUid, 'saves');
-                    const savesSnapshot = await window.fbMethods.getDocs(savesCol);
-                    let targetSaveData = null;
-                    let latestTime = 0;
-                    savesSnapshot.forEach(doc => {
-                        const data = doc.data();
-                        const updateTime = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
-                        if (doc.id === 'QuickSave' || updateTime > latestTime) {
-                            targetSaveData = data;
-                            latestTime = updateTime;
-                        }
-                    });
-
-                    citySelect.innerHTML = '<option value="">-- Choose a target --</option>';
-                    if (targetSaveData && targetSaveData.player) {
-                        if (targetSaveData.player.countriesOwned) {
+                        citySelect.innerHTML = '<option value="">-- Choose a city --</option>';
+                        if (targetSaveData && targetSaveData.player && targetSaveData.player.countriesOwned && targetSaveData.player.countriesOwned.length > 0) {
                             targetSaveData.player.countriesOwned.forEach(country => {
                                 const option = document.createElement('option');
-                                option.value = 'city:' + country;
-                                option.textContent = '🏙 City: ' + country;
+                                option.value = country;
+                                option.textContent = country;
                                 citySelect.appendChild(option);
                             });
+                        } else {
+                            const option = document.createElement('option');
+                            option.value = "";
+                            option.textContent = "No cities owned by this player";
+                            option.disabled = true;
+                            citySelect.appendChild(option);
                         }
-                        if (targetSaveData.player.planets) {
-                            targetSaveData.player.planets.forEach(p => {
-                                const option = document.createElement('option');
-                                option.value = 'planet:' + p.id;
-                                option.textContent = '🪐 Planet: ' + p.name;
-                                citySelect.appendChild(option);
-                            });
-                        }
-                    } else {
-                        citySelect.innerHTML = '<option value="">No targets found</option>';
+                    } catch (e) {
+                        console.error("Error fetching target cities:", e);
+                        citySelect.innerHTML = '<option value="">Error loading cities</option>';
                     }
-                } catch (e) {
-                    citySelect.innerHTML = '<option value="">Error loading targets</option>';
+                } else {
+                    citySelect.innerHTML = '<option value="">-- Choose a city --</option>';
                 }
             };
         }
@@ -6933,11 +6825,11 @@ What is your experience?"></textarea></div>
             const playerSelect = document.getElementById('nuke-player-select');
             const citySelect = document.getElementById('nuke-city-select');
             const targetUid = playerSelect.value;
-            const targetVal = citySelect.value;
+            const targetCity = citySelect.value;
             const nukeCost = 5000000000000; // 5T
             
-            if (!targetUid || !targetVal) {
-                showToast('Invalid', 'Please select both a player and a target', 'warning');
+            if (!targetUid || !targetCity) {
+                showToast('Invalid', 'Please select both a player and a city', 'warning');
                 return;
             }
 
@@ -6945,70 +6837,114 @@ What is your experience?"></textarea></div>
                 showToast('Insufficient Funds', `Launching a nuke costs $${formatNum(nukeCost)} (5T)`, 'danger');
                 return;
             }
-
-            if (!confirm(`Are you sure you want to launch a nuclear strike? This will cost 5T.`)) return;
             
-            const targetType = targetVal.split(':')[0];
-            const targetId = targetVal.split(':')[1];
-
             try {
-                if (targetUid === 'self') {
-                    if (targetType === 'city') {
-                        state.player.countriesOwned = state.player.countriesOwned.filter(c => c !== targetId);
-                    } else if (targetType === 'planet') {
-                        state.player.planets = state.player.planets.filter(p => p.id !== targetId);
-                        if (state.player.planets.length === 0) state.player.planetOwned = false;
+                if (!window.fbDb || !window.fbMethods) {
+                    showToast('Error', 'Database not ready', 'danger');
+                    return;
+                }
+                
+                const currentUser = window.fbAuth.currentUser;
+                if (!currentUser) {
+                    showToast('Error', 'Not logged in', 'danger');
+                    return;
+                }
+                
+                // Get target player data
+                const targetDocRef = window.fbMethods.doc(window.fbDb, 'users', targetUid);
+                const targetDocSnap = await window.fbMethods.getDoc(targetDocRef);
+                
+                if (!targetDocSnap.exists()) {
+                    showToast('Error', 'Target player not found', 'danger');
+                    return;
+                }
+                
+                const targetData = targetDocSnap.data();
+                const targetName = targetData.username || targetData.displayName || 'Unknown Player';
+                
+                // Get target's save data
+                const savesCol = window.fbMethods.collection(window.fbDb, 'users', targetUid, 'saves');
+                const savesSnapshot = await window.fbMethods.getDocs(savesCol);
+                let targetSaveData = null;
+                
+                savesSnapshot.forEach(doc => {
+                    if (doc.id === 'QuickSave' || !targetSaveData) {
+                        targetSaveData = doc.data();
                     }
-                    showToast('Self-Destruct!', 'You nuked your own property.', 'danger');
-                    addActivity(`Day ${state.player.day}`, `Self-destructed ${targetId}!`, 'danger');
-                } else {
-                    // Get target player data
-                    const targetDocRef = window.fbMethods.doc(window.fbDb, 'users', targetUid);
-                    const targetDocSnap = await window.fbMethods.getDoc(targetDocRef);
-                    const targetData = targetDocSnap.exists() ? targetDocSnap.data() : {};
-                    const targetName = targetData.username || 'Target';
-
-                    // Fetch target's save data
-                    const savesCol = window.fbMethods.collection(window.fbDb, 'users', targetUid, 'saves');
-                    const savesSnapshot = await window.fbMethods.getDocs(savesCol);
-                    let targetSaveData = null;
-                    savesSnapshot.forEach(doc => { if (doc.id === 'QuickSave' || !targetSaveData) targetSaveData = doc.data(); });
-
-                    if (targetSaveData) {
-                        const nukeTime = Date.now();
-                        targetSaveData.player.nukeEffects = {
-                            timestamp: nukeTime,
-                            expiresAt: nukeTime + 600000,
-                            stockReduction: 0.5,
-                            cryptoReduction: 0.5
-                        };
-                        const targetSaveRef = window.fbMethods.doc(window.fbDb, 'users', targetUid, 'saves', 'QuickSave');
-                        await window.fbMethods.setDoc(targetSaveRef, targetSaveData);
-                    }
-
-                    addActivity(`Day ${state.player.day}`, `🎯 Launched nuclear strike on ${targetName}'s ${targetId}! (-$5T)`, 'danger');
-                    showToast('Nuke Launched!', `💣 ${targetName}'s property hit!`, 'success');
-
-                    const notificationRef = window.fbMethods.collection(window.fbDb, 'users', targetUid, 'notifications');
-                    await window.fbMethods.addDoc(notificationRef, {
-                        type: 'nuke_received',
-                        from: state.player.name,
-                        city: targetId,
-                        timestamp: new Date().toISOString(),
-                        read: false
+                });
+                
+                if (!targetSaveData) {
+                    showToast('Error', 'Could not access target player data', 'danger');
+                    return;
+                }
+                
+                // Apply nuke effects
+                const nukeTime = Date.now();
+                const nukeEffects = {
+                    timestamp: nukeTime,
+                    expiresAt: nukeTime + 600000, // 10 minutes
+                    stockReduction: 0.5,
+                    cryptoReduction: 0.5
+                };
+                
+                // Reduce company stock by 50%
+                if (targetSaveData.player && targetSaveData.player.companies) {
+                    targetSaveData.player.companies.forEach(company => {
+                        if (targetSaveData.stockPrices && company.ticker) {
+                            targetSaveData.stockPrices[company.ticker] = (targetSaveData.stockPrices[company.ticker] || company.basePrice) * 0.5;
+                        }
                     });
                 }
                 
+                // Reduce all stocks by 50%
+                if (targetSaveData.stockPrices) {
+                    Object.keys(targetSaveData.stockPrices).forEach(ticker => {
+                        targetSaveData.stockPrices[ticker] *= 0.5;
+                    });
+                }
+                
+                // Reduce all crypto by 50%
+                if (targetSaveData.cryptoPrices) {
+                    Object.keys(targetSaveData.cryptoPrices).forEach(ticker => {
+                        targetSaveData.cryptoPrices[ticker] *= 0.5;
+                    });
+                }
+                
+                // Store nuke effects for 10 minute duration
+                if (!targetSaveData.player) targetSaveData.player = {};
+                targetSaveData.player.nukeEffects = nukeEffects;
+                
+                // Update target's save
+                const targetSaveRef = window.fbMethods.doc(window.fbDb, 'users', targetUid, 'saves', 'QuickSave');
+                await window.fbMethods.setDoc(targetSaveRef, targetSaveData);
+                
+                // Send notification to target
+                const currentUserName = window.fbAuth.currentUser.displayName || window.fbAuth.currentUser.email || 'A Player';
+                const notificationRef = window.fbMethods.collection(window.fbDb, 'users', targetUid, 'notifications');
+                await window.fbMethods.addDoc(notificationRef, {
+                    type: 'nuke_received',
+                    from: currentUserName,
+                    city: targetCity,
+                    timestamp: new Date().toISOString(),
+                    read: false
+                });
+                
+                // Deduct cost
                 state.player.cash -= nukeCost;
+                updateUI();
+
+                // Add activity to current player
+                addActivity(`Day ${state.player.day}`, `🎯 Launched nuclear strike on ${targetName}'s ${targetCity}! (-$5T)`, 'danger');
+                
+                // Show success message
+                showToast('Nuke Launched!', `💣 ${targetName}'s stocks and crypto have been hit! (-$5T)`, 'success');
                 closeNukeModal();
                 saveGame();
-                updateUI();
-                renderMap();
+                
             } catch (e) {
                 console.error('Nuke execution error:', e);
                 showToast('Error', 'Failed to launch nuke: ' + e.message, 'danger');
             }
-        }
         }
 
         // Listen for nuke and job notifications
