@@ -80,7 +80,7 @@
 
         button { cursor: pointer; border: none; outline: none; font-weight: 600; transition: all 0.2s; }
         input { outline: none; font-family: inherit; }
-        .hidden { display: none !important; }
+        .hidden { display: none !important; pointer-events: none !important; }
         svg { width: 20px; height: 20px; display: inline-block; vertical-align: middle; }
 
         /* SETUP SCREEN */
@@ -291,32 +291,32 @@
                     <h1 class="setup-title" style="font-size:2rem">TradeLife Cloud</h1>
                     <p class="setup-subtitle">Login to sync your progress</p>
                 </div>
+                
                 <div id="auth-form">
                     <div id="auth-tabs" style="display:flex;gap:0;margin-bottom:1.5rem;border:1px solid var(--border);border-radius:8px;overflow:hidden">
-                        <button id="tab-login" onclick="switchAuthTab('login')" style="flex:1;padding:0.6rem;background:var(--brand);color:white;border:none;font-weight:700;cursor:pointer">Login</button>
-                        <button id="tab-signup" onclick="switchAuthTab('signup')" style="flex:1;padding:0.6rem;background:transparent;color:var(--text-muted);border:none;font-weight:700;cursor:pointer">Sign Up</button>
+                        <button id="tab-login" type="button" onclick="switchAuthTab('login')" style="flex:1;padding:0.8rem;background:var(--brand);color:white;border:none;font-weight:700;cursor:pointer;display:block">Login</button>
+                        <button id="tab-signup" type="button" onclick="switchAuthTab('signup')" style="flex:1;padding:0.8rem;background:transparent;color:var(--text-muted);border:none;font-weight:700;cursor:pointer;display:block">Sign Up</button>
                     </div>
-                    <div class="input-group" style="margin-bottom:1rem"><input type="text" id="auth-username" placeholder="Username" style="text-align:left" autocomplete="username"></div>
-                    <div class="input-group" id="auth-email-group" style="margin-bottom:1rem;display:none"><input type="email" id="auth-email-field" placeholder="Email (for sign up)" style="text-align:left" autocomplete="email"></div>
-                    <div class="input-group" style="margin-bottom:1.5rem"><input type="password" id="auth-password" placeholder="Password" style="text-align:left" autocomplete="current-password"></div>
-                    <div class="button-group" style="flex-direction:column;gap:0.75rem">
-                        <button class="btn btn-primary" id="auth-submit-btn" onclick="handleAuth()" style="width:100%">Login</button>
+                    <div class="input-group" style="margin-bottom:1rem"><input type="text" id="auth-username" placeholder="Username" style="text-align:left;width:100%;padding:0.8rem" autocomplete="username"></div>
+                    <div class="input-group" id="auth-email-group" style="margin-bottom:1rem;display:none"><input type="email" id="auth-email-field" placeholder="Email (for sign up)" style="text-align:left;width:100%;padding:0.8rem" autocomplete="email"></div>
+                    <div class="input-group" style="margin-bottom:1.5rem"><input type="password" id="auth-password" placeholder="Password" style="text-align:left;width:100%;padding:0.8rem" autocomplete="current-password"></div>
+                    <div class="button-group" style="flex-direction:column;gap:0.75rem;display:flex">
+                        <button class="btn btn-primary" id="auth-submit-btn" type="button" onclick="handleAuth()" style="width:100%;padding:1rem;cursor:pointer;display:block;z-index:3000">Login</button>
+                        <button class="btn btn-secondary" type="button" onclick="startGuestMode()" style="width:100%;margin-top:0.5rem;padding:1rem;cursor:pointer;display:block;z-index:3000">Play as Guest (No Save)</button>
                         <div style="display:flex;align-items:center;gap:0.75rem;margin:0.25rem 0">
                             <div style="flex:1;height:1px;background:var(--border)"></div>
                             <span style="color:var(--text-muted);font-size:0.85rem">or</span>
                             <div style="flex:1;height:1px;background:var(--border)"></div>
                         </div>
-                        <button class="btn btn-secondary" onclick="handleGoogleSignIn()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:0.75rem">
+                        <button class="btn btn-secondary" type="button" onclick="handleGoogleSignIn()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:0.75rem;padding:1rem;cursor:pointer;z-index:3000">
                             <svg viewBox="0 0 24 24" width="20" height="20"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
                             Sign in with Google
                         </button>
                     </div>
                 </div>
-                <div id="auth-loading" class="hidden" style="text-align:center;padding:1rem">
-                    <div style="margin-bottom:1rem">Connecting to Cloud...</div>
-                    <div style="width:30px;height:30px;border:3px solid var(--brand);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto"></div>
                 </div>
             </div>
+        </div>
         </div>
 
         <div class="setup-container">
@@ -1912,9 +1912,22 @@
         function nextPage() { if ((state.characterPage + 1) * CHARS_PER_PAGE < CHARACTERS.length) { state.characterPage++; renderCharacters(); } }
 
         function selectCharacter(id) {
+            console.log('Selecting character:', id);
             state.selectedCharacter = id;
             renderCharacters();
-            document.getElementById('start-btn').disabled = false;
+            const startBtn = document.getElementById('start-btn');
+            if (startBtn) {
+                startBtn.disabled = false;
+                startBtn.style.opacity = '1';
+                startBtn.style.cursor = 'pointer';
+                startBtn.classList.remove('disabled');
+            }
+        }
+        // Original function was:
+        function _old_selectCharacter(id) {
+            state.selectedCharacter = id;
+            renderCharacters();
+            const startBtn = document.getElementById('start-btn'); startBtn.disabled = false; startBtn.style.opacity = '1'; startBtn.style.cursor = 'pointer';
         }
 
         function startGame() {
@@ -2203,79 +2216,19 @@
             }
         }
 
-        async function saveGame() {
-            // Auto-save to the last used slot if possible
-            await saveToSlot('QuickSave');
-        }
-
-        function resetGame() {
-            localStorage.removeItem('tradelife_save');
-            location.reload();
-        }
-
-        function checkSaveExists() {
-            const saves = getSaves();
-            if (Object.keys(saves).length > 0) {
-                document.getElementById('resume-btn').style.display = 'inline-flex';
-            }
-        }
-
-        window.onload = () => {
-            // Apply saved theme
-            const savedTheme = localStorage.getItem('tradelife_theme');
-            if (savedTheme === 'light') {
-                document.body.classList.add('light-theme');
-                ['theme-text','profile-theme-text'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = 'Light'; });
-            }
-            // Apply saved avatar (image or emoji)
-            const savedAvatarImgOnLoad = localStorage.getItem('tradelife_avatar_img');
-            const savedAvatarOnLoad = localStorage.getItem('tradelife_avatar');
-            const avatarElOnLoad = document.getElementById('profile-avatar-display');
-            if (avatarElOnLoad) {
-                if (savedAvatarImgOnLoad) {
-                    avatarElOnLoad.textContent = '';
-                    avatarElOnLoad.style.fontSize = '0';
-                    avatarElOnLoad.innerHTML = `<img src="${savedAvatarImgOnLoad}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
-                } else if (savedAvatarOnLoad) {
-                    avatarElOnLoad.style.fontSize = '4rem';
-                    avatarElOnLoad.textContent = savedAvatarOnLoad;
-                }
-            }
-            // Initialize Firebase Auth Listener
-            if (window.fbMethods) {
-                window.fbMethods.onAuthStateChanged(window.fbAuth, (user) => {
-                    if (user) {
-                        document.getElementById('auth-overlay').classList.add('hidden');
-                        const displayName = user.displayName || user.email.replace('@tradelife.game','') || 'Player';
-                        document.getElementById('user-email').textContent = displayName;
-                        state._currentUsername = displayName;
-                        // Load cloud saves after login
-                        syncSavesFromCloud();
-                    } else {
-                        document.getElementById('auth-overlay').classList.remove('hidden');
-                    }
-                });
-            }
-            checkSaveExists();
-            renderCharacters();
-        };
-
-        async function handleGoogleSignIn() {
-            document.getElementById('auth-form').classList.add('hidden');
-            document.getElementById('auth-loading').classList.remove('hidden');
-            try {
-                await window.fbMethods.signInWithPopup(window.fbAuth, window.fbGoogleProvider);
-                showToast('Success', 'Signed in with Google!', 'success');
-            } catch (e) {
-                document.getElementById('auth-form').classList.remove('hidden');
-                document.getElementById('auth-loading').classList.add('hidden');
-                showToast('Google Sign-In Error', e.message, 'danger');
-            }
-        }
-
         
         
+        let isGuestMode = false;
+        function startGuestMode() {
+            console.log('Guest mode started');
+            isGuestMode = true;
+            const overlay = document.getElementById('auth-overlay');
+            if (overlay) overlay.classList.add('hidden');
+            showToast('Guest Mode', 'Playing as guest. Progress will not be saved.', 'warning');
+        }
+
         function switchAuthTab(tab) {
+            console.log('Switching auth tab to:', tab);
             state._authTab = tab;
             const loginBtn = document.getElementById('tab-login');
             const signupBtn = document.getElementById('tab-signup');
@@ -2283,23 +2236,20 @@
             const emailGroup = document.getElementById('auth-email-group');
             
             if (tab === 'signup') {
-                loginBtn.style.background = 'transparent';
-                loginBtn.style.color = 'var(--text-muted)';
-                signupBtn.style.background = 'var(--brand)';
-                signupBtn.style.color = 'white';
-                submitBtn.textContent = 'Create Account';
-                emailGroup.style.display = 'flex';
+                if (loginBtn) { loginBtn.style.background = 'transparent'; loginBtn.style.color = 'var(--text-muted)'; }
+                if (signupBtn) { signupBtn.style.background = 'var(--brand)'; signupBtn.style.color = 'white'; }
+                if (submitBtn) submitBtn.textContent = 'Create Account';
+                if (emailGroup) emailGroup.style.display = 'flex';
             } else {
-                loginBtn.style.background = 'var(--brand)';
-                loginBtn.style.color = 'white';
-                signupBtn.style.background = 'transparent';
-                signupBtn.style.color = 'var(--text-muted)';
-                submitBtn.textContent = 'Login';
-                emailGroup.style.display = 'none';
+                if (loginBtn) { loginBtn.style.background = 'var(--brand)'; loginBtn.style.color = 'white'; }
+                if (signupBtn) { signupBtn.style.background = 'transparent'; signupBtn.style.color = 'var(--text-muted)'; }
+                if (submitBtn) submitBtn.textContent = 'Login';
+                if (emailGroup) emailGroup.style.display = 'none';
             }
         }
 
         async function handleAuth(type) {
+            console.log('handleAuth called with type:', type);
             if (!type) type = state._authTab || 'login';
             
             if (!window.fbMethods) {
@@ -2307,9 +2257,18 @@
                 return;
             }
 
-            const username = document.getElementById('auth-username').value.trim();
-            const password = document.getElementById('auth-password').value;
-            const emailField = document.getElementById('auth-email-field').value.trim();
+            const usernameInput = document.getElementById('auth-username');
+            const passwordInput = document.getElementById('auth-password');
+            const emailInput = document.getElementById('auth-email-field');
+
+            if (!usernameInput || !passwordInput) {
+                console.error('Auth inputs not found');
+                return;
+            }
+
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+            const emailField = emailInput ? emailInput.value.trim() : '';
 
             if (!username || !password) { 
                 showToast('Error', 'Enter username and password', 'danger'); 
@@ -2329,8 +2288,10 @@
             let emailToUse = username.toLowerCase().replace(/[^a-z0-9]/g, '') + '@tradelife.game';
             if (type === 'signup') emailToUse = emailField;
             
-            document.getElementById('auth-form').classList.add('hidden');
-            document.getElementById('auth-loading').classList.remove('hidden');
+            const authForm = document.getElementById('auth-form');
+            const authLoading = document.getElementById('auth-loading');
+            if (authForm) authForm.classList.add('hidden');
+            if (authLoading) authLoading.classList.remove('hidden');
             
             try {
                 if (type === 'signup') {
@@ -2363,17 +2324,33 @@
                     await window.fbMethods.signInWithEmailAndPassword(window.fbAuth, emailToUse, password);
                     showToast('Success', 'Welcome back, ' + username + '!', 'success');
                 }
-                document.getElementById('auth-username').value = '';
-                document.getElementById('auth-password').value = '';
-                document.getElementById('auth-email-field').value = '';
+                if (usernameInput) usernameInput.value = '';
+                if (passwordInput) passwordInput.value = '';
+                if (emailInput) emailInput.value = '';
             } catch (e) {
-                document.getElementById('auth-form').classList.remove('hidden');
-                document.getElementById('auth-loading').classList.add('hidden');
+                if (authForm) authForm.classList.remove('hidden');
+                if (authLoading) authLoading.classList.add('hidden');
                 let msg = e.message;
                 if (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') msg = 'Invalid username or password';
                 if (e.code === 'auth/email-already-in-use') msg = 'Email already in use';
                 if (e.code === 'auth/weak-password') msg = 'Password must be at least 6 characters';
                 showToast('Auth Error', msg, 'danger');
+            }
+        }
+
+        async function handleGoogleSignIn() {
+            console.log('handleGoogleSignIn called');
+            const authForm = document.getElementById('auth-form');
+            const authLoading = document.getElementById('auth-loading');
+            if (authForm) authForm.classList.add('hidden');
+            if (authLoading) authLoading.classList.remove('hidden');
+            try {
+                await window.fbMethods.signInWithPopup(window.fbAuth, window.fbGoogleProvider);
+                showToast('Success', 'Signed in with Google!', 'success');
+            } catch (e) {
+                if (authForm) authForm.classList.remove('hidden');
+                if (authLoading) authLoading.classList.add('hidden');
+                showToast('Google Sign-In Error', e.message, 'danger');
             }
         }
 
@@ -2384,6 +2361,11 @@
             } catch (e) {
                 showToast('Error', 'Logout failed', 'danger');
             }
+        }
+
+        async function saveGame() {
+            if (isGuestMode) return;
+            await saveToSlot('QuickSave');
         }
 \n        function initPrices() {
             STOCKS.forEach(s => {
