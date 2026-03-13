@@ -9,7 +9,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, onSnapshot, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, onSnapshot, updateDoc, arrayUnion, where, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getDatabase, ref as rtdbRef, set as rtdbSet, get as rtdbGet, onValue as rtdbOnValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         const firebaseConfig = {
@@ -37,7 +37,7 @@
         window.fbMethods = { 
             createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut,
             signInWithPopup, updateProfile,
-            doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, onSnapshot, updateDoc, arrayUnion,
+            doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, onSnapshot, updateDoc, arrayUnion, where, addDoc,
             rtdbRef, rtdbSet, rtdbGet, rtdbOnValue
         };
     </script>
@@ -339,7 +339,7 @@
                 <button class="pagination-btn" id="next-btn" onclick="nextPage()">Next →</button>
             </div>
             <div class="button-group">
-                <button id="resume-btn" class="btn btn-secondary" onclick="openSaveModal(true)" style="display: none;">Resume Game</button>
+                <button id="resume-btn" class="btn btn-success" onclick="openSaveModal(true)" style="display: none;">&#9654; Resume Game</button>
                 <button id="start-btn" class="btn btn-primary" onclick="startGame()" disabled>Start New Game</button>
                 <button class="btn btn-secondary" onclick="resetGame()">Reset All Data</button>
                 <button class="btn btn-secondary" id="theme-btn" onclick="toggleTheme()">
@@ -2093,10 +2093,30 @@
                 }
             }
             
-            if (Object.keys(saves).length === 0) {
-                list.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:1rem">No saves found</div>';
+            // When resuming, also show local auto-save as an option
+            let localAutoSaveHtml = '';
+            if (isResume) {
+                const localRaw = localStorage.getItem(LOCAL_AUTOSAVE_KEY);
+                if (localRaw) {
+                    try {
+                        const ld = JSON.parse(localRaw);
+                        const lt = ld.updatedAt ? new Date(ld.updatedAt).toLocaleString() : 'Unknown';
+                        localAutoSaveHtml = `
+                            <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;margin-bottom:0.75rem;border:2px solid var(--warning);display:flex;justify-content:space-between;align-items:center">
+                                <div>
+                                    <div style="font-weight:700">&#128190; Local Auto-Save <span style="color:var(--warning);font-size:0.75rem">(offline backup)</span></div>
+                                    <div style="font-size:0.75rem;color:var(--text-muted)">Day ${ld.player ? ld.player.day : '?'} | $${ld.player ? formatNum(ld.player.cash) : '?'} &mdash; ${lt}</div>
+                                </div>
+                                <button class="btn btn-success" onclick="loadLocalAutoSave()" style="font-size:0.75rem">Load</button>
+                            </div>`;
+                    } catch(e) {}
+                }
+            }
+
+            if (Object.keys(saves).length === 0 && !localAutoSaveHtml) {
+                list.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:1rem">No saves found. Your cloud saves will appear here after logging in.</div>';
             } else {
-                list.innerHTML = Object.entries(saves).map(([name, data]) => `
+                list.innerHTML = localAutoSaveHtml + Object.entries(saves).map(([name, data]) => `
                     <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;margin-bottom:0.75rem;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
                         <div>
                             <div style="font-weight:700">${name}</div>
@@ -2139,10 +2159,7 @@
             showToast('Deleted', `Save "${name}" removed`, 'warning');
             
             // Update resume button visibility
-            const updatedSaves = getSaves();
-            if (Object.keys(updatedSaves).length === 0) {
-                document.getElementById('resume-btn').style.display = 'none';
-            }
+            checkSaveExists();
         }
 
         async function saveToSlot(name) {
@@ -2233,7 +2250,7 @@
             
             // Clear local saves first to prevent data leaking between accounts
             localStorage.removeItem('tradelife_saves');
-            document.getElementById('resume-btn').style.display = 'none';
+            checkSaveExists();
 
             let cloudSaves = {};
             // Try Firestore first (Primary source)
@@ -2264,9 +2281,9 @@
             // Save cloud data to local storage for this specific account
             localStorage.setItem('tradelife_saves', JSON.stringify(cloudSaves));
             
+            checkSaveExists();
             if (Object.keys(cloudSaves).length > 0) {
-                document.getElementById('resume-btn').style.display = 'inline-flex';
-                showToast('Cloud Sync', 'Saves restored from cloud', 'success');
+                showToast('Cloud Sync', 'Saves restored from cloud ✓', 'success');
             } else {
                 showToast('Cloud Sync', 'No cloud saves found for this account', 'info');
             }
@@ -2342,6 +2359,71 @@
             }
         }
 
+        function loadLocalAutoSave() {
+            const localRaw = localStorage.getItem(LOCAL_AUTOSAVE_KEY);
+            if (!localRaw) { showToast('Error', 'No local auto-save found', 'danger'); return; }
+            try {
+                const data = JSON.parse(localRaw);
+                state.player = data.player;
+                state.stockPrices = data.stockPrices || {};
+                state.cryptoPrices = data.cryptoPrices || {};
+                state.stockHistory = data.stockHistory || {};
+                state.cryptoHistory = data.cryptoHistory || {};
+                state.bannedFromIPO = data.bannedFromIPO || [];
+                // Migration safety
+                if (!state.player.portfolio) state.player.portfolio = {};
+                if (!state.player.cryptoPortfolio) state.player.cryptoPortfolio = {};
+                if (!state.player.companies) state.player.companies = [];
+                if (!state.player.properties) state.player.properties = [];
+                if (!state.player.lifestyle) state.player.lifestyle = [];
+                if (!state.player.loans) state.player.loans = [];
+                if (!state.player.activityLog) state.player.activityLog = [];
+                if (!state.player.achievements) state.player.achievements = [];
+                if (!state.player.completedTasks) state.player.completedTasks = [];
+                if (!state.player.certifications) state.player.certifications = [];
+                if (!state.player.aiBots) state.player.aiBots = [];
+                if (state.player.clubBalance === undefined) state.player.clubBalance = 0;
+                // Fill missing prices
+                STOCKS.forEach(s => {
+                    if (!state.stockPrices[s.ticker]) state.stockPrices[s.ticker] = s.basePrice;
+                    if (!state.stockHistory[s.ticker] || state.stockHistory[s.ticker].length < 3) {
+                        const p = state.stockPrices[s.ticker];
+                        const hist = [];
+                        let hp = p * (0.90 + Math.random() * 0.10);
+                        for (let i = 0; i < 20; i++) {
+                            const v = 0.005 + Math.random() * 0.015;
+                            const d = Math.random() > 0.5 ? 1 : -1;
+                            hp = Math.max(0.01, hp + hp * v * d);
+                            hist.push(hp);
+                        }
+                        hist.push(p);
+                        state.stockHistory[s.ticker] = hist;
+                    }
+                });
+                CRYPTO_COINS.forEach(c => {
+                    if (!state.cryptoPrices[c.ticker]) state.cryptoPrices[c.ticker] = c.basePrice;
+                    if (!state.cryptoHistory[c.ticker] || state.cryptoHistory[c.ticker].length < 3) {
+                        const p = state.cryptoPrices[c.ticker];
+                        const hist = [];
+                        let hp = p * (0.85 + Math.random() * 0.15);
+                        for (let i = 0; i < 20; i++) {
+                            const v = (c.volatility || 0.05) * 0.3;
+                            const d = Math.random() > 0.5 ? 1 : -1;
+                            hp = Math.max(0.000000001, hp + hp * v * d);
+                            hist.push(hp);
+                        }
+                        hist.push(p);
+                        state.cryptoHistory[c.ticker] = hist;
+                    }
+                });
+                document.getElementById('save-modal').classList.add('hidden');
+                launchApp();
+                showToast('Game Loaded', 'Local auto-save restored! Remember to save to cloud.', 'success');
+            } catch(e) {
+                showToast('Error', 'Failed to load local auto-save', 'danger');
+            }
+        }
+
         async function saveGame() {
             // Auto-save to the last used slot if possible
             await saveToSlot('QuickSave');
@@ -2354,8 +2436,10 @@
 
         function checkSaveExists() {
             const saves = getSaves();
-            if (Object.keys(saves).length > 0) {
-                document.getElementById('resume-btn').style.display = 'inline-flex';
+            const hasLocalAutoSave = !!localStorage.getItem(LOCAL_AUTOSAVE_KEY);
+            const resumeBtn = document.getElementById('resume-btn');
+            if (resumeBtn) {
+                resumeBtn.style.display = (Object.keys(saves).length > 0 || hasLocalAutoSave) ? 'inline-flex' : 'none';
             }
         }
 
@@ -2649,33 +2733,56 @@
         async function visitPlayer(uid, username) {
             try {
                 showToast('Loading', 'Fetching player profile...', 'info');
+                
+                // 1. Fetch Profile Data
                 const userDoc = window.fbMethods.doc(window.fbDb, 'users', uid);
                 const userSnap = await window.fbMethods.getDoc(userDoc);
-                const profile = userSnap.data();
+                const profile = userSnap.exists() ? userSnap.data() : { username: username, displayName: username };
 
-                const saveDoc = window.fbMethods.doc(window.fbDb, 'users', uid, 'saves', 'AutoSave');
-                const saveSnap = await window.fbMethods.getDoc(saveDoc);
-                const saveData = saveSnap.exists() ? saveSnap.data() : null;
-                const player = saveData ? saveData.player : null;
+                // 2. Fetch Save Data (AutoSave is the primary slot for public viewing)
+                let player = null;
+                try {
+                    const saveDoc = window.fbMethods.doc(window.fbDb, 'users', uid, 'saves', 'AutoSave');
+                    const saveSnap = await window.fbMethods.getDoc(saveDoc);
+                    if (saveSnap.exists()) {
+                        player = saveSnap.data().player;
+                    } else {
+                        // Try to fetch any save if AutoSave doesn't exist
+                        const savesCol = window.fbMethods.collection(window.fbDb, 'users', uid, 'saves');
+                        const q = window.fbMethods.query(savesCol, window.fbMethods.limit(1));
+                        const qSnap = await window.fbMethods.getDocs(q);
+                        if (!qSnap.empty) {
+                            player = qSnap.docs[0].data().player;
+                        }
+                    }
+                } catch (saveErr) {
+                    console.warn("Could not fetch detailed save data", saveErr);
+                }
 
-                // Update Modal UI
+                // 3. Update Modal UI
                 const pfpEl = document.getElementById('visit-pfp');
                 if (profile.avatar_img) {
                     pfpEl.innerHTML = `<img src="${profile.avatar_img}" style="width:100%;height:100%;object-fit:cover">`;
                 } else {
+                    pfpEl.innerHTML = ''; // Clear previous image if any
                     pfpEl.textContent = profile.avatar || '🧑';
                 }
 
-                document.getElementById('visit-display-name').textContent = profile.displayName || username;
-                document.getElementById('visit-username').textContent = '@' + username;
-                document.getElementById('visit-cash').textContent = '$' + formatNum(player ? player.cash : (profile.netWorth || 0));
-                document.getElementById('visit-day').textContent = player ? player.day : (profile.day || 1);
+                document.getElementById('visit-display-name').textContent = profile.displayName || profile.username || username;
+                document.getElementById('visit-username').textContent = '@' + (profile.username || username);
+                
+                // Use profile stats as fallback if detailed player data is missing
+                const cashValue = player ? player.cash : (profile.netWorth || 0);
+                const dayValue = player ? player.day : (profile.day || 1);
+                
+                document.getElementById('visit-cash').textContent = '$' + formatNum(cashValue);
+                document.getElementById('visit-day').textContent = dayValue;
 
                 const compDiv = document.getElementById('visit-companies');
                 if (player && player.companies && player.companies.length > 0) {
                     compDiv.innerHTML = player.companies.map(c => `
                         <div style="background:rgba(56,189,248,0.1);color:#38bdf8;padding:0.3rem 0.6rem;border-radius:6px;font-size:0.75rem;font-weight:700;border:1px solid rgba(56,189,248,0.2)">
-                            ID: ${c.id.substring(0,8)}...
+                            ${c.name || 'Company'}
                         </div>
                     `).join('');
                 } else {
@@ -2683,11 +2790,12 @@
                 }
 
                 const giveBtn = document.getElementById('visit-give-btn');
-                giveBtn.onclick = () => openGiveMoneyModal(uid, username);
+                giveBtn.onclick = () => openGiveMoneyModal(uid, profile.username || username);
 
                 document.getElementById('visit-modal').classList.remove('hidden');
             } catch (e) {
-                showToast('Error', 'Failed to load profile', 'danger');
+                console.error("Visit error:", e);
+                showToast('Error', 'Failed to load profile: ' + e.message, 'danger');
             }
         }
 
