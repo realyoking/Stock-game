@@ -643,6 +643,33 @@
                 <!-- Banking Tab -->
                 <div id="banking" class="tab-panel">
                     <h2>Banking & Loans</h2>
+                    <!-- Loan Due Date Countdown Timer -->
+                    <div id="loan-timer-panel" style="display:none;background:var(--bg-surface);border:2px solid var(--danger);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem">
+                        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+                            <div style="display:flex;align-items:center;gap:0.75rem">
+                                <span style="font-size:1.5rem">⏰</span>
+                                <div>
+                                    <div style="font-weight:800;font-size:1rem;color:var(--danger)">LOAN DUE DATE COUNTDOWN</div>
+                                    <div style="font-size:0.8rem;color:var(--text-muted)">Pay before time runs out or your screen will lock!</div>
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:1.5rem;flex-wrap:wrap">
+                                <div style="text-align:center;background:var(--bg-panel);padding:0.75rem 1.25rem;border-radius:8px;border:1px solid var(--border)">
+                                    <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Days Until Lock</div>
+                                    <div style="font-size:2rem;font-weight:900;color:var(--danger)" id="loan-days-remaining">—</div>
+                                </div>
+                                <div style="text-align:center;background:var(--bg-panel);padding:0.75rem 1.25rem;border-radius:8px;border:1px solid var(--border)">
+                                    <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Overdue Loans</div>
+                                    <div style="font-size:2rem;font-weight:900;color:var(--warning)" id="loan-overdue-count">0</div>
+                                </div>
+                                <div style="text-align:center;background:var(--bg-panel);padding:0.75rem 1.25rem;border-radius:8px;border:1px solid var(--border)">
+                                    <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Total Owed</div>
+                                    <div style="font-size:1.5rem;font-weight:900;color:var(--danger)" id="loan-timer-total">$0</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="loan-timer-rows" style="margin-top:1rem;display:flex;flex-direction:column;gap:0.5rem"></div>
+                    </div>
                     <div class="widget-grid">
                         <div class="widget"><div class="widget-title">Total Debt</div><div class="widget-value" id="bank-debt">$0</div></div>
                         <div class="widget"><div class="widget-title">Credit Score</div><div class="widget-value" id="bank-credit">300</div></div>
@@ -651,8 +678,8 @@
                     <div id="credit-panel" style="margin-bottom:2rem"></div>
                     <h3>Active Loans</h3>
                     <table class="data-table" style="margin-bottom: 2rem;">
-                        <thead><tr><th>Amount</th><th>Interest Rate</th><th>Remaining</th><th>Monthly Payment</th><th>Action</th></tr></thead>
-                        <tbody id="loans-list"><tr><td colspan="5" style="text-align:center;color:var(--text-muted)">No active loans</td></tr></tbody>
+                        <thead><tr><th>Amount</th><th>Interest Rate</th><th>Remaining</th><th>Monthly Payment</th><th>Due Day</th><th>Time Left</th><th>Action</th></tr></thead>
+                        <tbody id="loans-list"><tr><td colspan="7" style="text-align:center;color:var(--text-muted)">No active loans</td></tr></tbody>
                     </table>
                     <h3>Take a Loan</h3>
                     <div class="widget">
@@ -919,20 +946,20 @@
             { name: 'Walmart', ticker: 'WMT', sector: 'Retail', basePrice: 85 },
             { name: 'Costco', ticker: 'COST', sector: 'Retail', basePrice: 900 },
             { name: 'Target', ticker: 'TGT', sector: 'Retail', basePrice: 75 },
-            { name: 'Bitcoin Stock', ticker: 'BTCS', sector: 'Crypto', basePrice: 45000 },
-            { name: 'Ethereum Stock', ticker: 'ETHS', sector: 'Crypto', basePrice: 2500 },
-            { name: 'Tesla', ticker: 'TSLA', sector: 'AI', basePrice: 245 },
-            { name: 'Palantir', ticker: 'PLTR', sector: 'AI', basePrice: 28 },
+            { name: 'Bitcoin Stock', ticker: 'BTCS', sector: 'Crypto', basePrice: 45000, volatility: 0.14 },
+            { name: 'Ethereum Stock', ticker: 'ETHS', sector: 'Crypto', basePrice: 2500, volatility: 0.12 },
+            { name: 'Tesla', ticker: 'TSLA', sector: 'AI', basePrice: 245, volatility: 0.09 },
+            { name: 'Palantir', ticker: 'PLTR', sector: 'AI', basePrice: 28, volatility: 0.10 },
             { name: 'Moderna', ticker: 'MRNA', sector: 'Biotech', basePrice: 120 },
             { name: 'Pfizer', ticker: 'PFE', sector: 'Biotech', basePrice: 28 },
             { name: 'NextEra', ticker: 'NEE', sector: 'Green Energy', basePrice: 75 },
             { name: 'First Solar', ticker: 'FSLR', sector: 'Green Energy', basePrice: 185 },
             // 100 new stocks
-            { name: 'SpaceX Holdings', ticker: 'SPXH', sector: 'Space', basePrice: 320 },
-            { name: 'Rocket Lab', ticker: 'RKLB', sector: 'Space', basePrice: 8 },
-            { name: 'Virgin Galactic', ticker: 'SPCE', sector: 'Space', basePrice: 3 },
-            { name: 'Planet Labs', ticker: 'PL', sector: 'Space', basePrice: 5 },
-            { name: 'Astra Space', ticker: 'ASTR', sector: 'Space', basePrice: 2 },
+            { name: 'SpaceX Holdings', ticker: 'SPXH', sector: 'Space', basePrice: 320, volatility: 0.12 },
+            { name: 'Rocket Lab', ticker: 'RKLB', sector: 'Space', basePrice: 8, volatility: 0.15 },
+            { name: 'Virgin Galactic', ticker: 'SPCE', sector: 'Space', basePrice: 3, volatility: 0.18 },
+            { name: 'Planet Labs', ticker: 'PL', sector: 'Space', basePrice: 5, volatility: 0.16 },
+            { name: 'Astra Space', ticker: 'ASTR', sector: 'Space', basePrice: 2, volatility: 0.20 },
             { name: 'Ford Motor', ticker: 'F', sector: 'Auto', basePrice: 12 },
             { name: 'General Motors', ticker: 'GM', sector: 'Auto', basePrice: 38 },
             { name: 'Toyota', ticker: 'TM', sector: 'Auto', basePrice: 185 },
@@ -988,11 +1015,11 @@
             { name: 'Oracle', ticker: 'ORCL', sector: 'Big Tech', basePrice: 130 },
             { name: 'IBM', ticker: 'IBM', sector: 'Big Tech', basePrice: 195 },
             { name: 'Intel', ticker: 'INTC', sector: 'Big Tech', basePrice: 22 },
-            { name: 'AMD', ticker: 'AMD', sector: 'AI', basePrice: 175 },
-            { name: 'Anthropic Holdings', ticker: 'ANTHR', sector: 'AI', basePrice: 850 },
-            { name: 'OpenAI Corp', ticker: 'OAIC', sector: 'AI', basePrice: 1200 },
-            { name: 'C3.ai', ticker: 'AI', sector: 'AI', basePrice: 28 },
-            { name: 'UiPath', ticker: 'PATH', sector: 'AI', basePrice: 15 },
+            { name: 'AMD', ticker: 'AMD', sector: 'AI', basePrice: 175, volatility: 0.09 },
+            { name: 'Anthropic Holdings', ticker: 'ANTHR', sector: 'AI', basePrice: 850, volatility: 0.13 },
+            { name: 'OpenAI Corp', ticker: 'OAIC', sector: 'AI', basePrice: 1200, volatility: 0.13 },
+            { name: 'C3.ai', ticker: 'AI', sector: 'AI', basePrice: 28, volatility: 0.14 },
+            { name: 'UiPath', ticker: 'PATH', sector: 'AI', basePrice: 15, volatility: 0.12 },
             { name: 'Illumina', ticker: 'ILMN', sector: 'Biotech', basePrice: 145 },
             { name: 'BioNTech', ticker: 'BNTX', sector: 'Biotech', basePrice: 95 },
             { name: 'Regeneron', ticker: 'REGN', sector: 'Biotech', basePrice: 890 },
@@ -1018,11 +1045,11 @@
             { name: 'Etsy', ticker: 'ETSY', sector: 'Retail', basePrice: 65 },
             { name: 'Home Depot', ticker: 'HD', sector: 'Retail', basePrice: 380 },
             { name: 'Lowes', ticker: 'LOW', sector: 'Retail', basePrice: 245 },
-            { name: 'Coinbase', ticker: 'COIN', sector: 'Crypto', basePrice: 225 },
-            { name: 'MicroStrategy', ticker: 'MSTR', sector: 'Crypto', basePrice: 1450 },
-            { name: 'Marathon Digital', ticker: 'MARA', sector: 'Crypto', basePrice: 18 },
-            { name: 'Riot Platforms', ticker: 'RIOT', sector: 'Crypto', basePrice: 12 },
-            { name: 'Galaxy Digital', ticker: 'GLXY', sector: 'Crypto', basePrice: 22 },
+            { name: 'Coinbase', ticker: 'COIN', sector: 'Crypto', basePrice: 225, volatility: 0.13 },
+            { name: 'MicroStrategy', ticker: 'MSTR', sector: 'Crypto', basePrice: 1450, volatility: 0.18 },
+            { name: 'Marathon Digital', ticker: 'MARA', sector: 'Crypto', basePrice: 18, volatility: 0.20 },
+            { name: 'Riot Platforms', ticker: 'RIOT', sector: 'Crypto', basePrice: 12, volatility: 0.20 },
+            { name: 'Galaxy Digital', ticker: 'GLXY', sector: 'Crypto', basePrice: 22, volatility: 0.16 },
             { name: 'Airbus', ticker: 'EADSY', sector: 'Industrial', basePrice: 42 },
             { name: 'Boeing', ticker: 'BA', sector: 'Industrial', basePrice: 195 },
             { name: 'UPS', ticker: 'UPS', sector: 'Industrial', basePrice: 145 },
@@ -2462,9 +2489,24 @@
             else fill.style.background = 'var(--danger)';
             // Update skip day cost
             const skipCostEl = document.getElementById('skip-day-cost');
+            const skipBtn = document.getElementById('skip-day-btn');
             if (skipCostEl) {
                 const fee = Math.round(state.player.cash * 0.10);
                 skipCostEl.textContent = '$' + formatNum(fee);
+            }
+            // Disable skip day button when player has no cash
+            if (skipBtn) {
+                if (state.player.cash <= 0) {
+                    skipBtn.disabled = true;
+                    skipBtn.style.opacity = '0.4';
+                    skipBtn.style.cursor = 'not-allowed';
+                    skipBtn.title = 'You need cash to skip a day!';
+                } else {
+                    skipBtn.disabled = false;
+                    skipBtn.style.opacity = '1';
+                    skipBtn.style.cursor = 'pointer';
+                    skipBtn.title = '';
+                }
             }
         }
 
@@ -2584,8 +2626,9 @@
         // ===================== MARKET TICK =====================
         function tickMarket() {
             STOCKS.forEach(s => {
-                const coin = s;
-                const volatility = 0.02 + Math.random() * 0.06; // 2-8% change
+                // Use per-stock volatility if defined, otherwise default 2-8%
+                const baseVol = s.volatility ? s.volatility : (0.02 + Math.random() * 0.06);
+                const volatility = baseVol * (0.5 + Math.random());
                 const direction = Math.random() > 0.5 ? 1 : -1;
                 const change = state.stockPrices[s.ticker] * volatility * direction;
                 state.stockPrices[s.ticker] = Math.max(0.01, state.stockPrices[s.ticker] + change);
@@ -2610,7 +2653,9 @@
             state.priceTickerInterval = setInterval(() => {
                 // Update stock prices
                 STOCKS.forEach(s => {
-                    const volatility = 0.001 + Math.random() * 0.003; // 0.1-0.4% per second
+                    // High-volatility stocks get bigger per-second swings
+                    const baseVol = s.volatility ? s.volatility * 0.08 : (0.001 + Math.random() * 0.003);
+                    const volatility = baseVol * (0.5 + Math.random());
                     const direction = Math.random() > 0.5 ? 1 : -1;
                     const change = state.stockPrices[s.ticker] * volatility * direction;
                     state.stockPrices[s.ticker] = Math.max(0.01, state.stockPrices[s.ticker] + change);
@@ -2622,7 +2667,9 @@
                 });
                 // Update crypto prices
                 CRYPTO_COINS.forEach(c => {
-                    const vol = (c.volatility || 0.05) * 0.02; // Scale down for per-second updates
+                    // Meme coins (volatility >= 0.20) get extra wild swings
+                    const scaleFactor = (c.volatility || 0.05) >= 0.20 ? 0.05 : 0.02;
+                    const vol = (c.volatility || 0.05) * scaleFactor;
                     const direction = Math.random() > 0.5 ? 1 : -1;
                     const change = state.cryptoPrices[c.ticker] * vol * direction;
                     state.cryptoPrices[c.ticker] = Math.max(0.000000001, state.cryptoPrices[c.ticker] + change);
@@ -4061,6 +4108,43 @@
             document.getElementById('loan-rate-display').textContent = (rate * 100).toFixed(1) + '%';
             const limit = calcBorrowLimit();
             document.getElementById('loan-limit-display').textContent = '$' + formatNum(limit);
+            // ---- Loan Timer Panel ----
+            const timerPanel = document.getElementById('loan-timer-panel');
+            const timerRows = document.getElementById('loan-timer-rows');
+            if (state.player.loans && state.player.loans.length > 0) {
+                timerPanel.style.display = 'block';
+                // Find the soonest due loan
+                let minDaysLeft = Infinity;
+                let overdueCount = 0;
+                let totalOwed = 0;
+                let rowsHtml = '';
+                state.player.loans.forEach((loan, i) => {
+                    const dueDay = loan.dueTriggerDay || (state.player.day + 10);
+                    const daysLeft = dueDay - state.player.day;
+                    totalOwed += loan.remaining;
+                    if (daysLeft < minDaysLeft) minDaysLeft = daysLeft;
+                    if (daysLeft <= 0) overdueCount++;
+                    const urgencyColor = daysLeft <= 0 ? 'var(--danger)' : daysLeft <= 3 ? 'var(--warning)' : 'var(--success)';
+                    const statusLabel = daysLeft <= 0 ? '🔴 OVERDUE' : daysLeft <= 3 ? '🟡 DUE SOON' : '🟢 On Track';
+                    rowsHtml += `<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg-panel);padding:0.6rem 1rem;border-radius:8px;border:1px solid var(--border);font-size:0.85rem">
+                        <div><span style="font-weight:700">Loan #${i+1}</span> — $${formatNum(loan.remaining)} remaining</div>
+                        <div style="display:flex;gap:1rem;align-items:center">
+                            <span style="color:var(--text-muted)">Due Day ${dueDay}</span>
+                            <span style="font-weight:700;color:${urgencyColor}">${daysLeft <= 0 ? 'OVERDUE by ' + Math.abs(daysLeft) + ' days' : daysLeft + ' days left'}</span>
+                            <span style="font-size:0.75rem">${statusLabel}</span>
+                        </div>
+                    </div>`;
+                });
+                document.getElementById('loan-days-remaining').textContent = minDaysLeft <= 0 ? 'OVERDUE' : minDaysLeft;
+                document.getElementById('loan-days-remaining').style.color = minDaysLeft <= 0 ? 'var(--danger)' : minDaysLeft <= 3 ? 'var(--warning)' : 'var(--success)';
+                document.getElementById('loan-overdue-count').textContent = overdueCount;
+                document.getElementById('loan-timer-total').textContent = '$' + formatNum(totalOwed);
+                timerRows.innerHTML = rowsHtml;
+                // Change border color based on urgency
+                timerPanel.style.borderColor = minDaysLeft <= 0 ? 'var(--danger)' : minDaysLeft <= 3 ? 'var(--warning)' : 'var(--success)';
+            } else {
+                timerPanel.style.display = 'none';
+            }
             // Credit score bar
             const creditScore = state.player.credit;
             const creditColor = creditScore >= 750 ? 'var(--success)' : creditScore >= 650 ? 'var(--warning)' : 'var(--danger)';
@@ -4081,17 +4165,23 @@
             // Loans list
             const tbody = document.getElementById('loans-list');
             if (state.player.loans.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">No active loans</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">No active loans</td></tr>';
             } else {
-                tbody.innerHTML = state.player.loans.map((loan, i) => `
-                    <tr>
+                tbody.innerHTML = state.player.loans.map((loan, i) => {
+                    const dueDay = loan.dueTriggerDay || (state.player.day + 10);
+                    const daysLeft = dueDay - state.player.day;
+                    const urgencyColor = daysLeft <= 0 ? 'var(--danger)' : daysLeft <= 3 ? 'var(--warning)' : 'var(--success)';
+                    const timeLeftText = daysLeft <= 0 ? `<span style="color:var(--danger);font-weight:700">OVERDUE ${Math.abs(daysLeft)}d</span>` : `<span style="color:${urgencyColor};font-weight:700">${daysLeft} days</span>`;
+                    return `<tr>
                         <td>$${formatNum(loan.amount)}</td>
                         <td>${(loan.rate * 100).toFixed(1)}%</td>
                         <td style="color:var(--danger)">$${formatNum(loan.remaining)}</td>
                         <td>$${formatNum(loan.monthly)}/day</td>
+                        <td style="font-weight:700">Day ${dueDay}</td>
+                        <td>${timeLeftText}</td>
                         <td><button class="btn btn-success" onclick="openLoanPayment(${i})" style="font-size:0.8rem">Pay</button></td>
-                    </tr>
-                `).join('');
+                    </tr>`;
+                }).join('');
             }
         }
 
