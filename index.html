@@ -2191,34 +2191,38 @@
                 // Update Leaderboard Data
                 const nw = calcNetWorth();
                 const displayName = user.displayName || user.email.replace('@tradelife.game','') || 'Player';
-                await window.fbMethods.setDoc(userDoc, {
+                const profileData = {
                     username: displayName,
+                    displayName: state.player.displayName || displayName,
                     email: user.email,
                     netWorth: nw,
                     day: state.player.day,
+                    avatar: state.player.avatar || '🧑',
+                    avatar_img: state.player.avatar_img || null,
                     lastActive: new Date().toISOString()
-                }, { merge: true });
+                };
                 
-                document.getElementById('resume-btn').style.display = 'inline-flex';
+                // 1. Update Firestore Profile
+                await window.fbMethods.setDoc(userDoc, profileData, { merge: true });
+
+                // 2. Update Username Index
+                const usernameDoc = window.fbMethods.doc(window.fbDb, "usernames", displayName.toLowerCase());
+                await window.fbMethods.setDoc(usernameDoc, { uid: user.uid }, { merge: true });
+
+                    // 3. Update Realtime Database (RTDB) for Search & Leaderboard
+                if (window.fbRtdb && window.fbMethods.rtdbRef) {
+                    try {
+                        const rtdbUserRef = window.fbMethods.rtdbRef(window.fbRtdb, 'users/' + user.uid);
+                        await window.fbMethods.rtdbSet(rtdbUserRef, profileData);
+                        
+                        const rtdbSaveRef = window.fbMethods.rtdbRef(window.fbRtdb, 'saves/' + user.uid + '/' + name);
+                        await window.fbMethods.rtdbSet(rtdbSaveRef, saveData);
+                    } catch (e) {
+                        console.error("RTDB sync failed", e);
+                    }
+                }
             } catch (e) {
-                console.error("Cloud save (Firestore) failed", e);
-            }
-            // Save to Realtime Database (for live leaderboard & quick access)
-            try {
-                const nw = calcNetWorth();
-                const rtdbUserRef = window.fbMethods.rtdbRef(window.fbRtdb, 'users/' + user.uid);
-                const rtdbDisplayName = user.displayName || user.email.replace('@tradelife.game','') || 'Player';
-                await window.fbMethods.rtdbSet(rtdbUserRef, {
-                    username: rtdbDisplayName,
-                    email: user.email,
-                    netWorth: nw,
-                    day: state.player.day,
-                    lastActive: new Date().toISOString()
-                });
-                const rtdbSaveRef = window.fbMethods.rtdbRef(window.fbRtdb, 'saves/' + user.uid + '/' + name);
-                await window.fbMethods.rtdbSet(rtdbSaveRef, saveData);
-            } catch (e) {
-                console.error("Cloud save (RTDB) failed", e);
+                console.error("Cloud save failed", e);
                 showToast('Cloud Error', 'Failed to sync with cloud', 'warning');
             }
         }
@@ -2558,44 +2562,64 @@
             resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--text-muted)">Searching...</div>';
 
             try {
-                // Use RTDB for partial/fuzzy search as it's easier to fetch all and filter
-                if (!window.fbRtdb || !window.fbMethods) {
-                    resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--danger)">Database not ready</div>';
+                // Check if Firebase is ready
+                if (!window.fbMethods || (!window.fbRtdb && !window.fbDb)) {
+                    resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--danger)">Database not ready. Please wait a few seconds and try again.</div>';
                     return;
                 }
 
-                const rtdbUsersRef = window.fbMethods.rtdbRef(window.fbRtdb, 'users');
-                const snap = await window.fbMethods.rtdbGet(rtdbUsersRef);
-                
-                if (!snap.exists()) {
-                    resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--danger)">No players found in database</div>';
-                    return;
-                }
+                let matches = [];
+                const currentUid = window.fbAuth.currentUser ? window.fbAuth.currentUser.uid : '';
 
-                const usersObj = snap.val();
-                const matches = [];
-                
-                Object.entries(usersObj).forEach(([uid, data]) => {
-                    const username = (data.username || '').toLowerCase();
-                    const displayName = (data.displayName || '').toLowerCase();
-                    
-                    // Partial match check
-                    if (username.includes(query) || displayName.includes(query)) {
-                        // Don't include self in results
-                        if (uid !== (window.fbAuth.currentUser ? window.fbAuth.currentUser.uid : '')) {
-                            matches.push({ uid, ...data });
+                // Primary Search: Realtime Database (RTDB)
+                if (window.fbRtdb) {
+                    try {
+                        const rtdbUsersRef = window.fbMethods.rtdbRef(window.fbRtdb, 'users');
+                        const snap = await window.fbMethods.rtdbGet(rtdbUsersRef);
+                        if (snap.exists()) {
+                            const usersObj = snap.val();
+                            Object.entries(usersObj).forEach(([uid, data]) => {
+                                const username = (data.username || '').toLowerCase();
+                                const displayName = (data.displayName || '').toLowerCase();
+                                if ((username.includes(query) || displayName.includes(query)) && uid !== currentUid) {
+                                    matches.push({ uid, ...data });
+                                }
+                            });
                         }
+                    } catch (rtdbErr) {
+                        console.warn("RTDB search failed, falling back to Firestore", rtdbErr);
                     }
-                });
+                }
+
+                // Fallback Search: Firestore (if RTDB failed or returned no matches)
+                if (matches.length === 0 && window.fbDb) {
+                    try {
+                        // Firestore doesn't support partial matches easily without a third-party service,
+                        // so we'll try to find an exact match first as a fallback.
+                        const usernameDoc = window.fbMethods.doc(window.fbDb, 'usernames', query);
+                        const snap = await window.fbMethods.getDoc(usernameDoc);
+                        if (snap.exists()) {
+                            const uid = snap.data().uid;
+                            if (uid !== currentUid) {
+                                const userDoc = window.fbMethods.doc(window.fbDb, 'users', uid);
+                                const userSnap = await window.fbMethods.getDoc(userDoc);
+                                if (userSnap.exists()) {
+                                    matches.push({ uid, ...userSnap.data() });
+                                }
+                            }
+                        }
+                    } catch (fsErr) {
+                        console.error("Firestore fallback search failed", fsErr);
+                    }
+                }
 
                 if (matches.length === 0) {
-                    resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--danger)">No matching players found</div>';
+                    resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--danger)">No matching players found. Make sure you are searching for a valid username.</div>';
                     return;
                 }
 
-                // Limit to top 10 matches
+                // Limit to top 10 matches and render
                 const topMatches = matches.slice(0, 10);
-
                 resultsDiv.innerHTML = `
                     <div style="display:flex;flex-direction:column;gap:0.75rem">
                         ${topMatches.map(m => `
@@ -2617,8 +2641,8 @@
                     </div>
                 `;
             } catch (e) {
-                console.error(e);
-                resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--danger)">Search failed. Please try again.</div>';
+                console.error("Search error:", e);
+                resultsDiv.innerHTML = `<div style="text-align:center;padding:1rem;color:var(--danger)">Search failed: ${e.message}. Check your Firebase console for permission errors.</div>`;
             }
         }
 
