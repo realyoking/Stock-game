@@ -4679,13 +4679,15 @@ What is your experience?"></textarea></div>
 
         function investInCompany(coId) {
             const co = state.player.companies.find(c => c.id === coId);
+            const MAX_INVEST = 10000000000000; // 10 Trillion max per transaction
             document.getElementById('amount-modal-title').textContent = `Invest in ${co.name}`;
-            document.getElementById('amount-modal-desc').textContent = `Your cash: $${formatNum(state.player.cash)}. Investment earns 1%/day revenue.`;
+            document.getElementById('amount-modal-desc').textContent = `Your cash: $${formatNum(state.player.cash)}. Max per transaction: $${formatNum(MAX_INVEST)}. Investment earns 1%/day revenue.`;
             document.getElementById('amount-modal-input').value = '';
             const btn = document.getElementById('amount-modal-confirm');
             btn.onclick = () => {
                 const amt = parseFloat(document.getElementById('amount-modal-input').value);
                 if (!amt || amt <= 0) { showToast('Error', 'Enter a valid amount', 'danger'); return; }
+                if (amt > MAX_INVEST) { showToast('Exceeds Limit', `Maximum investment per transaction is $${formatNum(MAX_INVEST)}`, 'danger'); return; }
                 if (state.player.cash < amt) { showToast('Insufficient Funds', '', 'danger'); return; }
                 state.player.cash = Math.max(0, state.player.cash - amt);
                 co.cash += amt;
@@ -4699,13 +4701,15 @@ What is your experience?"></textarea></div>
 
         function withdrawFromCompany(coId) {
             const co = state.player.companies.find(c => c.id === coId);
+            const MAX_WITHDRAW = 10000000000000; // 10 Trillion max per transaction
             document.getElementById('amount-modal-title').textContent = `Withdraw from ${co.name}`;
-            document.getElementById('amount-modal-desc').textContent = `Company cash available: $${formatNum(co.cash)}`;
+            document.getElementById('amount-modal-desc').textContent = `Company cash available: $${formatNum(co.cash)}. Max per transaction: $${formatNum(MAX_WITHDRAW)}`;
             document.getElementById('amount-modal-input').value = '';
             const btn = document.getElementById('amount-modal-confirm');
             btn.onclick = () => {
                 const amt = parseFloat(document.getElementById('amount-modal-input').value);
                 if (!amt || amt <= 0) { showToast('Error', 'Enter a valid amount', 'danger'); return; }
+                if (amt > MAX_WITHDRAW) { showToast('Exceeds Limit', `Maximum withdrawal per transaction is $${formatNum(MAX_WITHDRAW)}`, 'danger'); return; }
                 if (co.cash < amt) { showToast('Insufficient', 'Company does not have enough cash', 'danger'); return; }
                 co.cash = Math.max(0, co.cash - amt);
                 state.player.cash += amt;
@@ -6142,13 +6146,15 @@ What is your experience?"></textarea></div>
             const ab = state.player.aiBots.find(a => a.id === abId);
             if (!ab) return;
             const bot = AI_BOTS.find(b => b.id === ab.botId);
+            const MAX_BOT_FUNDS = 10000000000000; // 10 Trillion max per transaction
             document.getElementById('amount-modal-title').textContent = `Add Funds to ${bot ? bot.name : 'Bot'}`;
-            document.getElementById('amount-modal-desc').textContent = `Your cash: $${formatNum(state.player.cash)}. Funds will be managed by the bot.`;
+            document.getElementById('amount-modal-desc').textContent = `Your cash: $${formatNum(state.player.cash)}. Max per transaction: $${formatNum(MAX_BOT_FUNDS)}. Funds will be managed by the bot.`;
             document.getElementById('amount-modal-input').value = '';
             const btn = document.getElementById('amount-modal-confirm');
             btn.onclick = () => {
                 const amt = parseFloat(document.getElementById('amount-modal-input').value);
                 if (!amt || amt <= 0) { showToast('Error', 'Enter a valid amount', 'danger'); return; }
+                if (amt > MAX_BOT_FUNDS) { showToast('Exceeds Limit', `Maximum fund addition per transaction is $${formatNum(MAX_BOT_FUNDS)}`, 'danger'); return; }
                 if (state.player.cash < amt) { showToast('Insufficient Funds', '', 'danger'); return; }
                 state.player.cash -= amt;
                 ab.invested += amt;
