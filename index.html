@@ -508,6 +508,7 @@
                 <div class="nav-item" onclick="switchTab('banking')">Banking</div>
                 <div class="nav-item" onclick="switchTab('blackmarket')">Black Market</div>
                 <div class="nav-item" onclick="switchTab('crypto')">Crypto</div>
+                <div class="nav-item" onclick="switchTab('map')" style="color:#10b981">🌍 World Map</div>
                 <div class="nav-item" onclick="switchTab('education')">Education</div>
                 <div class="nav-item" onclick="switchTab('achievements')">Achievements</div>
                 <div class="nav-item" onclick="switchTab('aibot')" style="color:#a855f7">AI Invest Bot</div>
@@ -784,6 +785,48 @@ What is your experience?"></textarea></div>
                     </div>
                 </div>
 
+                <!-- World Map Tab -->
+                <div id="map" class="tab-panel">
+                    <h2 style="margin-bottom:0.5rem">🌍 World Map</h2>
+                    <p style="color:var(--text-muted);margin-bottom:1.5rem">Buy countries for 10T each. Unlock all countries to purchase the entire planet for 100T!</p>
+                    <div style="display:grid;grid-template-columns:1fr 300px;gap:1.5rem">
+                        <div>
+                            <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1.5rem">
+                                <h3 style="margin-bottom:1rem">Your Properties</h3>
+                                <div id="map-owned-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:0.75rem"></div>
+                            </div>
+                            <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem">
+                                <h3 style="margin-bottom:1rem">Available Countries</h3>
+                                <div id="map-countries-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.75rem"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="widget" style="position:sticky;top:0">
+                                <h3>Map Stats</h3>
+                                <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;margin-bottom:1rem;border:1px solid var(--border);font-size:0.9rem">
+                                    <div style="display:flex;justify-content:space-between;margin-bottom:0.75rem"><span style="color:var(--text-muted)">Countries Owned</span><span style="font-weight:700;color:var(--brand)" id="map-owned-count">0</span></div>
+                                    <div style="display:flex;justify-content:space-between;margin-bottom:0.75rem"><span style="color:var(--text-muted)">Total Countries</span><span style="font-weight:700">195</span></div>
+                                    <div style="display:flex;justify-content:space-between;margin-bottom:1rem"><span style="color:var(--text-muted)">Completion</span><span style="font-weight:700;color:var(--success)" id="map-completion">0%</span></div>
+                                    <div style="height:12px;background:var(--bg-base);border-radius:6px;overflow:hidden">
+                                        <div id="map-progress-bar" style="height:100%;background:linear-gradient(90deg,#10b981,#06b6d4);transition:width 0.5s;width:0%"></div>
+                                    </div>
+                                </div>
+                                <div id="map-planet-section" style="display:none;background:linear-gradient(135deg,#fbbf24,#f59e0b);padding:1rem;border-radius:8px;text-align:center;margin-bottom:1rem">
+                                    <div style="font-size:2rem;margin-bottom:0.5rem">🪐</div>
+                                    <div style="font-weight:700;color:#000;margin-bottom:0.5rem">Planet Unlocked!</div>
+                                    <p style="color:#000;font-size:0.85rem;margin-bottom:1rem">You own all countries! Purchase the entire planet for <strong>100T</strong></p>
+                                    <button class="btn btn-primary" onclick="buyPlanet()" style="width:100%;font-size:0.9rem;background:#000;color:#fbbf24;border:none">💰 Buy Planet (100T)</button>
+                                </div>
+                                <div id="map-planet-owned" style="display:none;background:linear-gradient(135deg,#ec4899,#f43f5e);padding:1rem;border-radius:8px;text-align:center">
+                                    <div style="font-size:2rem;margin-bottom:0.5rem">👑</div>
+                                    <div style="font-weight:700;color:#fff;margin-bottom:0.25rem">Planet Owner</div>
+                                    <p style="color:#fff;font-size:0.85rem">You own the entire planet!</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Education Tab -->
                 <div id="education" class="tab-panel">
                     <h2>Education & Skills</h2>
@@ -834,13 +877,17 @@ What is your experience?"></textarea></div>
                     <div id="club-locked-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center">
                         <div style="font-size:4rem;margin-bottom:1rem">🔒</div>
                         <h2 style="margin-bottom:0.5rem;color:var(--warning)">The Club — Members Only</h2>
-                        <p style="color:var(--text-muted);margin-bottom:1.5rem;max-width:400px">Exclusive VIP gambling lounge. Requires a net worth of $500,000,000 to unlock. Play Blackjack, Slots, Roulette, Dice, and more!</p>
+                        <p style="color:var(--text-muted);margin-bottom:1.5rem;max-width:400px">Exclusive VIP gambling lounge. Requires a net worth of <strong style="color:var(--warning)">$500,000,000</strong> AND a one-time membership fee of <strong style="color:var(--danger)">$1,000,000,000,000 (1T)</strong>. Play Blackjack, Slots, Roulette, Dice, and more!</p>
                         <div style="font-size:1.2rem;font-weight:700;color:var(--danger);margin-bottom:1rem">Your Net Worth: <span id="club-nw-display">$0</span></div>
                         <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:1rem;width:100%;max-width:360px;margin-bottom:1rem">
-                            <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;font-size:0.9rem"><span style="color:var(--text-muted)">Required</span><span style="font-weight:700;color:var(--warning)">$500,000,000</span></div>
+                            <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;font-size:0.9rem"><span style="color:var(--text-muted)">Net Worth Required</span><span style="font-weight:700;color:var(--warning)">$500,000,000</span></div>
                             <div style="height:12px;background:var(--bg-base);border-radius:6px;overflow:hidden">
                                 <div id="club-progress-bar" style="height:100%;background:linear-gradient(90deg,var(--warning),var(--success));transition:width 0.5s;width:0%"></div>
                             </div>
+                        </div>
+                        <div id="club-pay-section" style="display:none;margin-bottom:1rem">
+                            <p style="color:var(--success);font-size:0.95rem;font-weight:700;margin-bottom:0.75rem">✅ Net worth requirement met! Pay the membership fee to enter.</p>
+                            <button class="btn btn-primary" onclick="payClubEntry()" style="font-size:1rem;padding:0.75rem 2rem">💳 Pay $1T Membership Fee</button>
                         </div>
                         <p style="color:var(--text-muted);font-size:0.85rem">Keep investing and growing your wealth to gain access!</p>
                     </div>
@@ -868,14 +915,23 @@ What is your experience?"></textarea></div>
 
             <!-- Search Player Tab -->
             <div id="search" class="tab-panel">
-                <h2 style="margin-bottom:1.5rem">Search Players</h2>
-                <div class="widget" style="max-width:600px;margin-bottom:2rem">
-                    <p style="color:var(--text-muted);margin-bottom:1rem;font-size:0.9rem">Find other players by their username to visit their profile or send them money.</p>
-                    <div style="display:flex;gap:0.75rem">
-                        <input type="text" id="search-player-input" placeholder="Enter username..." onkeyup="if(event.key==='Enter')searchPlayer()" style="flex:1;padding:0.75rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:1rem">
-                        <button class="btn btn-primary" onclick="searchPlayer()">Search</button>
+                <h2 style="margin-bottom:1.5rem">Search Players & Planets</h2>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+                    <div class="widget">
+                        <h3 style="margin-bottom:1rem">Search Players</h3>
+                        <p style="color:var(--text-muted);margin-bottom:1rem;font-size:0.9rem">Find other players by their username to visit their profile.</p>
+                        <div style="display:flex;gap:0.75rem;margin-bottom:1rem">
+                            <input type="text" id="search-player-input" placeholder="Enter username..." onkeyup="if(event.key==='Enter')searchPlayer()" style="flex:1;padding:0.75rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:1rem">
+                            <button class="btn btn-primary" onclick="searchPlayer()">Search</button>
+                        </div>
+                        <div id="search-results" style="margin-top:1.5rem"></div>
                     </div>
-                    <div id="search-results" style="margin-top:1.5rem"></div>
+                    <div class="widget">
+                        <h3 style="margin-bottom:1rem">Planet Owners</h3>
+                        <p style="color:var(--text-muted);margin-bottom:1rem;font-size:0.9rem">See who owns the entire planet!</p>
+                        <button class="btn btn-primary" onclick="searchPlanetOwners()" style="width:100%;margin-bottom:1rem">Search Planet Owners</button>
+                        <div id="planet-search-results" style="margin-top:1rem"></div>
+                    </div>
                 </div>
             </div>
 
@@ -1982,6 +2038,28 @@ What is your experience?"></textarea></div>
         ];
 
 
+        // ===================== WORLD COUNTRIES DATA =====================
+        const WORLD_COUNTRIES = [
+            'United States', 'China', 'Japan', 'Germany', 'United Kingdom', 'France', 'India', 'Italy', 'Brazil', 'Canada',
+            'South Korea', 'Russia', 'Spain', 'Australia', 'Mexico', 'Netherlands', 'Saudi Arabia', 'Turkey', 'Switzerland', 'Sweden',
+            'Poland', 'Belgium', 'Argentina', 'Austria', 'Norway', 'Nigeria', 'Ireland', 'Israel', 'Singapore', 'Denmark',
+            'Malaysia', 'Philippines', 'Thailand', 'Indonesia', 'Vietnam', 'Pakistan', 'Bangladesh', 'Egypt', 'South Africa', 'Kenya',
+            'Greece', 'Portugal', 'Czech Republic', 'Hungary', 'Romania', 'Ukraine', 'New Zealand', 'Peru', 'Colombia', 'Chile',
+            'Finland', 'Qatar', 'United Arab Emirates', 'Hong Kong', 'Taiwan', 'Cambodia', 'Laos', 'Myanmar', 'Sri Lanka', 'Nepal',
+            'Mongolia', 'Kazakhstan', 'Uzbekistan', 'Turkmenistan', 'Tajikistan', 'Kyrgyzstan', 'Georgia', 'Armenia', 'Azerbaijan', 'Belarus',
+            'Moldova', 'Lithuania', 'Latvia', 'Estonia', 'Slovenia', 'Croatia', 'Bosnia', 'Serbia', 'Montenegro', 'Albania',
+            'North Macedonia', 'Bulgaria', 'Slovakia', 'Iceland', 'Luxembourg', 'Malta', 'Cyprus', 'Lebanon', 'Jordan', 'Iraq',
+            'Iran', 'Kuwait', 'Bahrain', 'Oman', 'Yemen', 'Morocco', 'Algeria', 'Tunisia', 'Libya', 'Sudan',
+            'Ethiopia', 'Somalia', 'Tanzania', 'Uganda', 'Rwanda', 'Burundi', 'Zambia', 'Zimbabwe', 'Botswana', 'Namibia',
+            'Angola', 'Mozambique', 'Malawi', 'Lesotho', 'Eswatini', 'Madagascar', 'Mauritius', 'Seychelles', 'Comoros', 'Djibouti',
+            'Eritrea', 'Ghana', 'Ivory Coast', 'Senegal', 'Mali', 'Burkina Faso', 'Niger', 'Chad', 'Cameroon', 'Gabon',
+            'Republic of Congo', 'Democratic Republic of Congo', 'Central African Republic', 'Benin', 'Togo', 'Sierra Leone',
+            'Liberia', 'Guinea', 'Guinea-Bissau', 'Gambia', 'Cape Verde', 'Mauritania', 'Costa Rica', 'Panama', 'Nicaragua', 'Honduras',
+            'El Salvador', 'Guatemala', 'Belize', 'Jamaica', 'Trinidad and Tobago', 'Bahamas', 'Barbados', 'Dominican Republic', 'Haiti', 'Cuba',
+            'Puerto Rico', 'Greenland', 'Faroe Islands', 'Fiji', 'Samoa', 'Vanuatu', 'Solomon Islands', 'Kiribati', 'Nauru', 'Palau',
+            'Marshall Islands', 'Micronesia', 'Papua New Guinea', 'Timor-Leste', 'Brunei', 'Maldives', 'Mauritius', 'Seychelles', 'Comoros'
+        ];
+
         // ===================== DUAL SAVE CONSTANTS =====================
         const LOCAL_AUTOSAVE_KEY = 'tradelife_autosave_local';
         let _pendingCloudSync = false;
@@ -2035,7 +2113,10 @@ What is your experience?"></textarea></div>
                 achievements: [],
                 completedTasks: [],
                 aiBots: [],
-                clubBalance: 0
+                clubBalance: 0,
+                clubPaid: false,
+                countriesOwned: [],
+                planetOwned: false
             },
             stockPrices: {},
             cryptoPrices: {},
@@ -2354,6 +2435,9 @@ What is your experience?"></textarea></div>
                 if (!state.player.certifications) state.player.certifications = [];
                 if (!state.player.aiBots) state.player.aiBots = [];
                 if (state.player.clubBalance === undefined) state.player.clubBalance = 0;
+                if (state.player.clubPaid === undefined) state.player.clubPaid = false;
+                if (!state.player.countriesOwned) state.player.countriesOwned = [];
+                if (state.player.planetOwned === undefined) state.player.planetOwned = false;
                 
                 // Fill any missing prices and history
                 STOCKS.forEach(s => {
@@ -2421,6 +2505,9 @@ What is your experience?"></textarea></div>
                 if (!state.player.certifications) state.player.certifications = [];
                 if (!state.player.aiBots) state.player.aiBots = [];
                 if (state.player.clubBalance === undefined) state.player.clubBalance = 0;
+                if (state.player.clubPaid === undefined) state.player.clubPaid = false;
+                if (!state.player.countriesOwned) state.player.countriesOwned = [];
+                if (state.player.planetOwned === undefined) state.player.planetOwned = false;
                 // Fill missing prices
                 STOCKS.forEach(s => {
                     if (!state.stockPrices[s.ticker]) state.stockPrices[s.ticker] = s.basePrice;
@@ -2682,6 +2769,59 @@ What is your experience?"></textarea></div>
         // ===================== SEARCH & VISIT PLAYERS =====================
         function renderSearch() {
             // No specific render logic needed for search tab itself
+        }
+
+        async function searchPlanetOwners() {
+            const resultsDiv = document.getElementById('planet-search-results');
+            resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--text-muted)">Searching for planet owners...</div>';
+
+            try {
+                if (!window.fbMethods || !window.fbDb) {
+                    resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--danger)">Database not ready. Please wait a few seconds and try again.</div>';
+                    return;
+                }
+
+                const usersCol = window.fbMethods.collection(window.fbDb, "users");
+                const snapshot = await window.fbMethods.getDocs(usersCol);
+                
+                const planetOwners = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.gameState && data.gameState.player && data.gameState.player.planetOwned === true) {
+                        planetOwners.push({
+                            username: data.username || 'Unknown',
+                            displayName: data.displayName || data.username || 'Unknown',
+                            character: data.gameState.player.character,
+                            cash: data.gameState.player.cash || 0,
+                            day: data.gameState.player.day || 1,
+                            uid: doc.id
+                        });
+                    }
+                });
+
+                if (planetOwners.length === 0) {
+                    resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--text-muted)">No planet owners found yet. Be the first!</div>';
+                } else {
+                    resultsDiv.innerHTML = planetOwners.map(owner => `
+                        <div style="background:linear-gradient(135deg,#ec4899,#f43f5e);border-radius:8px;padding:1rem;margin-bottom:0.75rem;color:#fff;cursor:pointer" onclick="visitPlayer('${owner.uid}')">
+                            <div style="display:flex;align-items:center;gap:1rem">
+                                <div style="font-size:2rem">👑</div>
+                                <div style="flex:1">
+                                    <div style="font-weight:700">${owner.displayName}</div>
+                                    <div style="font-size:0.85rem;opacity:0.9">@${owner.username}</div>
+                                    <div style="font-size:0.8rem;opacity:0.8;margin-top:0.25rem">Day ${owner.day} | Cash: $${formatNum(owner.cash)}</div>
+                                </div>
+                                <div style="text-align:right">
+                                    <div style="font-size:0.9rem;opacity:0.9">Planet Owner</div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (e) {
+                console.error('Planet search error:', e);
+                resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--danger)">Error searching for planet owners</div>';
+            }
         }
 
         async function searchPlayer() {
@@ -3474,6 +3614,7 @@ What is your experience?"></textarea></div>
             else if (state.currentTab === 'banking') renderBanking();
             else if (state.currentTab === 'blackmarket') renderBlackMarket();
             else if (state.currentTab === 'crypto') renderCrypto();
+            else if (state.currentTab === 'map') renderMap();
             else if (state.currentTab === 'achievements') renderAchievements();
             else if (state.currentTab === 'education') renderEducation();
             else if (state.currentTab === 'leaderboard') await renderLeaderboard();
@@ -3527,6 +3668,8 @@ What is your experience?"></textarea></div>
             });
             // Companies
             state.player.companies.forEach(co => { nw += co.cash; });
+            // AI Bots (include current bot portfolio value in net worth)
+            if (state.player.aiBots) state.player.aiBots.forEach(ab => { nw += (ab.value || 0); });
             // Debt
             nw -= state.player.debt;
             return nw;
@@ -3949,6 +4092,11 @@ What is your experience?"></textarea></div>
             state.careerCategory = cat;
             document.getElementById('cat-npc').classList.toggle('active-cat', cat === 'npc');
             document.getElementById('cat-real').classList.toggle('active-cat', cat === 'real');
+            // Show loading immediately so user sees something while async fetch runs
+            if (cat === 'real') {
+                const tbody = document.getElementById('career-list');
+                if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:2rem">Loading real player jobs...</td></tr>';
+            }
             renderCareer();
         }
 
@@ -3994,7 +4142,10 @@ What is your experience?"></textarea></div>
                         }</td>
                     </tr>`;
                 }).join('');
+                tbody.innerHTML = html;
             } else {
+                // Real careers: show loading, then fetch async and update tbody directly
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:2rem">Loading real player jobs...</td></tr>';
                 try {
                     const jobsCol = window.fbMethods.collection(window.fbDb, "global_jobs");
                     const q = window.fbMethods.query(jobsCol, window.fbMethods.orderBy("createdAt", "desc"), window.fbMethods.limit(20));
@@ -4022,13 +4173,13 @@ What is your experience?"></textarea></div>
                             </tr>`;
                         });
                     }
+                    // Update tbody after async fetch completes
+                    tbody.innerHTML = html;
                 } catch (e) { 
                     console.error("Failed to fetch player jobs", e); 
-                    html = '<tr><td colspan="5" style="text-align:center;color:var(--danger)">Failed to load jobs</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--danger)">Failed to load jobs. Check connection.</td></tr>';
                 }
             }
-            
-            tbody.innerHTML = html;
         }
 
         async function applyPlayerJob(jobId) {
@@ -5269,6 +5420,93 @@ What is your experience?"></textarea></div>
             { id: 'ed10', name: 'Leadership Masterclass', cost: 15000, xp: 4000, clout: 800, cert: 'Leader' }
         ];
 
+        function renderMap() {
+            const ownedCount = state.player.countriesOwned.length;
+            const totalCountries = WORLD_COUNTRIES.length;
+            const completion = Math.round((ownedCount / totalCountries) * 100);
+            
+            // Update stats
+            document.getElementById('map-owned-count').textContent = ownedCount;
+            document.getElementById('map-completion').textContent = completion + '%';
+            document.getElementById('map-progress-bar').style.width = completion + '%';
+            
+            // Show/hide planet section
+            const planetSection = document.getElementById('map-planet-section');
+            const planetOwned = document.getElementById('map-planet-owned');
+            if (state.player.planetOwned) {
+                if (planetSection) planetSection.style.display = 'none';
+                if (planetOwned) planetOwned.style.display = 'block';
+            } else if (ownedCount === totalCountries) {
+                if (planetSection) planetSection.style.display = 'block';
+                if (planetOwned) planetOwned.style.display = 'none';
+            } else {
+                if (planetSection) planetSection.style.display = 'none';
+                if (planetOwned) planetOwned.style.display = 'none';
+            }
+            
+            // Render owned countries
+            const ownedList = document.getElementById('map-owned-list');
+            ownedList.innerHTML = state.player.countriesOwned.length === 0 ? 
+                '<div style="grid-column:1/-1;color:var(--text-muted);text-align:center;padding:2rem">No countries owned yet</div>' :
+                state.player.countriesOwned.map(c => `
+                    <div style="background:linear-gradient(135deg,#10b981,#059669);border-radius:8px;padding:1rem;text-align:center;color:#fff;font-weight:700">
+                        ${c}
+                    </div>
+                `).join('');
+            
+            // Render available countries
+            const countriesGrid = document.getElementById('map-countries-grid');
+            countriesGrid.innerHTML = WORLD_COUNTRIES.map(country => {
+                const isOwned = state.player.countriesOwned.includes(country);
+                const canAfford = state.player.cash >= 10000000000000; // 10T
+                return `
+                    <div style="background:${isOwned ? 'var(--success)' : 'var(--bg-panel)'};border:1px solid var(--border);border-radius:8px;padding:1rem;text-align:center;cursor:${isOwned ? 'default' : canAfford ? 'pointer' : 'not-allowed'};opacity:${isOwned ? 0.6 : 1}" onclick="${isOwned ? '' : canAfford ? `buyCountry('${country}')` : ''}">
+                        <div style="font-weight:700;margin-bottom:0.5rem;font-size:0.9rem">${country}</div>
+                        <div style="font-size:0.75rem;color:${isOwned ? '#fff' : 'var(--text-muted)'};margin-bottom:0.5rem">${isOwned ? '✓ Owned' : '10T'}</div>
+                        ${!isOwned ? `<button class="btn ${canAfford ? 'btn-primary' : 'btn-secondary'}" style="width:100%;font-size:0.7rem;padding:0.4rem" ${!canAfford ? 'disabled' : ''}>Buy</button>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function buyCountry(country) {
+            const COUNTRY_PRICE = 10000000000000; // 10T
+            if (state.player.cash < COUNTRY_PRICE) {
+                showToast('Insufficient Funds', 'You need 10T to buy a country', 'danger');
+                return;
+            }
+            if (state.player.countriesOwned.includes(country)) {
+                showToast('Already Owned', 'You already own this country', 'warning');
+                return;
+            }
+            state.player.cash -= COUNTRY_PRICE;
+            state.player.countriesOwned.push(country);
+            addActivity(`Day ${state.player.day}`, `Purchased ${country} for 10T!`, 'success');
+            showToast('Country Acquired!', `You now own ${country}!`, 'success');
+            saveGame();
+            updateUI();
+            renderMap();
+        }
+
+        function buyPlanet() {
+            const PLANET_PRICE = 100000000000000; // 100T
+            if (state.player.countriesOwned.length !== WORLD_COUNTRIES.length) {
+                showToast('Not Ready', 'You must own all countries first', 'danger');
+                return;
+            }
+            if (state.player.cash < PLANET_PRICE) {
+                showToast('Insufficient Funds', 'You need 100T to buy the planet', 'danger');
+                return;
+            }
+            state.player.cash -= PLANET_PRICE;
+            state.player.planetOwned = true;
+            addActivity(`Day ${state.player.day}`, 'Purchased the entire planet for 100T! You are now the supreme ruler!', 'success');
+            showToast('Planet Owner!', 'You now own the entire planet! 👑', 'success');
+            saveGame();
+            updateUI();
+            renderMap();
+        }
+
         function renderEducation() {
             document.getElementById('edu-xp').textContent = formatNum(state.player.exp);
             document.getElementById('edu-certs').textContent = state.player.certifications.length;
@@ -5660,7 +5898,11 @@ What is your experience?"></textarea></div>
                         </div>
                     </div>
                     <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;line-height:1.5">${bot.desc}</div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;font-size:0.8rem;margin-bottom:1rem">
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;font-size:0.8rem;margin-bottom:1rem">
+                        <div style="background:var(--bg-panel);padding:0.5rem;border-radius:6px;text-align:center">
+                            <div style="color:var(--text-muted)">Price</div>
+                            <div style="font-weight:700;color:var(--brand)">$${formatNum(bot.price)}</div>
+                        </div>
                         <div style="background:var(--bg-panel);padding:0.5rem;border-radius:6px;text-align:center">
                             <div style="color:var(--text-muted)">Win Rate</div>
                             <div style="font-weight:700;color:${bot.winRate >= 0.5 ? 'var(--success)' : 'var(--danger)'}">${(bot.winRate*100).toFixed(0)}%</div>
@@ -5740,8 +5982,16 @@ What is your experience?"></textarea></div>
                 let changeRate;
                 const roll = Math.random();
                 if (bot.id === 'bot7') {
-                    // Quantum Oracle: always wins
+                    // Quantum Oracle: always wins, but only invests 70% of portfolio value
+                    const effectiveValue70 = ab.value * 0.70;
                     changeRate = bot.dailyReturn * (0.8 + Math.random() * 0.5);
+                    // Apply return only on 70% of value (cap stock investment at 70%)
+                    const change70 = effectiveValue70 * changeRate;
+                    ab.value = Math.max(0, ab.value + change70);
+                    ab.totalPL = ab.value - ab.invested;
+                    const changeStr70 = change70 >= 0 ? `+$${formatNum(change70)}` : `-$${formatNum(Math.abs(change70))}`;
+                    addActivity(`Day ${state.player.day}`, `${bot.name}: ${changeStr70} (${(changeRate*100).toFixed(1)}%) [70% invested]`, change70 >= 0 ? 'success' : 'danger');
+                    return; // Skip the rest of the loop for bot7
                 } else if (roll < bot.winRate) {
                     // Win day
                     changeRate = bot.dailyReturn * (0.5 + Math.random() * 1.5);
@@ -5759,6 +6009,7 @@ What is your experience?"></textarea></div>
 
         // ===================== THE CLUB =====================
         const CLUB_UNLOCK_AMOUNT = 500000000;
+        const CLUB_ENTRY_FEE = 1000000000000; // 1 Trillion one-time membership fee
         let clubState = { game: 'blackjack', bjDeck: [], bjPlayerHand: [], bjDealerHand: [], bjBet: 0, bjPhase: 'bet', crashMultiplier: 1, crashRunning: false, crashInterval: null, crashBet: 0, crashCashedOut: false };
 
         function renderClub() {
@@ -5767,21 +6018,46 @@ What is your experience?"></textarea></div>
             const unlocked = document.getElementById('club-unlocked-screen');
             const nwEl = document.getElementById('club-nw-display');
             const bar = document.getElementById('club-progress-bar');
+            const paySection = document.getElementById('club-pay-section');
             if (nwEl) nwEl.textContent = '$' + formatNum(nw);
             if (bar) bar.style.width = Math.min(100, (nw / CLUB_UNLOCK_AMOUNT) * 100) + '%';
             const navItem = document.getElementById('club-nav-item');
-            if (nw >= CLUB_UNLOCK_AMOUNT) {
+            // Check if already paid membership fee
+            if (state.player.clubPaid) {
                 if (locked) locked.style.display = 'none';
                 if (unlocked) unlocked.style.display = 'block';
                 if (!state.player.clubBalance) state.player.clubBalance = 0;
                 if (navItem) navItem.textContent = 'The Club 🎰';
                 updateClubBalanceDisplay();
                 switchClubGame(clubState.game);
+            } else if (nw >= CLUB_UNLOCK_AMOUNT) {
+                // Net worth met but not paid yet — show pay button
+                if (locked) locked.style.display = 'flex';
+                if (unlocked) unlocked.style.display = 'none';
+                if (paySection) paySection.style.display = 'block';
+                if (navItem) navItem.textContent = 'The Club 💳';
             } else {
                 if (locked) locked.style.display = 'flex';
                 if (unlocked) unlocked.style.display = 'none';
+                if (paySection) paySection.style.display = 'none';
                 if (navItem) navItem.textContent = 'The Club 🔒';
             }
+        }
+
+        function payClubEntry() {
+            const nw = calcNetWorth();
+            if (nw < CLUB_UNLOCK_AMOUNT) {
+                showToast('Not Eligible', 'You need $500M net worth first', 'danger'); return;
+            }
+            if (state.player.cash < CLUB_ENTRY_FEE) {
+                showToast('Insufficient Cash', 'You need $1T cash to pay the membership fee', 'danger'); return;
+            }
+            state.player.cash -= CLUB_ENTRY_FEE;
+            state.player.clubPaid = true;
+            if (!state.player.clubBalance) state.player.clubBalance = 0;
+            addActivity(`Day ${state.player.day}`, 'Paid $1T membership fee to join The Club!', 'success');
+            showToast('Welcome to The Club!', 'You are now a VIP member!', 'success');
+            saveGame(); updateUI(); renderClub();
         }
 
         function updateClubBalanceDisplay() {
