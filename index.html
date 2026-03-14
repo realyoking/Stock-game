@@ -576,8 +576,8 @@
             <p id="ban-reason-text" style="margin-bottom:1rem; color:var(--text-main);"></p>
             <p id="ban-expiry-text" style="margin-bottom:2rem; color:var(--text-muted); font-size:0.9rem;"></p>
             <div style="border-top:1px solid var(--border); padding-top:1.5rem;">
-                <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem;">If you think this is a mistake, contact us!</p>
-                <a href="https://discord.gg/tradelife" target="_blank" class="btn btn-primary" style="width:100%;">Contact Support</a>
+                <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem;">If you think this is a mistake, you can appeal your ban directly below.</p>
+                <button class="btn btn-primary" style="width:100%;" onclick="document.getElementById('ban-screen').classList.add('hidden'); switchTab('support'); document.getElementById('support-category').value='ban_appeal'; document.getElementById('support-subject').value='Ban Appeal'; setTimeout(()=>document.getElementById('support-message').focus(),200);">Appeal This Ban</button>
             </div>
         </div>
     </div>
@@ -633,6 +633,7 @@
                 <div class="nav-item" onclick="switchTab('leaderboard')" style="color:var(--warning)">Leaderboard</div>
                 <div class="nav-item" onclick="switchTab('search')" style="color:#38bdf8">Search Players</div>
                 <div class="nav-item" onclick="switchTab('profile')" style="color:var(--brand);border-top:1px solid var(--border);margin-top:auto;padding-top:1rem">Profile</div>
+                <div class="nav-item" onclick="switchTab('support')" style="color:#06b6d4;margin-top:0.25rem">📩 Contact Us</div>
                 <div class="nav-item hidden" id="admin-nav-item" onclick="switchTab('admin')" style="color:#ff0080;background:rgba(255,0,128,0.1);border:1px solid rgba(255,0,128,0.3);margin-top:0.5rem">⚙️ Admin Panel</div>
             </div>
             <div class="sidebar-stats">
@@ -671,6 +672,32 @@
                         <div class="widget"><div class="widget-title">Portfolio</div><div class="widget-value" id="dash-portfolio">$0</div></div>
                         <div class="widget"><div class="widget-title">Crypto</div><div class="widget-value" id="dash-crypto">$0</div></div>
                     </div>
+
+                    <!-- Moderation History Section -->
+                    <div id="dash-moderation-section" style="margin-bottom:2rem;display:none">
+                        <h3 style="margin-bottom:1rem">🛡️ Moderation History</h3>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem">
+                            <div class="widget" style="border-left:4px solid var(--warning)">
+                                <div class="widget-title" style="color:var(--warning)">⚠️ Total Warnings</div>
+                                <div class="widget-value" id="dash-warn-count" style="color:var(--warning)">0</div>
+                                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.25rem">Issued by admins</div>
+                            </div>
+                            <div class="widget" style="border-left:4px solid var(--danger)">
+                                <div class="widget-title" style="color:var(--danger)">🚫 Total Bans</div>
+                                <div class="widget-value" id="dash-ban-count" style="color:var(--danger)">0</div>
+                                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.25rem">Historical ban count</div>
+                            </div>
+                            <div class="widget" style="border-left:4px solid var(--brand)">
+                                <div class="widget-title">📊 Account Status</div>
+                                <div class="widget-value" id="dash-account-status" style="font-size:1rem;color:var(--success)">Good Standing</div>
+                                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.25rem">Current status</div>
+                            </div>
+                        </div>
+                        <div style="margin-top:0.75rem;padding:0.75rem 1rem;background:var(--bg-panel);border-radius:8px;border:1px solid var(--border);font-size:0.8rem;color:var(--text-muted)">
+                            💡 This section reflects your moderation history for transparency. If you believe any action was taken in error, use <a href="#" onclick="switchTab('support');return false;" style="color:#06b6d4;text-decoration:none">Contact Support</a> to appeal.
+                        </div>
+                    </div>
+
                     <h3>Recent Activity</h3>
                     <table class="data-table">
                         <thead><tr><th>Day</th><th>Event</th><th>Status</th></tr></thead>
@@ -1194,7 +1221,7 @@ What is your experience?"></textarea></div>
                         <button class="btn btn-secondary" onclick="resetGame()" style="width:100%;background:var(--danger);color:white">⚠️ Reset All Data</button>
                     </div>
                 </div>
-            </div>       </div>
+            </div>
 
             <!-- Admin Panel Tab -->
             <div id="admin" class="tab-panel" style="max-height:calc(100vh - 150px);overflow-y:auto;padding-right:10px">
@@ -1212,6 +1239,7 @@ What is your experience?"></textarea></div>
                     <button class="btn btn-secondary" id="atab-players" onclick="switchAdminTab('players')" style="font-size:0.85rem">👤 Player Control</button>
                     <button class="btn btn-secondary" id="atab-stocks" onclick="switchAdminTab('stocks')" style="font-size:0.85rem">📈 Stock Prices</button>
                     <button class="btn btn-secondary" id="atab-crypto" onclick="switchAdminTab('crypto')" style="font-size:0.85rem">🪙 Crypto Prices</button>
+                    <button class="btn btn-secondary" id="atab-support" onclick="switchAdminTab('support')" style="font-size:0.85rem">📩 Support Messages</button>
                 </div>
 
                 <!-- Announcements Sub-Panel -->
@@ -1431,12 +1459,71 @@ What is your experience?"></textarea></div>
                         </div>
                     </div>
                 </div>
+                <!-- Support Messages Sub-Panel -->
+                <div id="admin-panel-support" class="admin-sub-panel" style="display:none">
+                    <div class="widget">
+                        <h3 style="margin-bottom:0.5rem;color:#ff0080">📩 Player Support Messages</h3>
+                        <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1.5rem">View and manage all incoming support messages from players. Click a sender to jump to their profile.</p>
+                        <div style="display:flex;gap:0.75rem;margin-bottom:1.5rem;flex-wrap:wrap;align-items:center">
+                            <input type="text" id="admin-support-search" placeholder="Search by username or subject..." oninput="adminFilterSupportMessages()" style="flex:1;min-width:200px;padding:0.6rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem">
+                            <select id="admin-support-category" onchange="adminFilterSupportMessages()" style="padding:0.6rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem">
+                                <option value="all">All Categories</option>
+                                <option value="ban_appeal">Ban Appeal</option>
+                                <option value="bug_report">Bug Report</option>
+                                <option value="general">General Inquiry</option>
+                                <option value="other">Other</option>
+                            </select>
+                            <button class="btn btn-secondary" onclick="adminLoadSupportMessages()" style="font-size:0.85rem">🔄 Refresh</button>
+                        </div>
+                        <div id="admin-support-list" style="max-height:600px;overflow-y:auto">
+                            <div style="color:var(--text-muted);text-align:center;padding:2rem;font-size:0.9rem">Loading messages...</div>
+                        </div>
+                    </div>
+                </div>
             </div>
+            <!-- Contact Us / Support Tab -->
+                <div id="support" class="tab-panel">
+                    <h2 style="margin-bottom:0.5rem">📩 Contact Support</h2>
+                    <p style="color:var(--text-muted);margin-bottom:2rem;font-size:0.9rem">Need help? Submit a support message below. Our team will review it as soon as possible. You can use this to appeal a ban, report a bug, or ask a general question.</p>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;max-width:900px">
+                        <!-- Submit Form -->
+                        <div class="widget">
+                            <h3 style="margin-bottom:1.5rem;color:#06b6d4">📝 New Support Message</h3>
+                            <div style="margin-bottom:1rem">
+                                <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:0.5rem;font-weight:700">CATEGORY</label>
+                                <select id="support-category" style="width:100%;padding:0.75rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.95rem">
+                                    <option value="ban_appeal">🚫 Ban Appeal</option>
+                                    <option value="bug_report">🐛 Bug Report</option>
+                                    <option value="general">❓ General Inquiry</option>
+                                    <option value="other">💬 Other</option>
+                                </select>
+                            </div>
+                            <div style="margin-bottom:1rem">
+                                <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:0.5rem;font-weight:700">SUBJECT</label>
+                                <input type="text" id="support-subject" placeholder="Brief summary of your issue..." style="width:100%;padding:0.75rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.95rem">
+                            </div>
+                            <div style="margin-bottom:1.5rem">
+                                <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:0.5rem;font-weight:700">MESSAGE</label>
+                                <textarea id="support-message" placeholder="Describe your issue in detail. If appealing a ban, explain why you believe it was a mistake..." rows="6" style="width:100%;padding:0.75rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.95rem;resize:vertical;font-family:inherit"></textarea>
+                            </div>
+                            <button class="btn btn-primary" onclick="submitSupportMessage()" style="width:100%;padding:0.9rem;font-size:1rem;background:linear-gradient(135deg,#06b6d4,#3b82f6)">📤 Send Message</button>
+                            <div id="support-submit-status" style="margin-top:1rem;font-size:0.85rem;text-align:center"></div>
+                        </div>
+                        <!-- My Previous Messages -->
+                        <div class="widget">
+                            <h3 style="margin-bottom:1.5rem;color:#06b6d4">📂 My Previous Messages</h3>
+                            <div id="support-my-messages">
+                                <div style="color:var(--text-muted);text-align:center;padding:2rem;font-size:0.9rem">Sign in to view your messages</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><!-- end content-area -->
 
             <!-- News Ticker -->
             <div class="news-ticker"><div class="news-ticker-inner" id="news-ticker-text">Loading news...</div></div>
-        </div>
-    </div>
+        </div><!-- end main-content -->
+    </div><!-- end app-layout -->
 
     <!-- Debt Lock Screen -->
     <div id="debt-lock-screen" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9998;align-items:center;justify-content:center;flex-direction:column">
@@ -4226,9 +4313,10 @@ What is your experience?"></textarea></div>
             });
             document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
             document.getElementById(tab).classList.add('active');
-            const titles = { dashboard:'Dashboard', market:'Stock Market', portfolio:'Portfolio', career:'Career', company:'Company Management', properties:'Real Estate', lifestyle:'Lifestyle', banking:'Banking', blackmarket:'Black Market', crypto:'Cryptocurrency', education:'Education', achievements:'Achievements', aibot:'AI Invest Bot', club:'The Club', search:'Search Players', leaderboard:'Leaderboard', profile:'Profile & Settings', admin:'⚙️ Admin Panel' };
+            const titles = { dashboard:'Dashboard', market:'Stock Market', portfolio:'Portfolio', career:'Career', company:'Company Management', properties:'Real Estate', lifestyle:'Lifestyle', banking:'Banking', blackmarket:'Black Market', crypto:'Cryptocurrency', education:'Education', achievements:'Achievements', aibot:'AI Invest Bot', club:'The Club', search:'Search Players', leaderboard:'Leaderboard', profile:'Profile & Settings', admin:'⚙️ Admin Panel', support:'📩 Contact Support' };
             document.getElementById('tab-title').textContent = titles[tab] || tab;
             renderAll();
+            if (tab === 'support') loadMySupportMessages();
         }
 
         function toggleTheme() {
@@ -4269,6 +4357,8 @@ What is your experience?"></textarea></div>
             document.getElementById('dash-debt').textContent = '$' + formatNum(state.player.debt);
             document.getElementById('dash-portfolio').textContent = '$' + formatNum(portfolioVal);
             document.getElementById('dash-crypto').textContent = '$' + formatNum(cryptoVal);
+            // Moderation History
+            renderModerationHistory();
             const tbody = document.getElementById('activity-log');
             if (state.player.activityLog.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-muted)">No activity yet</td></tr>';
@@ -7547,7 +7637,7 @@ What is your experience?"></textarea></div>
         }
 
         function switchAdminTab(tab) {
-            ['announce', 'players', 'stocks', 'crypto'].forEach(t => {
+            ['announce', 'players', 'stocks', 'crypto', 'support'].forEach(t => {
                 const panel = document.getElementById('admin-panel-' + t);
                 const btn = document.getElementById('atab-' + t);
                 if (panel) panel.style.display = t === tab ? '' : 'none';
@@ -7558,6 +7648,7 @@ What is your experience?"></textarea></div>
             if (tab === 'stocks') adminRenderStocksTable();
             if (tab === 'crypto') adminRenderCryptoTable();
             if (tab === 'announce') adminLoadAnnouncementHistory();
+            if (tab === 'support') adminLoadSupportMessages();
         }
 
         // ---- ANNOUNCEMENTS ----
@@ -7921,7 +8012,15 @@ What is your experience?"></textarea></div>
             const reason = document.getElementById('admin-warn-reason').value.trim();
             if (!reason) { showToast('Error', 'Enter a reason', 'danger'); return; }
             try {
-                await window.fbMethods.updateDoc(window.fbMethods.doc(window.fbDb, 'users', adminCurrentPlayerUid), { pendingWarning: reason });
+                const userRef = window.fbMethods.doc(window.fbDb, 'users', adminCurrentPlayerUid);
+                const snap = await window.fbMethods.getDoc(userRef);
+                const currentWarnCount = (snap.exists() ? (snap.data().warningCount || 0) : 0);
+                await window.fbMethods.updateDoc(userRef, {
+                    pendingWarning: reason,
+                    warningCount: currentWarnCount + 1,
+                    lastWarningAt: new Date().toISOString(),
+                    lastWarningReason: reason
+                });
                 showToast('Success', 'Warning sent to player', 'success');
                 document.getElementById('admin-warn-modal').classList.add('hidden');
             } catch(e) { showToast('Error', e.message, 'danger'); }
@@ -7941,10 +8040,16 @@ What is your experience?"></textarea></div>
             const expiry = duration === 0 ? 0 : Date.now() + (duration * 1000);
             
             try {
-                await window.fbMethods.updateDoc(window.fbMethods.doc(window.fbDb, 'users', adminCurrentPlayerUid), { 
+                const userRef = window.fbMethods.doc(window.fbDb, 'users', adminCurrentPlayerUid);
+                const snap = await window.fbMethods.getDoc(userRef);
+                const currentBanCount = (snap.exists() ? (snap.data().banCount || 0) : 0);
+                await window.fbMethods.updateDoc(userRef, { 
                     isBanned: true, 
                     banReason: reason, 
-                    banExpiry: expiry 
+                    banExpiry: expiry,
+                    banCount: currentBanCount + 1,
+                    lastBanAt: new Date().toISOString(),
+                    lastBanReason: reason
                 });
                 showToast('Success', 'Player has been banned', 'danger');
                 document.getElementById('admin-ban-modal').classList.add('hidden');
@@ -8292,6 +8397,202 @@ What is your experience?"></textarea></div>
                 }).join('');
                 }
             }).catch(() => {});
+        }
+
+        // ===================== SUPPORT MESSAGE SYSTEM =====================
+
+        async function submitSupportMessage() {
+            const user = window.fbAuth ? window.fbAuth.currentUser : null;
+            if (!user) { showToast('Not Signed In', 'You must be logged in to send a message', 'danger'); return; }
+            const category = document.getElementById('support-category').value;
+            const subject = document.getElementById('support-subject').value.trim();
+            const message = document.getElementById('support-message').value.trim();
+            const statusEl = document.getElementById('support-submit-status');
+            if (!subject) { showToast('Error', 'Please enter a subject', 'danger'); return; }
+            if (!message || message.length < 10) { showToast('Error', 'Please enter a message (at least 10 characters)', 'danger'); return; }
+            statusEl.innerHTML = '<span style="color:var(--text-muted)">Sending...</span>';
+            try {
+                const msgData = {
+                    uid: user.uid,
+                    username: state._currentUsername || user.displayName || user.email || 'Unknown',
+                    email: user.email || '',
+                    category,
+                    subject,
+                    message,
+                    createdAt: new Date().toISOString(),
+                    status: 'open'
+                };
+                await window.fbMethods.addDoc(window.fbMethods.collection(window.fbDb, 'support_messages'), msgData);
+                document.getElementById('support-subject').value = '';
+                document.getElementById('support-message').value = '';
+                statusEl.innerHTML = '<span style="color:var(--success)">&#10003; Message sent! Our team will review it shortly.</span>';
+                showToast('Message Sent!', 'Support team will review your message', 'success');
+                loadMySupportMessages();
+            } catch(e) {
+                statusEl.innerHTML = '<span style="color:var(--danger)">Failed to send: ' + e.message + '</span>';
+                showToast('Error', 'Failed to send message: ' + e.message, 'danger');
+            }
+        }
+
+        async function loadMySupportMessages() {
+            const user = window.fbAuth ? window.fbAuth.currentUser : null;
+            const container = document.getElementById('support-my-messages');
+            if (!container) return;
+            if (!user) {
+                container.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:2rem;font-size:0.9rem">Sign in to view your messages</div>';
+                return;
+            }
+            container.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem">Loading...</div>';
+            try {
+                const ref = window.fbMethods.collection(window.fbDb, 'support_messages');
+                const q = window.fbMethods.query(ref, window.fbMethods.where('uid', '==', user.uid), window.fbMethods.orderBy('createdAt', 'desc'), window.fbMethods.limit(10));
+                const snap = await window.fbMethods.getDocs(q);
+                if (snap.empty) {
+                    container.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:2rem;font-size:0.9rem">No messages yet. Use the form to contact support.</div>';
+                    return;
+                }
+                const catLabels = { ban_appeal: '&#128683; Ban Appeal', bug_report: '&#128027; Bug Report', general: '&#10067; General', other: '&#128172; Other' };
+                const catColors = { ban_appeal: 'var(--danger)', bug_report: 'var(--warning)', general: 'var(--brand)', other: 'var(--text-muted)' };
+                container.innerHTML = snap.docs.map(d => {
+                    const m = d.data();
+                    const time = m.createdAt ? new Date(m.createdAt).toLocaleString() : 'Unknown';
+                    const cat = catLabels[m.category] || m.category;
+                    const col = catColors[m.category] || 'var(--text-muted)';
+                    const statusColor = m.status === 'resolved' ? 'var(--success)' : m.status === 'in_review' ? 'var(--warning)' : 'var(--brand)';
+                    const statusLabel = m.status === 'resolved' ? '&#10003; Resolved' : m.status === 'in_review' ? '&#128269; In Review' : '&#128338; Open';
+                    return `<div style="background:var(--bg-panel);border:1px solid var(--border);border-left:3px solid ${col};border-radius:8px;padding:1rem;margin-bottom:0.75rem">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.5rem;gap:0.5rem;flex-wrap:wrap">
+                            <div style="font-weight:700;font-size:0.9rem">${m.subject}</div>
+                            <span style="font-size:0.7rem;padding:0.2rem 0.5rem;border-radius:4px;background:rgba(0,0,0,0.2);color:${statusColor};white-space:nowrap">${statusLabel}</span>
+                        </div>
+                        <div style="font-size:0.75rem;color:${col};margin-bottom:0.5rem">${cat}</div>
+                        <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem;line-height:1.4">${m.message.length > 120 ? m.message.substring(0,120)+'...' : m.message}</div>
+                        <div style="font-size:0.75rem;color:var(--text-muted)">${time}</div>
+                    </div>`;
+                }).join('');
+            } catch(e) {
+                container.innerHTML = '<div style="color:var(--danger);font-size:0.85rem">Error loading messages: ' + e.message + '</div>';
+            }
+        }
+
+        // ---- ADMIN: LOAD & MANAGE SUPPORT MESSAGES ----
+        let allSupportMessages = [];
+
+        async function adminLoadSupportMessages() {
+            if (!isAdmin()) return;
+            const container = document.getElementById('admin-support-list');
+            if (!container) return;
+            container.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:2rem">Loading...</div>';
+            try {
+                const ref = window.fbMethods.collection(window.fbDb, 'support_messages');
+                const q = window.fbMethods.query(ref, window.fbMethods.orderBy('createdAt', 'desc'), window.fbMethods.limit(100));
+                const snap = await window.fbMethods.getDocs(q);
+                allSupportMessages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                adminRenderSupportMessages(allSupportMessages);
+            } catch(e) {
+                container.innerHTML = '<div style="color:var(--danger);font-size:0.85rem">Error: ' + e.message + '</div>';
+            }
+        }
+
+        function adminFilterSupportMessages() {
+            const search = (document.getElementById('admin-support-search') || {}).value || '';
+            const cat = (document.getElementById('admin-support-category') || {}).value || 'all';
+            const filtered = allSupportMessages.filter(m => {
+                const matchSearch = !search || (m.username || '').toLowerCase().includes(search.toLowerCase()) || (m.subject || '').toLowerCase().includes(search.toLowerCase());
+                const matchCat = cat === 'all' || m.category === cat;
+                return matchSearch && matchCat;
+            });
+            adminRenderSupportMessages(filtered);
+        }
+
+        function adminRenderSupportMessages(messages) {
+            const container = document.getElementById('admin-support-list');
+            if (!container) return;
+            if (messages.length === 0) {
+                container.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:3rem;font-size:0.9rem">No support messages found.</div>';
+                return;
+            }
+            const catLabels = { ban_appeal: '&#128683; Ban Appeal', bug_report: '&#128027; Bug Report', general: '&#10067; General', other: '&#128172; Other' };
+            const catColors = { ban_appeal: '#ef4444', bug_report: '#f59e0b', general: '#3b82f6', other: '#a1a1aa' };
+            container.innerHTML = messages.map(m => {
+                const time = m.createdAt ? new Date(m.createdAt).toLocaleString() : 'Unknown';
+                const cat = catLabels[m.category] || m.category;
+                const col = catColors[m.category] || '#a1a1aa';
+                return `<div style="background:var(--bg-panel);border:1px solid var(--border);border-left:4px solid ${col};border-radius:10px;padding:1.25rem;margin-bottom:1rem">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.75rem;gap:0.5rem;flex-wrap:wrap">
+                        <div>
+                            <div style="font-weight:700;font-size:1rem;margin-bottom:0.2rem">${m.subject}</div>
+                            <div style="font-size:0.75rem;color:${col};margin-bottom:0.2rem">${cat}</div>
+                            <div style="font-size:0.8rem;color:var(--text-muted)">${time}</div>
+                        </div>
+                        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:flex-start">
+                            <button onclick="adminViewSupportSender('${m.uid}')" class="btn btn-secondary" style="font-size:0.75rem;padding:0.3rem 0.6rem;color:#06b6d4;border-color:#06b6d4">&#128100; View Player</button>
+                            <button onclick="adminDeleteSupportMessage('${m.id}')" class="btn btn-danger" style="font-size:0.75rem;padding:0.3rem 0.6rem">&#128465; Delete</button>
+                        </div>
+                    </div>
+                    <div style="background:var(--bg-base);border:1px solid var(--border);border-radius:8px;padding:0.75rem;margin-bottom:0.75rem;font-size:0.9rem;line-height:1.6;color:var(--text-main)">${m.message}</div>
+                    <div style="display:flex;gap:1rem;font-size:0.8rem;color:var(--text-muted);flex-wrap:wrap">
+                        <span>&#128100; <strong style="color:var(--text-main)">${m.username || 'Unknown'}</strong></span>
+                        <span>&#9993; ${m.email || 'No email'}</span>
+                        <span>&#128273; UID: <code style="font-size:0.75rem;color:var(--brand)">${m.uid || '?'}</code></span>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        async function adminDeleteSupportMessage(msgId) {
+            if (!isAdmin()) return;
+            if (!confirm('Delete this support message? This cannot be undone.')) return;
+            try {
+                await window.fbMethods.deleteDoc(window.fbMethods.doc(window.fbDb, 'support_messages', msgId));
+                allSupportMessages = allSupportMessages.filter(m => m.id !== msgId);
+                adminFilterSupportMessages();
+                showToast('Deleted', 'Support message removed', 'success');
+            } catch(e) { showToast('Error', e.message, 'danger'); }
+        }
+
+        function adminViewSupportSender(uid) {
+            if (!uid) return;
+            switchTab('admin');
+            switchAdminTab('players');
+            adminLoadPlayer(uid);
+        }
+
+        // ===================== MODERATION HISTORY (DASHBOARD) =====================
+
+        async function renderModerationHistory() {
+            const user = window.fbAuth ? window.fbAuth.currentUser : null;
+            const section = document.getElementById('dash-moderation-section');
+            if (!section) return;
+            if (!user) { section.style.display = 'none'; return; }
+            try {
+                const snap = await window.fbMethods.getDoc(window.fbMethods.doc(window.fbDb, 'users', user.uid));
+                if (!snap.exists()) { section.style.display = 'none'; return; }
+                const data = snap.data();
+                const warnCount = data.warningCount || 0;
+                const banCount = data.banCount || 0;
+                const isBanned = data.isBanned || false;
+                if (warnCount > 0 || banCount > 0 || isBanned) {
+                    section.style.display = '';
+                    document.getElementById('dash-warn-count').textContent = warnCount;
+                    document.getElementById('dash-ban-count').textContent = banCount;
+                    const statusEl = document.getElementById('dash-account-status');
+                    if (isBanned) {
+                        statusEl.textContent = 'Currently Banned';
+                        statusEl.style.color = 'var(--danger)';
+                    } else if (warnCount >= 3) {
+                        statusEl.textContent = 'Under Review';
+                        statusEl.style.color = 'var(--warning)';
+                    } else {
+                        statusEl.textContent = 'Good Standing';
+                        statusEl.style.color = 'var(--success)';
+                    }
+                } else {
+                    section.style.display = 'none';
+                }
+            } catch(e) {
+                section.style.display = 'none';
+            }
         }
 
         // ---- SYNC GLOBAL MARKET PRICES FROM RTDB (for all players) ----
