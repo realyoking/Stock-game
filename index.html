@@ -440,32 +440,123 @@
 
     <!-- Nuke Modal -->
     <div id="nuke-modal" class="modal-overlay hidden">
-        <div class="modal-content" style="max-width:500px">
+        <div class="modal-content" style="max-width:540px">
             <div class="modal-header">💣 Launch Nuclear Strike</div>
             <div style="margin-bottom:1.5rem">
+                <!-- Step 1: Select Player -->
                 <div style="margin-bottom:1rem">
-                    <label style="display:block;margin-bottom:0.5rem;color:var(--text-muted);font-size:0.85rem;text-transform:uppercase;font-weight:700">Select Target Player</label>
+                    <label style="display:block;margin-bottom:0.5rem;color:var(--text-muted);font-size:0.85rem;text-transform:uppercase;font-weight:700">1. Select Target Player</label>
                     <select id="nuke-player-select" style="width:100%;padding:0.75rem;background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem;cursor:pointer">
                         <option value="">-- Choose a player --</option>
                     </select>
                 </div>
-                <div style="margin-bottom:1rem">
-                    <label style="display:block;margin-bottom:0.5rem;color:var(--text-muted);font-size:0.85rem;text-transform:uppercase;font-weight:700">Select Target City</label>
+                <!-- Step 2: Select Planet -->
+                <div style="margin-bottom:1rem;display:none" id="nuke-planet-section">
+                    <label style="display:block;margin-bottom:0.5rem;color:var(--text-muted);font-size:0.85rem;text-transform:uppercase;font-weight:700">2. Select Target Planet</label>
+                    <select id="nuke-planet-select" style="width:100%;padding:0.75rem;background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem;cursor:pointer">
+                        <option value="">-- Choose a planet --</option>
+                    </select>
+                </div>
+                <!-- Step 3: Strike Type -->
+                <div style="margin-bottom:1rem;display:none" id="nuke-strike-section">
+                    <label style="display:block;margin-bottom:0.5rem;color:var(--text-muted);font-size:0.85rem;text-transform:uppercase;font-weight:700">3. Strike Type</label>
+                    <select id="nuke-strike-type" onchange="updateNukeTargetOptions()" style="width:100%;padding:0.75rem;background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem;cursor:pointer">
+                        <option value="country">🎯 Specific Country</option>
+                        <option value="city">🏙️ Specific City</option>
+                        <option value="entire_planet">💥 Entire Planet (Devastating)</option>
+                    </select>
+                </div>
+                <!-- Step 4: Select Country/City -->
+                <div style="margin-bottom:1rem;display:none" id="nuke-target-section">
+                    <label style="display:block;margin-bottom:0.5rem;color:var(--text-muted);font-size:0.85rem;text-transform:uppercase;font-weight:700" id="nuke-target-label">4. Select Target Country</label>
                     <select id="nuke-city-select" style="width:100%;padding:0.75rem;background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem;cursor:pointer">
-                        <option value="">-- Choose a city --</option>
+                        <option value="">-- Choose a target --</option>
                     </select>
                 </div>
                 <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;border:1px solid var(--border);font-size:0.85rem;color:var(--text-muted)">
-                    <div style="margin-bottom:0.5rem"><strong>Cost & Effects:</strong></div>
+                    <div style="margin-bottom:0.5rem"><strong>Cost &amp; Effects:</strong></div>
                     <div style="color:var(--danger);font-weight:700;margin-bottom:0.25rem">💸 Cost: $5,000,000,000,000 (5T)</div>
                     <div>💰 Company stock: -50% (if public)</div>
-                    <div>📉 All stocks & crypto: -50% for 10 mins</div>
+                    <div>📉 All stocks &amp; crypto: -50% for 10 mins</div>
                     <div>🔔 Target receives notification</div>
                 </div>
             </div>
             <div class="modal-buttons">
                 <button class="btn btn-secondary" onclick="closeNukeModal()">Cancel</button>
                 <button class="btn btn-danger" onclick="executeNuke()" style="background:linear-gradient(135deg,#ef4444,#dc2626)">💣 Launch Nuke</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Planet Management Modal -->
+    <div id="planet-management-modal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width:600px">
+            <div class="modal-header">🪐 Planet Management</div>
+            <div id="planet-management-content">
+                <!-- Planets list rendered by JS -->
+            </div>
+            <div style="margin-top:1rem;padding:1rem;background:var(--bg-panel);border-radius:8px;border:1px solid var(--border)">
+                <h4 style="margin-bottom:0.75rem;color:var(--brand)">Buy a New Planet</h4>
+                <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:0.75rem">Cost: <strong style="color:var(--warning)">100T</strong> per planet. Each planet is tracked individually.</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem">
+                    <div>
+                        <label style="display:block;color:var(--text-muted);font-size:0.8rem;margin-bottom:0.4rem">Planet Name</label>
+                        <input type="text" id="new-planet-name" placeholder="e.g. Nova Prime" style="width:100%;padding:0.6rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem">
+                    </div>
+                    <div>
+                        <label style="display:block;color:var(--text-muted);font-size:0.8rem;margin-bottom:0.4rem">Planet Type</label>
+                        <select id="new-planet-type" style="width:100%;padding:0.6rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem">
+                            <option value="Earth-like">🌍 Earth-like</option>
+                            <option value="Desert">🏜️ Desert</option>
+                            <option value="Ice">❄️ Ice</option>
+                            <option value="Volcanic">🌋 Volcanic</option>
+                            <option value="Oceanic">🌊 Oceanic</option>
+                            <option value="Gaseous">🌫️ Gaseous</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="buyNewPlanet()" style="width:100%">🪐 Purchase Planet (100T)</button>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="document.getElementById('planet-management-modal').classList.add('hidden')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Planet Edit Modal -->
+    <div id="planet-edit-modal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width:420px">
+            <div class="modal-header">✏️ Edit Planet</div>
+            <input type="hidden" id="planet-edit-id">
+            <div style="margin-bottom:1rem">
+                <label style="display:block;color:var(--text-muted);font-size:0.85rem;margin-bottom:0.5rem">Planet Name</label>
+                <input type="text" id="planet-edit-name" placeholder="Planet name..." style="width:100%;padding:0.75rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem">
+            </div>
+            <div style="margin-bottom:1.5rem">
+                <label style="display:block;color:var(--text-muted);font-size:0.85rem;margin-bottom:0.5rem">Planet Type</label>
+                <select id="planet-edit-type" style="width:100%;padding:0.75rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem">
+                    <option value="Earth-like">🌍 Earth-like</option>
+                    <option value="Desert">🏜️ Desert</option>
+                    <option value="Ice">❄️ Ice</option>
+                    <option value="Volcanic">🌋 Volcanic</option>
+                    <option value="Oceanic">🌊 Oceanic</option>
+                    <option value="Gaseous">🌫️ Gaseous</option>
+                </select>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="document.getElementById('planet-edit-modal').classList.add('hidden')">Cancel</button>
+                <button class="btn btn-primary" onclick="savePlanetEdit()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Planet Cities Modal -->
+    <div id="planet-cities-modal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width:500px">
+            <div class="modal-header">🏙️ City Management</div>
+            <div id="planet-cities-content"></div>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="document.getElementById('planet-cities-modal').classList.add('hidden')">Close</button>
             </div>
         </div>
     </div>
@@ -577,7 +668,7 @@
             <p id="ban-expiry-text" style="margin-bottom:2rem; color:var(--text-muted); font-size:0.9rem;"></p>
             <div style="border-top:1px solid var(--border); padding-top:1.5rem;">
                 <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem;">If you think this is a mistake, you can appeal your ban directly below.</p>
-                <button class="btn btn-primary" style="width:100%;" onclick="document.getElementById('ban-screen').classList.add('hidden'); switchTab('support'); document.getElementById('support-category').value='ban_appeal'; document.getElementById('support-subject').value='Ban Appeal'; setTimeout(()=>document.getElementById('support-message').focus(),200);">Appeal This Ban</button>
+                <button class="btn btn-primary" style="width:100%;" onclick="document.getElementById('ban-screen').classList.add('hidden'); switchTab('support'); setTimeout(() => { document.getElementById('support-category').value='ban_appeal'; document.getElementById('support-subject').value='Ban Appeal'; document.getElementById('support-message').focus(); }, 100);">Appeal This Ban</button>
             </div>
         </div>
     </div>
@@ -975,7 +1066,8 @@ What is your experience?"></textarea></div>
                                 <div id="map-planet-owned" style="display:none;background:linear-gradient(135deg,#ec4899,#f43f5e);padding:1rem;border-radius:8px;text-align:center">
                                     <div style="font-size:2rem;margin-bottom:0.5rem">👑</div>
                                     <div style="font-weight:700;color:#fff;margin-bottom:0.25rem">Planet Owner</div>
-                                    <p style="color:#fff;font-size:0.85rem">You own the entire planet!</p>
+                                    <p id="map-planet-count" style="color:#fff;font-size:0.85rem;margin-bottom:0.75rem">You own the entire planet!</p>
+                                    <button class="btn" onclick="openPlanetManagement()" style="background:rgba(0,0,0,0.3);color:#fff;border:1px solid rgba(255,255,255,0.4);width:100%;font-size:0.8rem;padding:0.5rem">🪐 Manage Planets</button>
                                 </div>
                                 <button class="btn btn-danger" onclick="openNukeModal()" style="width:100%;margin-top:1rem;background:linear-gradient(135deg,#ef4444,#dc2626);font-size:0.9rem;padding:0.75rem">💣 Launch Nuke</button>
                             </div>
@@ -1295,9 +1387,11 @@ What is your experience?"></textarea></div>
                                         <div id="admin-pd-username" style="color:var(--text-muted);font-size:0.9rem">@username</div>
                                         <div id="admin-pd-uid" style="color:var(--text-muted);font-size:0.75rem">UID: —</div>
                                     </div>
-                                    <div style="margin-left:auto; display:flex; gap:0.5rem;">
+                                    <div style="margin-left:auto; display:flex; gap:0.5rem; flex-wrap:wrap; justify-content: flex-end;">
                                         <button class="btn btn-warning" onclick="adminOpenWarnModal()" style="font-size:0.8rem">⚠️ Warn</button>
+                                        <button id="admin-unwarn-btn" class="btn btn-secondary" onclick="adminSubmitUnwarn()" style="font-size:0.8rem; display:none;">✅ Unwarn</button>
                                         <button class="btn btn-danger" onclick="adminOpenBanModal()" style="font-size:0.8rem">🚫 Ban</button>
+                                        <button id="admin-unban-btn" class="btn btn-success" onclick="adminSubmitUnban()" style="font-size:0.8rem; display:none;">🔓 Unban</button>
                                     </div>
                                 </div>
                                 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:1.5rem">
@@ -1385,9 +1479,15 @@ What is your experience?"></textarea></div>
                                 </div>
 
                                 <!-- Company Control -->
-                                <div style="background:var(--bg-panel);border-radius:12px;padding:1.25rem;border:1px solid var(--border)">
+                                <div style="background:var(--bg-panel);border-radius:12px;padding:1.25rem;border:1px solid var(--border);margin-bottom:1rem">
                                     <h4 style="margin-bottom:1rem;color:#ff0080">🏢 Company Control</h4>
                                     <div id="admin-companies-list"><div style="color:var(--text-muted);font-size:0.85rem">No companies found</div></div>
+                                </div>
+
+                                <!-- Planet Control -->
+                                <div style="background:var(--bg-panel);border-radius:12px;padding:1.25rem;border:1px solid var(--border)">
+                                    <h4 style="margin-bottom:1rem;color:#ff0080">🪐 Planet Control</h4>
+                                    <div id="admin-planet-control"><div style="color:var(--text-muted);font-size:0.85rem">No planets owned</div></div>
                                 </div>
                             </div>
                         </div>
@@ -2511,6 +2611,212 @@ What is your experience?"></textarea></div>
         ];
 
 
+        // ===================== COUNTRY TIER SYSTEM =====================
+        const COUNTRY_TIERS = {
+            'United States': {tier: 1, price: 1e26, income: 1e12, stockBoost: 0.10, companyBoost: 0.15},
+            'China': {tier: 1, price: 1e26, income: 1e12, stockBoost: 0.10, companyBoost: 0.15},
+            'Russia': {tier: 2, price: 1e24, income: 1e11, stockBoost: 0.05, companyBoost: 0.08},
+            'India': {tier: 2, price: 1e24, income: 1e11, stockBoost: 0.05, companyBoost: 0.08},
+            'South Korea': {tier: 2, price: 1e24, income: 1e11, stockBoost: 0.05, companyBoost: 0.08},
+            'France': {tier: 2, price: 1e24, income: 1e11, stockBoost: 0.05, companyBoost: 0.08},
+            'Japan': {tier: 2, price: 1e24, income: 1e11, stockBoost: 0.05, companyBoost: 0.08},
+            'United Kingdom': {tier: 2, price: 1e24, income: 1e11, stockBoost: 0.05, companyBoost: 0.08},
+            'Turkey': {tier: 2, price: 1e24, income: 1e11, stockBoost: 0.05, companyBoost: 0.08},
+            'Italy': {tier: 2, price: 1e24, income: 1e11, stockBoost: 0.05, companyBoost: 0.08},
+            'Germany': {tier: 2, price: 1e24, income: 1e11, stockBoost: 0.05, companyBoost: 0.08},
+            'Pakistan': {tier: 2, price: 1e24, income: 1e11, stockBoost: 0.05, companyBoost: 0.08},
+            'Brazil': {tier: 2, price: 1e24, income: 1e11, stockBoost: 0.05, companyBoost: 0.08},
+            'Indonesia': {tier: 2, price: 1e24, income: 1e11, stockBoost: 0.05, companyBoost: 0.08},
+            'Israel': {tier: 2, price: 1e24, income: 1e11, stockBoost: 0.05, companyBoost: 0.08},
+            'Egypt': {tier: 2, price: 1e24, income: 1e11, stockBoost: 0.05, companyBoost: 0.08},
+            'Australia': {tier: 2, price: 1e24, income: 1e11, stockBoost: 0.05, companyBoost: 0.08},
+            'Iran': {tier: 2, price: 1e24, income: 1e11, stockBoost: 0.05, companyBoost: 0.08},
+            'Ukraine': {tier: 2, price: 1e24, income: 1e11, stockBoost: 0.05, companyBoost: 0.08},
+            'Saudi Arabia': {tier: 2, price: 1e24, income: 1e11, stockBoost: 0.05, companyBoost: 0.08},
+            'Vietnam': {tier: 2, price: 1e24, income: 1e11, stockBoost: 0.05, companyBoost: 0.08},
+            'Canada': {tier: 2, price: 1e24, income: 1e11, stockBoost: 0.05, companyBoost: 0.08},
+            'Poland': {tier: 2, price: 1e24, income: 1e11, stockBoost: 0.05, companyBoost: 0.08},
+            'Spain': {tier: 2, price: 1e24, income: 1e11, stockBoost: 0.05, companyBoost: 0.08},
+            'South Korea': {tier: 2, price: 1e24, income: 1e11, stockBoost: 0.05, companyBoost: 0.08},
+            'Taiwan': {tier: 2, price: 1e24, income: 1e11, stockBoost: 0.05, companyBoost: 0.08},
+            'Mexico': {tier: 3, price: 1e22, income: 1e9, stockBoost: 0.02, companyBoost: 0.04},
+            'Thailand': {tier: 3, price: 1e22, income: 1e9, stockBoost: 0.02, companyBoost: 0.04},
+            'Algeria': {tier: 3, price: 1e22, income: 1e9, stockBoost: 0.02, companyBoost: 0.04},
+            'South Africa': {tier: 3, price: 1e22, income: 1e9, stockBoost: 0.02, companyBoost: 0.04},
+            'Netherlands': {tier: 3, price: 1e22, income: 1e9, stockBoost: 0.02, companyBoost: 0.04},
+            'Sweden': {tier: 3, price: 1e22, income: 1e9, stockBoost: 0.02, companyBoost: 0.04},
+            'Myanmar (formerly Burma)': {tier: 3, price: 1e22, income: 1e9, stockBoost: 0.02, companyBoost: 0.04},
+            'Singapore': {tier: 3, price: 1e22, income: 1e9, stockBoost: 0.02, companyBoost: 0.04},
+            'Nigeria': {tier: 3, price: 1e22, income: 1e9, stockBoost: 0.02, companyBoost: 0.04},
+            'Argentina': {tier: 3, price: 1e22, income: 1e9, stockBoost: 0.02, companyBoost: 0.04},
+            'Norway': {tier: 3, price: 1e22, income: 1e9, stockBoost: 0.02, companyBoost: 0.04},
+            'Switzerland': {tier: 3, price: 1e22, income: 1e9, stockBoost: 0.02, companyBoost: 0.04},
+            'Greece': {tier: 3, price: 1e22, income: 1e9, stockBoost: 0.02, companyBoost: 0.04},
+            'United Arab Emirates': {tier: 3, price: 1e22, income: 1e9, stockBoost: 0.02, companyBoost: 0.04},
+            'Iraq': {tier: 3, price: 1e22, income: 1e9, stockBoost: 0.02, companyBoost: 0.04},
+            'Portugal': {tier: 3, price: 1e22, income: 1e9, stockBoost: 0.02, companyBoost: 0.04},
+            'Romania': {tier: 3, price: 1e22, income: 1e9, stockBoost: 0.02, companyBoost: 0.04},
+            'Kazakhstan': {tier: 3, price: 1e22, income: 1e9, stockBoost: 0.02, companyBoost: 0.04},
+            'Colombia': {tier: 3, price: 1e22, income: 1e9, stockBoost: 0.02, companyBoost: 0.04},
+            'Chile': {tier: 3, price: 1e22, income: 1e9, stockBoost: 0.02, companyBoost: 0.04},
+            'Ethiopia': {tier: 3, price: 1e22, income: 1e9, stockBoost: 0.02, companyBoost: 0.04},
+            'Czechia (Czech Republic)': {tier: 3, price: 1e22, income: 1e9, stockBoost: 0.02, companyBoost: 0.04},
+            'Hungary': {tier: 3, price: 1e22, income: 1e9, stockBoost: 0.02, companyBoost: 0.04},
+            'Belgium': {tier: 3, price: 1e22, income: 1e9, stockBoost: 0.02, companyBoost: 0.04},
+            'Philippines': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Uzbekistan': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Finland': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Morocco': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Denmark': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Austria': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Qatar': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Bangladesh': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Belarus': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Peru': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Malaysia': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Angola': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Syria': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Azerbaijan': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Serbia': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Bulgaria': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Jordan': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Slovakia': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Sri Lanka': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Croatia': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Tunisia': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Sudan': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Kuwait': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Venezuela': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Oman': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Cuba': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Libya': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Democratic Republic of the Congo': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Ireland': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Georgia': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Turkmenistan': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Ecuador': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Kenya': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Lithuania': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Slovenia': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Bolivia': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Yemen': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Ghana': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Tanzania': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'New Zealand': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Uruguay': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Guatemala': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Latvia': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Costa Rica': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Bahrain': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Estonia': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Ivory Coast': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Uganda': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Dominican Republic': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Cameroon': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Panama': {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02},
+            'Afghanistan': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Lebanon': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Cyprus': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Zambia': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Honduras': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Paraguay': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Zimbabwe': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Cambodia': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Armenia': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Albania': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Mali': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'North Macedonia': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'El Salvador': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Senegal': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Kyrgyzstan': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Laos': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Nicaragua': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Bosnia and Herzegovina': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Moldova': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Mongolia': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Burkina Faso': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Congo (Congo-Brazzaville)': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Guinea': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Tajikistan': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Niger': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Chad': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Mozambique': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Namibia': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Botswana': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Gabon': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Rwanda': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Mauritius': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Jamaica': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Madagascar': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Trinidad and Tobago': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Malta': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Somalia': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Mauritania': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Malawi': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Benin': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Togo': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Sierra Leone': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'South Sudan': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Liberia': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Suriname': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Guyana': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Montenegro': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Luxembourg': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Iceland': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Palestine State': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
+            'Central African Republic': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Eswatini': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Burundi': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Lesotho': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Gambia': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Bhutan': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Guinea-Bissau': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Equatorial Guinea': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Fiji': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Eritrea': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Maldives': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Belize': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Bahamas': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Cabo Verde': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Barbados': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Djibouti': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Timor-Leste': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Seychelles': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Saint Lucia': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Antigua and Barbuda': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Comoros': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Solomon Islands': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Saint Vincent and the Grenadines': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Grenada': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Saint Kitts and Nevis': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Vanuatu': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Samoa': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Dominica': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Sao Tome and Principe': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Kiribati': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Micronesia': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Marshall Islands': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Tonga': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Andorra': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Liechtenstein': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'San Marino': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Monaco': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Palau': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Nauru': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Tuvalu': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Holy See': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Brunei': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Nepal': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Haiti': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Papua New Guinea': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005}
+        };
+
+        // Default tier for countries not in the list
+        function getCountryTier(country) {
+            if (COUNTRY_TIERS[country]) return COUNTRY_TIERS[country];
+            return {tier: 4, price: 1e20, income: 1e7, stockBoost: 0.01, companyBoost: 0.02}; // Default to Tier 4
+        }
+
         // ===================== WORLD COUNTRIES DATA =====================
         const WORLD_COUNTRIES = [
             'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Antigua and Barbuda', 'Argentina', 'Armenia', 'Australia', 'Austria',
@@ -2591,7 +2897,8 @@ What is your experience?"></textarea></div>
                 clubBalance: 0,
                 clubPaid: false,
                 countriesOwned: [],
-                planetOwned: false
+                planetOwned: false,
+                planets: []
             },
             stockPrices: {},
             cryptoPrices: {},
@@ -2982,6 +3289,7 @@ What is your experience?"></textarea></div>
                 if (state.player.clubPaid === undefined) state.player.clubPaid = false;
                 if (!state.player.countriesOwned) state.player.countriesOwned = [];
                 if (state.player.planetOwned === undefined) state.player.planetOwned = false;
+                if (!state.player.planets) state.player.planets = [];
                 
                 // Fill any missing prices and history
                 STOCKS.forEach(s => {
@@ -3052,6 +3360,7 @@ What is your experience?"></textarea></div>
                 if (state.player.clubPaid === undefined) state.player.clubPaid = false;
                 if (!state.player.countriesOwned) state.player.countriesOwned = [];
                 if (state.player.planetOwned === undefined) state.player.planetOwned = false;
+                if (!state.player.planets) state.player.planets = [];
                 // Fill missing prices
                 STOCKS.forEach(s => {
                     if (!state.stockPrices[s.ticker]) state.stockPrices[s.ticker] = s.basePrice;
@@ -3464,9 +3773,30 @@ What is your experience?"></textarea></div>
 
                 // Limit to top 10 matches and render
                 const topMatches = matches.slice(0, 10);
+                // Fetch planet data for each match
+                const matchesWithPlanets = await Promise.all(topMatches.map(async m => {
+                    try {
+                        const savesCol = window.fbMethods.collection(window.fbDb, 'users', m.uid, 'saves');
+                        const savesSnap = await window.fbMethods.getDocs(savesCol);
+                        let planets = [];
+                        let planetOwned = false;
+                        savesSnap.forEach(d => {
+                            const sd = d.data();
+                            if (sd.player) {
+                                if (sd.player.planets && sd.player.planets.length > 0) planets = sd.player.planets;
+                                if (sd.player.planetOwned) planetOwned = true;
+                            }
+                        });
+                        return { ...m, planets, planetOwned };
+                    } catch(e) { return { ...m, planets: [], planetOwned: false }; }
+                }));
                 resultsDiv.innerHTML = `
                     <div style="display:flex;flex-direction:column;gap:0.75rem">
-                        ${topMatches.map(m => `
+                        ${matchesWithPlanets.map(m => {
+                            const planetCount = m.planets ? m.planets.length : 0;
+                            const hasPlanet = m.planetOwned || planetCount > 0;
+                            const planetNames = m.planets && m.planets.length > 0 ? m.planets.map(p => p.name).join(', ') : (m.planetOwned ? 'Earth (Classic)' : '');
+                            return `
                             <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:1rem;display:flex;align-items:center;gap:1rem">
                                 <div style="width:45px;height:45px;border-radius:50%;background:var(--bg-panel);display:flex;align-items:center;justify-content:center;font-size:1.8rem;overflow:hidden;border:1px solid var(--border)">
                                     ${m.avatar_img ? `<img src="${m.avatar_img}" style="width:100%;height:100%;object-fit:cover">` : (m.avatar || '🧑')}
@@ -3474,14 +3804,15 @@ What is your experience?"></textarea></div>
                                 <div style="flex:1">
                                     <div style="font-weight:700;font-size:0.95rem">${m.displayName || m.username || 'Player'}</div>
                                     <div style="font-size:0.75rem;color:var(--text-muted)">@${m.username || 'unknown'}</div>
+                                    ${hasPlanet ? `<div style="font-size:0.72rem;color:#ec4899;margin-top:0.2rem">🪐 ${planetCount > 0 ? planetCount + ' planet' + (planetCount > 1 ? 's' : '') : '1 planet'}: ${planetNames}</div>` : ''}
                                 </div>
                                 <div style="text-align:right;margin-right:0.5rem">
                                     <div style="font-size:0.7rem;color:var(--text-muted)">Net Worth</div>
                                     <div style="font-weight:700;color:var(--success);font-size:0.85rem">$${formatNum(m.netWorth || 0)}</div>
                                 </div>
                                 <button class="btn btn-primary" style="padding:0.4rem 0.8rem;font-size:0.8rem" onclick="visitPlayer('${m.uid}', '${m.username || 'player'}')">Visit</button>
-                            </div>
-                        `).join('')}
+                            </div>`;
+                        }).join('')}
                     </div>
                 `;
             } catch (e) {
@@ -3760,6 +4091,16 @@ What is your experience?"></textarea></div>
                     addActivity(`Day ${state.player.day}`, `Rental income from ${prop.name}: $${prop.yield}`, 'success');
                 }
             });
+            // Country passive income
+            let countryIncome = 0;
+            state.player.countriesOwned.forEach(country => {
+                const tierData = getCountryTier(country);
+                countryIncome += tierData.income;
+            });
+            if (countryIncome > 0) {
+                state.player.cash += countryIncome;
+                addActivity(`Day ${state.player.day}`, `Country income: $${formatNum(countryIncome)}`, 'success');
+            }
             // Loan payments
             state.player.loans.forEach((loan, i) => {
                 if (loan.remaining > 0) {
@@ -6108,9 +6449,18 @@ What is your experience?"></textarea></div>
             const planetOwned = document.getElementById('map-planet-owned');
             
             // Even if planet is owned, we show the countries grid to allow buying missing ones
-            if (state.player.planetOwned) {
+            const ownedPlanets = state.player.planets || [];
+            if (state.player.planetOwned || ownedPlanets.length > 0) {
                 if (planetSection) planetSection.style.display = 'none';
-                if (planetOwned) planetOwned.style.display = 'block';
+                if (planetOwned) {
+                    planetOwned.style.display = 'block';
+                    // Update planet count display
+                    const planetCountEl = planetOwned.querySelector('#map-planet-count');
+                    if (planetCountEl) {
+                        const count = ownedPlanets.length || 1;
+                        planetCountEl.textContent = count + ' planet' + (count > 1 ? 's' : '') + ' owned';
+                    }
+                }
             } else if (ownedCount === totalCountries) {
                 if (planetSection) planetSection.style.display = 'block';
                 if (planetOwned) planetOwned.style.display = 'none';
@@ -6157,9 +6507,12 @@ What is your experience?"></textarea></div>
         }
 
         function buyCountry(country) {
-            const COUNTRY_PRICE = 10000000000000; // 10T
+            const tierData = getCountryTier(country);
+            const COUNTRY_PRICE = tierData.price;
+            const priceDisplay = formatNum(COUNTRY_PRICE);
+            
             if (state.player.cash < COUNTRY_PRICE) {
-                showToast('Insufficient Funds', 'You need 10T to buy a country', 'danger');
+                showToast('Insufficient Funds', `You need ${priceDisplay} to buy ${country}`, 'danger');
                 return;
             }
             if (state.player.countriesOwned.includes(country)) {
@@ -6168,8 +6521,8 @@ What is your experience?"></textarea></div>
             }
             state.player.cash -= COUNTRY_PRICE;
             state.player.countriesOwned.push(country);
-            addActivity(`Day ${state.player.day}`, `Purchased ${country} for 10T!`, 'success');
-            showToast('Country Acquired!', `You now own ${country}!`, 'success');
+            addActivity(`Day ${state.player.day}`, `Purchased ${country} (Tier ${tierData.tier}) for ${priceDisplay}!`, 'success');
+            showToast('Country Acquired!', `You now own ${country}! Earning $${formatNum(tierData.income)}/day`, 'success');
             saveGame();
             updateUI();
             renderMap();
@@ -6190,6 +6543,149 @@ What is your experience?"></textarea></div>
             saveGame();
             updateUI();
             renderMap();
+        }
+
+        // ===================== PLANET MANAGEMENT SYSTEM =====================
+        const PLANET_TYPES = {
+            'Earth-like': '🌍',
+            'Desert': '🏜️',
+            'Ice': '❄️',
+            'Volcanic': '🌋',
+            'Oceanic': '🌊',
+            'Gaseous': '🌫️'
+        };
+
+        function openPlanetManagement() {
+            renderPlanetManagement();
+            document.getElementById('planet-management-modal').classList.remove('hidden');
+        }
+
+        function renderPlanetManagement() {
+            const planets = state.player.planets || [];
+            const container = document.getElementById('planet-management-content');
+            if (!container) return;
+            if (planets.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--text-muted)">No planets owned yet. Purchase one below!</div>';
+                return;
+            }
+            container.innerHTML = planets.map(p => {
+                const icon = PLANET_TYPES[p.type] || '🪐';
+                const cities = p.cities || [];
+                const countries = p.countries || [];
+                return `<div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:0.75rem">
+                    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem">
+                        <div style="font-size:2rem">${icon}</div>
+                        <div style="flex:1">
+                            <div style="font-weight:700;font-size:1rem">${p.name}</div>
+                            <div style="font-size:0.8rem;color:var(--text-muted)">${p.type} &bull; ${cities.length + countries.length} cities/countries</div>
+                        </div>
+                        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+                            <button class="btn btn-secondary" onclick="openPlanetEdit('${p.id}')" style="font-size:0.75rem;padding:0.35rem 0.7rem">✏️ Edit</button>
+                            <button class="btn btn-secondary" onclick="openPlanetCities('${p.id}')" style="font-size:0.75rem;padding:0.35rem 0.7rem">🏙️ Cities</button>
+                            <button class="btn btn-danger" onclick="destroyPlanet('${p.id}')" style="font-size:0.75rem;padding:0.35rem 0.7rem">💥 Destroy</button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function buyNewPlanet() {
+            const PLANET_PRICE = 100000000000000; // 100T
+            const name = (document.getElementById('new-planet-name').value || '').trim();
+            const type = document.getElementById('new-planet-type').value || 'Earth-like';
+            if (!name) { showToast('Error', 'Please enter a planet name', 'danger'); return; }
+            if (state.player.cash < PLANET_PRICE) {
+                showToast('Insufficient Funds', 'You need 100T to buy a planet', 'danger');
+                return;
+            }
+            if (!state.player.planets) state.player.planets = [];
+            const newPlanet = {
+                id: 'planet_' + Date.now(),
+                name: name,
+                type: type,
+                cities: [],
+                countries: [],
+                purchasedAt: new Date().toISOString()
+            };
+            state.player.planets.push(newPlanet);
+            state.player.cash -= PLANET_PRICE;
+            state.player.planetOwned = true;
+            document.getElementById('new-planet-name').value = '';
+            addActivity(`Day ${state.player.day}`, `Purchased planet "${name}" (${type}) for 100T!`, 'success');
+            showToast('Planet Purchased!', `🪐 "${name}" is now yours!`, 'success');
+            saveGame();
+            updateUI();
+            renderMap();
+            renderPlanetManagement();
+        }
+
+        function openPlanetEdit(planetId) {
+            const planet = (state.player.planets || []).find(p => p.id === planetId);
+            if (!planet) return;
+            document.getElementById('planet-edit-id').value = planetId;
+            document.getElementById('planet-edit-name').value = planet.name;
+            document.getElementById('planet-edit-type').value = planet.type || 'Earth-like';
+            document.getElementById('planet-edit-modal').classList.remove('hidden');
+        }
+
+        function savePlanetEdit() {
+            const planetId = document.getElementById('planet-edit-id').value;
+            const newName = (document.getElementById('planet-edit-name').value || '').trim();
+            const newType = document.getElementById('planet-edit-type').value;
+            if (!newName) { showToast('Error', 'Planet name cannot be empty', 'danger'); return; }
+            const planet = (state.player.planets || []).find(p => p.id === planetId);
+            if (!planet) return;
+            planet.name = newName;
+            planet.type = newType;
+            document.getElementById('planet-edit-modal').classList.add('hidden');
+            showToast('Saved!', `Planet updated to "${newName}" (${newType})`, 'success');
+            saveGame();
+            renderPlanetManagement();
+        }
+
+        function destroyPlanet(planetId) {
+            if (!confirm('Are you sure you want to obliterate this planet? This cannot be undone!')) return;
+            state.player.planets = (state.player.planets || []).filter(p => p.id !== planetId);
+            if ((state.player.planets || []).length === 0) state.player.planetOwned = false;
+            showToast('Planet Destroyed', '💥 The planet has been obliterated!', 'danger');
+            addActivity(`Day ${state.player.day}`, 'Destroyed a planet!', 'danger');
+            saveGame();
+            updateUI();
+            renderMap();
+            renderPlanetManagement();
+        }
+
+        function openPlanetCities(planetId) {
+            const planet = (state.player.planets || []).find(p => p.id === planetId);
+            if (!planet) return;
+            const container = document.getElementById('planet-cities-content');
+            const cities = [...(planet.cities || []), ...(planet.countries || [])];
+            const icon = PLANET_TYPES[planet.type] || '🪐';
+            if (cities.length === 0) {
+                container.innerHTML = `<div style="text-align:center;padding:1.5rem;color:var(--text-muted)">${icon} <strong>${planet.name}</strong> has no cities or countries yet.</div>`;
+            } else {
+                container.innerHTML = `<div style="margin-bottom:0.75rem;font-size:0.9rem;color:var(--text-muted)">${icon} <strong>${planet.name}</strong> &mdash; ${cities.length} cities/countries</div>` +
+                    cities.map((c, i) => {
+                        const cName = c.name || c;
+                        return `<div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:0.6rem 1rem;margin-bottom:0.5rem">
+                            <span style="font-size:0.9rem">🏙️ ${cName}</span>
+                            <button class="btn btn-danger" onclick="destroyPlanetCity('${planetId}', '${cName}')" style="font-size:0.75rem;padding:0.3rem 0.6rem">💥 Destroy</button>
+                        </div>`;
+                    }).join('');
+            }
+            document.getElementById('planet-cities-modal').classList.remove('hidden');
+        }
+
+        function destroyPlanetCity(planetId, cityName) {
+            if (!confirm(`Destroy "${cityName}"? This cannot be undone!`)) return;
+            const planet = (state.player.planets || []).find(p => p.id === planetId);
+            if (!planet) return;
+            if (planet.cities) planet.cities = planet.cities.filter(c => (c.name || c) !== cityName);
+            if (planet.countries) planet.countries = planet.countries.filter(c => (c.name || c) !== cityName);
+            showToast('City Destroyed', `💥 "${cityName}" has been obliterated!`, 'danger');
+            addActivity(`Day ${state.player.day}`, `Destroyed city "${cityName}" on a planet`, 'danger');
+            saveGame();
+            openPlanetCities(planetId); // Refresh city list
         }
 
         function renderEducation() {
@@ -7236,14 +7732,87 @@ What is your experience?"></textarea></div>
 
         // ===================== NUKE SYSTEM =====================
         let nukeExecuting = false; // Prevent multiple simultaneous nuke executions
+        let _nukeTargetSaveData = null; // Store target save data for nuke execution
+
+        function updateNukeTargetOptions() {
+            const strikeType = document.getElementById('nuke-strike-type').value;
+            const targetSection = document.getElementById('nuke-target-section');
+            const targetLabel = document.getElementById('nuke-target-label');
+            const citySelect = document.getElementById('nuke-city-select');
+            const planetSelect = document.getElementById('nuke-planet-select');
+            const selectedPlanetId = planetSelect ? planetSelect.value : '';
+
+            if (strikeType === 'entire_planet') {
+                targetSection.style.display = 'none';
+                return;
+            }
+            targetSection.style.display = '';
+
+            // Repopulate based on strike type and selected planet
+            if (!_nukeTargetSaveData) return;
+            const player = _nukeTargetSaveData.player || {};
+
+            if (strikeType === 'city') {
+                targetLabel.textContent = '4. Select Target City';
+                citySelect.innerHTML = '<option value="">-- Choose a city --</option>';
+                // Cities come from countriesOwned (which are city names in this game)
+                let cities = [];
+                if (selectedPlanetId) {
+                    // Cities on a specific planet
+                    const planet = (player.planets || []).find(p => p.id === selectedPlanetId);
+                    cities = planet ? (planet.cities || []) : [];
+                } else {
+                    cities = player.countriesOwned || [];
+                }
+                if (cities.length > 0) {
+                    cities.forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c.name || c;
+                        opt.textContent = c.name || c;
+                        citySelect.appendChild(opt);
+                    });
+                } else {
+                    citySelect.innerHTML = '<option value="" disabled>No cities on this planet</option>';
+                }
+            } else {
+                targetLabel.textContent = '4. Select Target Country';
+                citySelect.innerHTML = '<option value="">-- Choose a country --</option>';
+                let countries = [];
+                if (selectedPlanetId) {
+                    const planet = (player.planets || []).find(p => p.id === selectedPlanetId);
+                    countries = planet ? (planet.countries || planet.cities || []) : [];
+                } else {
+                    countries = player.countriesOwned || [];
+                }
+                if (countries.length > 0) {
+                    countries.forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c.name || c;
+                        opt.textContent = c.name || c;
+                        citySelect.appendChild(opt);
+                    });
+                } else {
+                    citySelect.innerHTML = '<option value="" disabled>No countries on this planet</option>';
+                }
+            }
+        }
+
         async function openNukeModal() {
             const modal = document.getElementById('nuke-modal');
             const playerSelect = document.getElementById('nuke-player-select');
+            const planetSelect = document.getElementById('nuke-planet-select');
             const citySelect = document.getElementById('nuke-city-select');
+            const planetSection = document.getElementById('nuke-planet-section');
+            const targetSection = document.getElementById('nuke-target-section');
+            _nukeTargetSaveData = null;
             
             modal.classList.remove('hidden');
             playerSelect.innerHTML = '<option value="">-- Choose a player --</option>';
-            citySelect.innerHTML = '<option value="">-- Choose a city --</option>';
+            planetSelect.innerHTML = '<option value="">-- Choose a planet --</option>';
+            citySelect.innerHTML = '<option value="">-- Choose a target --</option>';
+            if (planetSection) planetSection.style.display = 'none';
+            if (targetSection) targetSection.style.display = 'none';
+            document.getElementById('nuke-strike-section').style.display = 'none';
             
             // Fetch all players from Firestore
             try {
@@ -7251,7 +7820,6 @@ What is your experience?"></textarea></div>
                     const usersCol = window.fbMethods.collection(window.fbDb, "users");
                     const snapshot = await window.fbMethods.getDocs(usersCol);
                     const currentUid = window.fbAuth.currentUser ? window.fbAuth.currentUser.uid : '';
-                    
                     snapshot.forEach(doc => {
                         const data = doc.data();
                         const uid = doc.id;
@@ -7260,7 +7828,6 @@ What is your experience?"></textarea></div>
                             const option = document.createElement('option');
                             option.value = uid;
                             option.textContent = name;
-                            option.dataset.playerData = JSON.stringify(data);
                             playerSelect.appendChild(option);
                         }
                     });
@@ -7270,50 +7837,69 @@ What is your experience?"></textarea></div>
                 showToast('Error', 'Could not load player list', 'danger');
             }
             
+            // Step 1: Player selected -> load their planets
             playerSelect.onchange = async () => {
-                const selectedOption = playerSelect.options[playerSelect.selectedIndex];
-                if (selectedOption.value) {
-                    citySelect.innerHTML = '<option value="">Loading cities...</option>';
-                    try {
-                        // Fetch target's owned countries from their save data
-                        const targetUid = selectedOption.value;
-                        const savesCol = window.fbMethods.collection(window.fbDb, 'users', targetUid, 'saves');
-                        const savesSnapshot = await window.fbMethods.getDocs(savesCol);
-                        let targetSaveData = null;
-                        
-                        // Look for the most recent save or QuickSave
-                        let latestTime = 0;
-                        savesSnapshot.forEach(doc => {
-                            const data = doc.data();
-                            const updateTime = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
-                            if (doc.id === 'QuickSave' || updateTime > latestTime) {
-                                targetSaveData = data;
-                                latestTime = updateTime;
-                            }
-                        });
-
-                        citySelect.innerHTML = '<option value="">-- Choose a city --</option>';
-                        if (targetSaveData && targetSaveData.player && targetSaveData.player.countriesOwned && targetSaveData.player.countriesOwned.length > 0) {
-                            targetSaveData.player.countriesOwned.forEach(country => {
-                                const option = document.createElement('option');
-                                option.value = country;
-                                option.textContent = country;
-                                citySelect.appendChild(option);
-                            });
-                        } else {
-                            const option = document.createElement('option');
-                            option.value = "";
-                            option.textContent = "No cities owned by this player";
-                            option.disabled = true;
-                            citySelect.appendChild(option);
+                const targetUid = playerSelect.value;
+                planetSelect.innerHTML = '<option value="">Loading planets...</option>';
+                if (planetSection) planetSection.style.display = 'none';
+                if (targetSection) targetSection.style.display = 'none';
+                document.getElementById('nuke-strike-section').style.display = 'none';
+                _nukeTargetSaveData = null;
+                if (!targetUid) return;
+                try {
+                    const savesCol = window.fbMethods.collection(window.fbDb, 'users', targetUid, 'saves');
+                    const savesSnapshot = await window.fbMethods.getDocs(savesCol);
+                    let latestTime = 0;
+                    savesSnapshot.forEach(doc => {
+                        const data = doc.data();
+                        const updateTime = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
+                        if (doc.id === 'QuickSave' || updateTime > latestTime) {
+                            _nukeTargetSaveData = data;
+                            latestTime = updateTime;
                         }
-                    } catch (e) {
-                        console.error("Error fetching target cities:", e);
-                        citySelect.innerHTML = '<option value="">Error loading cities</option>';
+                    });
+                    const player = _nukeTargetSaveData ? (_nukeTargetSaveData.player || {}) : {};
+                    const planets = player.planets || [];
+                    const hasPlanet = player.planetOwned || planets.length > 0;
+
+                    planetSelect.innerHTML = '<option value="">-- Choose a planet --</option>';
+                    if (planets.length > 0) {
+                        planets.forEach(p => {
+                            const opt = document.createElement('option');
+                            opt.value = p.id;
+                            opt.textContent = `${p.name} (${p.type})`;
+                            planetSelect.appendChild(opt);
+                        });
+                    } else if (hasPlanet) {
+                        const opt = document.createElement('option');
+                        opt.value = 'classic_planet';
+                        opt.textContent = 'Earth (Classic Planet)';
+                        planetSelect.appendChild(opt);
+                    } else {
+                        const opt = document.createElement('option');
+                        opt.value = '';
+                        opt.textContent = 'No planets owned';
+                        opt.disabled = true;
+                        planetSelect.appendChild(opt);
                     }
-                } else {
-                    citySelect.innerHTML = '<option value="">-- Choose a city --</option>';
+                    if (planetSection) planetSection.style.display = '';
+                } catch(e) {
+                    console.error('Error loading planets for nuke:', e);
+                    planetSelect.innerHTML = '<option value="">Error loading planets</option>';
+                    if (planetSection) planetSection.style.display = '';
                 }
+            };
+
+            // Step 2: Planet selected -> show strike type and target options
+            planetSelect.onchange = () => {
+                if (!planetSelect.value) {
+                    if (targetSection) targetSection.style.display = 'none';
+                    document.getElementById('nuke-strike-section').style.display = 'none';
+                    return;
+                }
+                document.getElementById('nuke-strike-section').style.display = '';
+                document.getElementById('nuke-strike-type').value = 'country';
+                updateNukeTargetOptions();
             };
         }
 
@@ -7330,18 +7916,32 @@ What is your experience?"></textarea></div>
             
             const playerSelect = document.getElementById('nuke-player-select');
             const citySelect = document.getElementById('nuke-city-select');
+            const planetSelect = document.getElementById('nuke-planet-select');
+            const strikeTypeEl = document.getElementById('nuke-strike-type');
             const nukeBtn = document.querySelector('[onclick="executeNuke()"]');
             const targetUid = playerSelect.value;
-            const targetCity = citySelect.value;
-            const nukeCost = 5000000000000; // 5T
+            const targetPlanetId = planetSelect ? planetSelect.value : '';
+            const strikeType = strikeTypeEl ? strikeTypeEl.value : 'country';
+            const targetCity = strikeType === 'entire_planet' ? '__entire_planet__' : citySelect.value;
             
-            if (!targetUid || !targetCity) {
-                showToast('Invalid', 'Please select both a player and a city', 'warning');
+            // Calculate nuke cost based on target country tier (2x the country price)
+            let nukeCost = 5000000000000; // Default 5T fallback
+            if (targetCity && targetCity !== '__entire_planet__') {
+                const tierData = getCountryTier(targetCity);
+                nukeCost = tierData.price * 2; // 2x the country price
+            }
+            
+            if (!targetUid || !targetPlanetId) {
+                showToast('Invalid', 'Please select a player and a planet', 'warning');
+                return;
+            }
+            if (strikeType !== 'entire_planet' && !targetCity) {
+                showToast('Invalid', 'Please select a target city or country (or choose Entire Planet)', 'warning');
                 return;
             }
 
             if (state.player.cash < nukeCost) {
-                showToast('Insufficient Funds', `Launching a nuke costs $${formatNum(nukeCost)} (5T)`, 'danger');
+                showToast('Insufficient Funds', `Launching a nuke costs $${formatNum(nukeCost)}`, 'danger');
                 return;
             }
             
@@ -7420,9 +8020,40 @@ What is your experience?"></textarea></div>
                         targetSaveData.cryptoPrices[ticker] *= 0.5;
                     });
                 }
+
+                // Apply targeted destruction based on strike type
+                if (!targetSaveData.player) targetSaveData.player = {};
+                if (strikeType === 'entire_planet') {
+                    // Destroy the entire planet
+                    if (targetPlanetId === 'classic_planet') {
+                        targetSaveData.player.planetOwned = false;
+                        targetSaveData.player.countriesOwned = [];
+                    } else {
+                        targetSaveData.player.planets = (targetSaveData.player.planets || []).filter(p => p.id !== targetPlanetId);
+                        if ((targetSaveData.player.planets || []).length === 0) targetSaveData.player.planetOwned = false;
+                    }
+                } else if (strikeType === 'city') {
+                    // Destroy a specific city on the planet
+                    if (targetPlanetId === 'classic_planet') {
+                        targetSaveData.player.countriesOwned = (targetSaveData.player.countriesOwned || []).filter(c => c !== targetCity);
+                    } else {
+                        const planet = (targetSaveData.player.planets || []).find(p => p.id === targetPlanetId);
+                        if (planet && planet.cities) planet.cities = planet.cities.filter(c => (c.name || c) !== targetCity);
+                    }
+                } else {
+                    // Destroy a specific country on the planet
+                    if (targetPlanetId === 'classic_planet') {
+                        targetSaveData.player.countriesOwned = (targetSaveData.player.countriesOwned || []).filter(c => c !== targetCity);
+                    } else {
+                        const planet = (targetSaveData.player.planets || []).find(p => p.id === targetPlanetId);
+                        if (planet) {
+                            if (planet.countries) planet.countries = planet.countries.filter(c => (c.name || c) !== targetCity);
+                            if (planet.cities) planet.cities = planet.cities.filter(c => (c.name || c) !== targetCity);
+                        }
+                    }
+                }
                 
                 // Store nuke effects for 10 minute duration
-                if (!targetSaveData.player) targetSaveData.player = {};
                 targetSaveData.player.nukeEffects = nukeEffects;
                 
                 // Update target's save
@@ -7432,10 +8063,13 @@ What is your experience?"></textarea></div>
                 // Send notification to target
                 const currentUserName = window.fbAuth.currentUser.displayName || window.fbAuth.currentUser.email || 'A Player';
                 const notificationRef = window.fbMethods.collection(window.fbDb, 'users', targetUid, 'notifications');
+                const strikeDesc = strikeType === 'entire_planet' ? 'Entire Planet' : targetCity;
                 await window.fbMethods.addDoc(notificationRef, {
                     type: 'nuke_received',
                     from: currentUserName,
-                    city: targetCity,
+                    city: strikeDesc,
+                    strikeType: strikeType,
+                    planetId: targetPlanetId,
                     timestamp: new Date().toISOString(),
                     read: false
                 });
@@ -7445,10 +8079,11 @@ What is your experience?"></textarea></div>
                 updateUI();
 
                 // Add activity to current player
-                addActivity(`Day ${state.player.day}`, `🎯 Launched nuclear strike on ${targetName}'s ${targetCity}! (-$5T)`, 'danger');
+                const strikeLabel = strikeType === 'entire_planet' ? 'entire planet' : `${strikeType} "${targetCity}"`;
+                addActivity(`Day ${state.player.day}`, `🎯 Launched nuclear strike on ${targetName}'s ${strikeLabel}! (-$5T)`, 'danger');
                 
                 // Show success message
-                showToast('Nuke Launched!', `💣 ${targetName}'s stocks and crypto have been hit! (-$5T)`, 'success');
+                showToast('Nuke Launched!', `💣 ${targetName}'s ${strikeLabel} has been hit! (-$5T)`, 'success');
                 closeNukeModal();
                 saveGame();
                 
@@ -7825,6 +8460,11 @@ What is your experience?"></textarea></div>
                 document.getElementById('admin-pd-day').textContent = day;
                 document.getElementById('admin-pd-level').textContent = level;
                 document.getElementById('admin-new-name').value = name;
+                // Show/hide unban/unwarn buttons
+                const unbanBtn = document.getElementById('admin-unban-btn');
+                const unwarnBtn = document.getElementById('admin-unwarn-btn');
+                if (unbanBtn) unbanBtn.style.display = userData.isBanned ? 'inline-block' : 'none';
+                if (unwarnBtn) unwarnBtn.style.display = (userData.warningCount > 0) ? 'inline-block' : 'none';
                 // Render companies
                 const coDiv = document.getElementById('admin-companies-list');
                 if (companies.length === 0) {
@@ -7851,6 +8491,41 @@ What is your experience?"></textarea></div>
                             </div>
                         </div>
                     `).join('');
+                }
+                // Render Planet Control section
+                const adminPlanetContainer = document.getElementById('admin-planet-control');
+                if (adminPlanetContainer) {
+                    const playerPlanets = (saveData && saveData.player && saveData.player.planets) ? saveData.player.planets : [];
+                    const classicPlanet = (saveData && saveData.player && saveData.player.planetOwned);
+                    if (playerPlanets.length === 0 && !classicPlanet) {
+                        adminPlanetContainer.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem">No planets owned</div>';
+                    } else {
+                        let planetHtml = '';
+                        if (classicPlanet && playerPlanets.length === 0) {
+                            planetHtml += `<div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:0.75rem;margin-bottom:0.5rem">
+                                <div style="display:flex;align-items:center;gap:0.5rem">
+                                    <span style="font-size:1.3rem">🌍</span>
+                                    <div style="flex:1"><div style="font-weight:700;font-size:0.9rem">Earth (Classic)</div><div style="font-size:0.75rem;color:var(--text-muted)">Earth-like</div></div>
+                                    <span style="font-size:0.7rem;padding:0.2rem 0.5rem;background:var(--success);color:#fff;border-radius:4px">Active</span>
+                                </div>
+                            </div>`;
+                        }
+                        playerPlanets.forEach(p => {
+                            const icon = {'Earth-like':'🌍','Desert':'🏜️','Ice':'❄️','Volcanic':'🌋','Oceanic':'🌊','Gaseous':'🌫️'}[p.type] || '🪐';
+                            const cityCount = (p.cities||[]).length + (p.countries||[]).length;
+                            planetHtml += `<div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:0.75rem;margin-bottom:0.5rem">
+                                <div style="display:flex;align-items:center;gap:0.5rem">
+                                    <span style="font-size:1.3rem">${icon}</span>
+                                    <div style="flex:1">
+                                        <div style="font-weight:700;font-size:0.9rem">${p.name}</div>
+                                        <div style="font-size:0.75rem;color:var(--text-muted)">${p.type} &bull; ${cityCount} cities/countries</div>
+                                    </div>
+                                    <span style="font-size:0.7rem;padding:0.2rem 0.5rem;background:var(--success);color:#fff;border-radius:4px">Active</span>
+                                </div>
+                            </div>`;
+                        });
+                        adminPlanetContainer.innerHTML = planetHtml;
+                    }
                 }
                 // Render badge grid
                 const badgeGrid = document.getElementById('admin-badge-grid');
@@ -8023,6 +8698,7 @@ What is your experience?"></textarea></div>
                 });
                 showToast('Success', 'Warning sent to player', 'success');
                 document.getElementById('admin-warn-modal').classList.add('hidden');
+                adminLoadPlayer(adminCurrentPlayerUid);
             } catch(e) { showToast('Error', e.message, 'danger'); }
         }
 
@@ -8053,6 +8729,38 @@ What is your experience?"></textarea></div>
                 });
                 showToast('Success', 'Player has been banned', 'danger');
                 document.getElementById('admin-ban-modal').classList.add('hidden');
+                adminLoadPlayer(adminCurrentPlayerUid);
+            } catch(e) { showToast('Error', e.message, 'danger'); }
+        }
+
+        async function adminSubmitUnban() {
+            if (!adminCurrentPlayerUid) return;
+            if (!confirm('Are you sure you want to unban this player?')) return;
+            try {
+                const userRef = window.fbMethods.doc(window.fbDb, 'users', adminCurrentPlayerUid);
+                await window.fbMethods.updateDoc(userRef, { 
+                    isBanned: false, 
+                    banReason: null, 
+                    banExpiry: null 
+                });
+                showToast('Success', 'Player has been unbanned', 'success');
+                adminLoadPlayer(adminCurrentPlayerUid);
+            } catch(e) { showToast('Error', e.message, 'danger'); }
+        }
+
+        async function adminSubmitUnwarn() {
+            if (!adminCurrentPlayerUid) return;
+            if (!confirm('Are you sure you want to reset this player\'s warning count to 0?')) return;
+            try {
+                const userRef = window.fbMethods.doc(window.fbDb, 'users', adminCurrentPlayerUid);
+                await window.fbMethods.updateDoc(userRef, { 
+                    warningCount: 0,
+                    pendingWarning: null,
+                    lastWarningAt: null,
+                    lastWarningReason: null
+                });
+                showToast('Success', 'Player warnings have been reset', 'success');
+                adminLoadPlayer(adminCurrentPlayerUid);
             } catch(e) { showToast('Error', e.message, 'danger'); }
         }
         function adminHandleCustomBadgePreview(event) {
