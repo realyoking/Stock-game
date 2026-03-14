@@ -189,6 +189,41 @@
             background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px;
             padding: 0.75rem 1rem; margin-bottom: 0.5rem; font-size: 0.85rem;
         }
+        /* GIFT POPUP */
+        .gift-popup-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 99999;
+            display: flex; align-items: center; justify-content: center; padding: 1rem;
+            animation: fadeIn 0.3s ease;
+        }
+        .gift-popup {
+            background: var(--bg-surface); border-radius: 20px; padding: 2.5rem;
+            max-width: 480px; width: 100%; text-align: center;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+            animation: giftBounce 0.5s cubic-bezier(0.34,1.56,0.64,1);
+            position: relative; overflow: hidden;
+        }
+        .gift-popup::before {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(135deg, rgba(255,0,128,0.06), rgba(124,58,237,0.06));
+            pointer-events: none;
+        }
+        @keyframes giftBounce { from { transform: scale(0.5) translateY(60px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+        @keyframes giftFloat { 0%,100%{transform:translateY(0) rotate(-5deg)} 50%{transform:translateY(-12px) rotate(5deg)} }
+        .gift-icon-wrap {
+            font-size: 5rem; display: inline-block;
+            animation: giftFloat 2s ease-in-out infinite;
+            filter: drop-shadow(0 8px 20px rgba(255,0,128,0.4));
+            margin-bottom: 1.25rem;
+        }
+        .gift-item-card {
+            background: linear-gradient(135deg, rgba(255,0,128,0.12), rgba(124,58,237,0.12));
+            border: 1px solid rgba(255,0,128,0.3); border-radius: 14px;
+            padding: 1.25rem; margin: 1.25rem 0;
+        }
+        .gift-item-label { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: #ff0080; margin-bottom: 0.5rem; }
+        .gift-item-value { font-size: 1.6rem; font-weight: 900; color: var(--text-main); }
+        .gift-confetti { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
+
         /* ANNOUNCEMENT POPUP */
         .announcement-popup-overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 99999;
@@ -621,6 +656,33 @@
         </div>
     </div>
 
+    <!-- Gift History Modal -->
+    <div id="admin-gift-history-modal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width:700px">
+            <div class="modal-header" style="color:#ff0080">🎁 Gift History</div>
+            <div style="display:flex;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap">
+                <input type="text" id="gift-history-search" placeholder="Search by player or gift..." oninput="filterGiftHistory()" style="flex:1;min-width:180px;padding:0.6rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem">
+                <select id="gift-history-type-filter" onchange="filterGiftHistory()" style="padding:0.6rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem">
+                    <option value="all">All Types</option>
+                    <option value="cash">Cash</option>
+                    <option value="stock">Stock</option>
+                    <option value="crypto">Crypto</option>
+                    <option value="property">Property</option>
+                    <option value="lifestyle">Lifestyle</option>
+                    <option value="aibot">AI Bot</option>
+                    <option value="country">Country</option>
+                    <option value="planet">Planet</option>
+                </select>
+            </div>
+            <div id="gift-history-list" style="max-height:420px;overflow-y:auto">
+                <div style="color:var(--text-muted);text-align:center;padding:2rem">Loading...</div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="document.getElementById('admin-gift-history-modal').classList.add('hidden')">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Moderation Modals -->
     <div id="admin-warn-modal" class="modal-overlay hidden">
         <div class="modal-content" style="max-width:400px">
@@ -1031,46 +1093,64 @@ What is your experience?"></textarea></div>
                 <!-- World Map Tab -->
                 <div id="map" class="tab-panel">
                     <h2 style="margin-bottom:0.5rem">🌍 World Map</h2>
-                    <p style="color:var(--text-muted);margin-bottom:1.5rem">Buy countries for 10T each. Unlock all countries to purchase the entire planet for 100T!</p>
-                    <div style="display:grid;grid-template-columns:1fr 300px;gap:1.5rem">
-                        <div>
-                            <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1.5rem">
-                                <h3 style="margin-bottom:1rem">Your Properties</h3>
-                                <div id="map-owned-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:0.75rem"></div>
-                            </div>
-                            <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem">
-                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-                                    <h3 style="margin:0">Available Countries</h3>
-                                    <input type="text" id="map-search-input" oninput="renderMap()" placeholder="Search countries..." style="padding:0.5rem;background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;color:var(--text-main);font-size:0.85rem;width:200px">
-                                </div>
-                                <div id="map-countries-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.75rem"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="widget" style="position:sticky;top:0">
-                                <h3>Map Stats</h3>
-                                <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;margin-bottom:1rem;border:1px solid var(--border);font-size:0.9rem">
-                                    <div style="display:flex;justify-content:space-between;margin-bottom:0.75rem"><span style="color:var(--text-muted)">Countries Owned</span><span style="font-weight:700;color:var(--brand)" id="map-owned-count">0</span></div>
-                                    <div style="display:flex;justify-content:space-between;margin-bottom:0.75rem"><span style="color:var(--text-muted)">Total Countries</span><span style="font-weight:700">195</span></div>
-                                    <div style="display:flex;justify-content:space-between;margin-bottom:1rem"><span style="color:var(--text-muted)">Completion</span><span style="font-weight:700;color:var(--success)" id="map-completion">0%</span></div>
-                                    <div style="height:12px;background:var(--bg-base);border-radius:6px;overflow:hidden">
-                                        <div id="map-progress-bar" style="height:100%;background:linear-gradient(90deg,#10b981,#06b6d4);transition:width 0.5s;width:0%"></div>
+                    <p style="color:var(--text-muted);margin-bottom:1.5rem">Conquer the galaxy! Purchase a planet first to start buying countries and earning income.</p>
+                    
+                    <!-- Planet Selection Bar -->
+                    <div id="map-planet-selector" style="display:flex;gap:0.75rem;margin-bottom:1.5rem;overflow-x:auto;padding-bottom:0.5rem">
+                        <!-- Planets will be rendered here -->
+                    </div>
+
+                    <div id="map-main-content">
+                        <!-- Content shown only if a planet is selected -->
+                        <div id="map-planet-view" style="display:none">
+                            <div style="display:grid;grid-template-columns:1fr 300px;gap:1.5rem">
+                                <div>
+                                    <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1.5rem">
+                                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+                                            <h3 style="margin:0">Owned Countries</h3>
+                                            <div id="planet-total-income" style="color:var(--success);font-weight:800;font-size:1.1rem">$0/day</div>
+                                        </div>
+                                        <div id="map-owned-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.75rem"></div>
+                                    </div>
+                                    <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem">
+                                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+                                            <h3 style="margin:0">Available Countries</h3>
+                                            <input type="text" id="map-search-input" oninput="renderMap()" placeholder="Search countries..." style="padding:0.5rem;background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;color:var(--text-main);font-size:0.85rem;width:200px">
+                                        </div>
+                                        <div id="map-countries-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0.75rem"></div>
                                     </div>
                                 </div>
-                                <div id="map-planet-section" style="display:none;background:linear-gradient(135deg,#fbbf24,#f59e0b);padding:1rem;border-radius:8px;text-align:center;margin-bottom:1rem">
-                                    <div style="font-size:2rem;margin-bottom:0.5rem">🪐</div>
-                                    <div style="font-weight:700;color:#000;margin-bottom:0.5rem">Planet Unlocked!</div>
-                                    <p style="color:#000;font-size:0.85rem;margin-bottom:1rem">You own all countries! Purchase the entire planet for <strong>100T</strong></p>
-                                    <button class="btn btn-primary" onclick="buyPlanet()" style="width:100%;font-size:0.9rem;background:#000;color:#fbbf24;border:none">💰 Buy Planet (100T)</button>
+                                <div>
+                                    <div class="widget" style="position:sticky;top:0">
+                                        <div id="selected-planet-info" style="text-align:center;margin-bottom:1.5rem;padding:1rem;background:var(--bg-panel);border-radius:12px;border:1px solid var(--border)">
+                                            <div id="selected-planet-icon" style="font-size:3rem;margin-bottom:0.5rem">🌍</div>
+                                            <h3 id="selected-planet-name" style="margin-bottom:0.25rem">Earth</h3>
+                                            <div id="selected-planet-type" style="font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em">Earth-like</div>
+                                        </div>
+                                        
+                                        <h3>Planet Stats</h3>
+                                        <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;margin-bottom:1rem;border:1px solid var(--border);font-size:0.9rem">
+                                            <div style="display:flex;justify-content:space-between;margin-bottom:0.75rem"><span style="color:var(--text-muted)">Countries Owned</span><span style="font-weight:700;color:var(--brand)" id="map-owned-count">0</span></div>
+                                            <div style="display:flex;justify-content:space-between;margin-bottom:0.75rem"><span style="color:var(--text-muted)">Total Countries</span><span style="font-weight:700">195</span></div>
+                                            <div style="display:flex;justify-content:space-between;margin-bottom:1rem"><span style="color:var(--text-muted)">Completion</span><span style="font-weight:700;color:var(--success)" id="map-completion">0%</span></div>
+                                            <div style="height:12px;background:var(--bg-base);border-radius:6px;overflow:hidden">
+                                                <div id="map-progress-bar" style="height:100%;background:linear-gradient(90deg,#10b981,#06b6d4);transition:width 0.5s;width:0%"></div>
+                                            </div>
+                                        </div>
+
+                                        <button class="btn btn-danger" onclick="openNukeModal()" style="width:100%;margin-top:1rem;background:linear-gradient(135deg,#ef4444,#dc2626);font-size:0.9rem;padding:0.75rem;font-weight:800">☢️ LAUNCH NUKE</button>
+                                        <button class="btn btn-secondary" onclick="openPlanetManagement()" style="width:100%;margin-top:0.75rem;font-size:0.85rem">🪐 Manage Planets</button>
+                                    </div>
                                 </div>
-                                <div id="map-planet-owned" style="display:none;background:linear-gradient(135deg,#ec4899,#f43f5e);padding:1rem;border-radius:8px;text-align:center">
-                                    <div style="font-size:2rem;margin-bottom:0.5rem">👑</div>
-                                    <div style="font-weight:700;color:#fff;margin-bottom:0.25rem">Planet Owner</div>
-                                    <p id="map-planet-count" style="color:#fff;font-size:0.85rem;margin-bottom:0.75rem">You own the entire planet!</p>
-                                    <button class="btn" onclick="openPlanetManagement()" style="background:rgba(0,0,0,0.3);color:#fff;border:1px solid rgba(255,255,255,0.4);width:100%;font-size:0.8rem;padding:0.5rem">🪐 Manage Planets</button>
-                                </div>
-                                <button class="btn btn-danger" onclick="openNukeModal()" style="width:100%;margin-top:1rem;background:linear-gradient(135deg,#ef4444,#dc2626);font-size:0.9rem;padding:0.75rem">💣 Launch Nuke</button>
                             </div>
+                        </div>
+
+                        <!-- No Planet State -->
+                        <div id="map-no-planet" style="text-align:center;padding:4rem 2rem;background:var(--bg-surface);border:1px solid var(--border);border-radius:20px">
+                            <div style="font-size:5rem;margin-bottom:1.5rem">🌌</div>
+                            <h2 style="margin-bottom:1rem">No Planet Selected</h2>
+                            <p style="color:var(--text-muted);max-width:500px;margin:0 auto 2rem">You must own and select a planet to begin your global conquest. Purchase your first planet to unlock countries, income, and nuclear capabilities.</p>
+                            <button class="btn btn-primary" onclick="openPlanetManagement()" style="padding:1rem 2rem;font-size:1.1rem;background:linear-gradient(135deg,var(--brand),#7c3aed)">🚀 Purchase Your First Planet (100T)</button>
                         </div>
                     </div>
                 </div>
@@ -1332,6 +1412,7 @@ What is your experience?"></textarea></div>
                     <button class="btn btn-secondary" id="atab-stocks" onclick="switchAdminTab('stocks')" style="font-size:0.85rem">📈 Stock Prices</button>
                     <button class="btn btn-secondary" id="atab-crypto" onclick="switchAdminTab('crypto')" style="font-size:0.85rem">🪙 Crypto Prices</button>
                     <button class="btn btn-secondary" id="atab-support" onclick="switchAdminTab('support')" style="font-size:0.85rem">📩 Support Messages</button>
+                    <button class="btn btn-secondary" id="atab-gifts" onclick="switchAdminTab('gifts')" style="font-size:0.85rem">🎁 Gift History</button>
                 </div>
 
                 <!-- Announcements Sub-Panel -->
@@ -1411,7 +1492,10 @@ What is your experience?"></textarea></div>
 
                                 <!-- Gifting Control -->
                                 <div style="background:var(--bg-panel);border-radius:12px;padding:1.25rem;margin-bottom:1rem;border:1px solid var(--border)">
-                                    <h4 style="margin-bottom:1rem;color:#ff0080">🎁 Gift Assets</h4>
+                                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+                                        <h4 style="color:#ff0080;margin:0">🎁 Gift Assets</h4>
+                                        <button class="btn btn-secondary" onclick="adminOpenGiftHistory()" style="font-size:0.75rem;padding:0.3rem 0.7rem">📋 Gift History</button>
+                                    </div>
                                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem">
                                         <select id="admin-gift-type" onchange="adminUpdateGiftOptions()" style="padding:0.6rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem">
                                             <option value="cash">Cash ($)</option>
@@ -1426,7 +1510,10 @@ What is your experience?"></textarea></div>
                                         <select id="admin-gift-item" style="padding:0.6rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem;display:none"></select>
                                         <input type="number" id="admin-gift-amount" placeholder="Amount/Qty" style="padding:0.6rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem">
                                     </div>
-                                    <button class="btn btn-success" onclick="adminSendGift()" style="width:100%;font-size:0.85rem">Send Gift</button>
+                                    <div style="margin-bottom:0.75rem">
+                                        <input type="text" id="admin-gift-message" placeholder="Optional message to player (e.g. Happy Birthday! 🎂)" style="width:100%;padding:0.6rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem">
+                                    </div>
+                                    <button class="btn btn-success" onclick="adminSendGift()" style="width:100%;font-size:0.85rem;background:linear-gradient(135deg,#ff0080,#7c3aed);padding:0.75rem">🎁 Send Gift</button>
                                 </div>
 
                                 <!-- Coin Control -->
@@ -1559,6 +1646,32 @@ What is your experience?"></textarea></div>
                         </div>
                     </div>
                 </div>
+                <!-- Gift History Sub-Panel -->
+                <div id="admin-panel-gifts" class="admin-sub-panel" style="display:none">
+                    <div class="widget">
+                        <h3 style="margin-bottom:0.5rem;color:#ff0080">🎁 All Gifts Sent</h3>
+                        <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1.5rem">Full log of every gift sent to players by admins.</p>
+                        <div style="display:flex;gap:0.75rem;margin-bottom:1.5rem;flex-wrap:wrap;align-items:center">
+                            <input type="text" id="admin-gifts-search" placeholder="Search by player or gift..." oninput="adminFilterGiftsPanel()" style="flex:1;min-width:200px;padding:0.6rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem">
+                            <select id="admin-gifts-type" onchange="adminFilterGiftsPanel()" style="padding:0.6rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem">
+                                <option value="all">All Types</option>
+                                <option value="cash">Cash</option>
+                                <option value="stock">Stock</option>
+                                <option value="crypto">Crypto</option>
+                                <option value="property">Property</option>
+                                <option value="lifestyle">Lifestyle</option>
+                                <option value="aibot">AI Bot</option>
+                                <option value="country">Country</option>
+                                <option value="planet">Planet</option>
+                            </select>
+                            <button class="btn btn-secondary" onclick="adminLoadGiftsPanel()" style="font-size:0.85rem">🔄 Refresh</button>
+                        </div>
+                        <div id="admin-gifts-panel-list" style="max-height:600px;overflow-y:auto">
+                            <div style="color:var(--text-muted);text-align:center;padding:2rem;font-size:0.9rem">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Support Messages Sub-Panel -->
                 <div id="admin-panel-support" class="admin-sub-panel" style="display:none">
                     <div class="widget">
@@ -2764,51 +2877,51 @@ What is your experience?"></textarea></div>
             'Luxembourg': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
             'Iceland': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
             'Palestine State': {tier: 5, price: 1e18, income: 1e5, stockBoost: 0.005, companyBoost: 0.01},
-            'Central African Republic': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Eswatini': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Burundi': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Lesotho': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Gambia': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Bhutan': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Guinea-Bissau': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Equatorial Guinea': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Fiji': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Eritrea': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Maldives': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Belize': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Bahamas': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Cabo Verde': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Barbados': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Djibouti': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Timor-Leste': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Seychelles': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Saint Lucia': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Antigua and Barbuda': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Comoros': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Solomon Islands': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Saint Vincent and the Grenadines': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Grenada': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Saint Kitts and Nevis': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Vanuatu': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Samoa': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Dominica': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Sao Tome and Principe': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Kiribati': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Micronesia': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Marshall Islands': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Tonga': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Andorra': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Liechtenstein': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'San Marino': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Monaco': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Palau': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Nauru': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Tuvalu': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Holy See': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Brunei': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Nepal': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Haiti': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
-            'Papua New Guinea': {tier: 6, price: 1e16, income: 1e3, stockBoost: 0.001, companyBoost: 0.005}
+            'Central African Republic': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Eswatini': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Burundi': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Lesotho': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Gambia': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Bhutan': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Guinea-Bissau': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Equatorial Guinea': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Fiji': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Eritrea': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Maldives': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Belize': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Bahamas': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Cabo Verde': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Barbados': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Djibouti': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Timor-Leste': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Seychelles': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Saint Lucia': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Antigua and Barbuda': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Comoros': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Solomon Islands': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Saint Vincent and the Grenadines': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Grenada': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Saint Kitts and Nevis': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Vanuatu': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Samoa': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Dominica': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Sao Tome and Principe': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Kiribati': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Micronesia': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Marshall Islands': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Tonga': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Andorra': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Liechtenstein': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'San Marino': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Monaco': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Palau': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Nauru': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Tuvalu': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Holy See': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Brunei': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Nepal': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Haiti': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005},
+            'Papua New Guinea': {tier: 6, price: 1e15, income: 1e3, stockBoost: 0.001, companyBoost: 0.005}
         };
 
         // Default tier for countries not in the list
@@ -3472,6 +3585,14 @@ What is your experience?"></textarea></div>
                                     showToast('⚠️ WARNING', userData.pendingWarning, 'warning', 10000);
                                     await window.fbMethods.updateDoc(window.fbMethods.doc(window.fbDb, 'users', user.uid), { pendingWarning: null });
                                 }
+                                // Check for Pending Gift
+                                if (userData.pendingGift) {
+                                    const gift = userData.pendingGift;
+                                    // Clear the pending gift immediately
+                                    await window.fbMethods.updateDoc(window.fbMethods.doc(window.fbDb, 'users', user.uid), { pendingGift: null });
+                                    // Show gift popup with a small delay
+                                    setTimeout(() => showGiftPopup(gift), 1800);
+                                }
                             }
                         } catch(e) { console.error("Ban check failed", e); }
 
@@ -4026,11 +4147,14 @@ What is your experience?"></textarea></div>
         function endDay(isSkip = false) {
             if (isSkip) {
                 // Deduct 10% fee BEFORE processing end of day
-                const fee = Math.round(state.player.cash * 0.10);
+                const currentCash = state.player.cash;
+                const fee = Math.floor(currentCash * 0.10);
+                
                 if (fee > 0) {
-                    state.player.cash = Math.max(0, state.player.cash - fee);
-                    addActivity(`Day ${state.player.day}`, `Skipped day fee: -$${fee.toLocaleString()}`, 'danger');
+                    state.player.cash -= fee;
+                    addActivity(`Day ${state.player.day}`, `Skipped day fee (10%): -$${formatNum(fee)}`, 'danger');
                 }
+                
                 // Process full end-of-day (salary, property income, projects, etc.)
                 state._isSkipDay = true;
                 _processEndOfDay();
@@ -4091,14 +4215,18 @@ What is your experience?"></textarea></div>
                     addActivity(`Day ${state.player.day}`, `Rental income from ${prop.name}: $${prop.yield}`, 'success');
                 }
             });
-            // Country passive income
+                // 5. Country Income (from all planets)
             let countryIncome = 0;
-            state.player.countriesOwned.forEach(country => {
-                const tierData = getCountryTier(country);
-                countryIncome += tierData.income;
+            const planets = state.player.planets || [];
+            planets.forEach(planet => {
+                (planet.countries || []).forEach(country => {
+                    const tier = getCountryTier(country);
+                    countryIncome += tier.income;
+                });
             });
+            state.player.cash += countryIncome;
+            totalDailyIncome += countryIncome;
             if (countryIncome > 0) {
-                state.player.cash += countryIncome;
                 addActivity(`Day ${state.player.day}`, `Country income: $${formatNum(countryIncome)}`, 'success');
             }
             // Loan payments
@@ -4199,8 +4327,7 @@ What is your experience?"></textarea></div>
             startPriceTicker();
             renderAll();
             if (state._isSkipDay) {
-                const skipFeeDisplay = Math.round(state.player.cash * 0.10);
-                showToast('Day Skipped!', `Day ${state.player.day} begins. Salary +$${state.player.salary.toLocaleString()} collected.`, 'warning');
+                showToast('Day Skipped!', `Day ${state.player.day} begins. (10% Fee deducted, Income collected)`, 'warning');
             } else {
                 showToast('New Day!', `Day ${state.player.day} begins. Salary: $${state.player.salary.toLocaleString()}`, 'success');
             }
@@ -4615,6 +4742,15 @@ What is your experience?"></textarea></div>
             state.player.companies.forEach(co => { nw += co.cash; });
             // AI Bots (include current bot portfolio value in net worth)
             if (state.player.aiBots) state.player.aiBots.forEach(ab => { nw += (ab.value || 0); });
+            // Planets & Countries
+            const planets = state.player.planets || [];
+            planets.forEach(p => {
+                nw += 100000000000000; // 100T per planet
+                (p.countries || []).forEach(c => {
+                    const tier = getCountryTier(c);
+                    nw += tier.price;
+                });
+            });
             // Debt
             nw -= state.player.debt;
             return nw;
@@ -6431,43 +6567,81 @@ What is your experience?"></textarea></div>
             { id: 'ed15', name: 'Philosophy of Wealth', cost: 1000, xp: 300, clout: 100, cert: 'Thinker' }
         ];
 
+        let selectedPlanetId = null;
+
+        function selectPlanet(planetId) {
+            selectedPlanetId = planetId;
+            renderMap();
+        }
+
         function renderMap() {
-            const ownedCount = state.player.countriesOwned.length;
+            const planets = state.player.planets || [];
+            const selector = document.getElementById('map-planet-selector');
+            const noPlanet = document.getElementById('map-no-planet');
+            const planetView = document.getElementById('map-planet-view');
+
+            // Render Planet Selector
+            if (selector) {
+                selector.innerHTML = planets.map(p => {
+                    const icon = PLANET_TYPES[p.type] || '🪐';
+                    const active = selectedPlanetId === p.id;
+                    return `
+                        <div onclick="selectPlanet('${p.id}')" style="flex-shrink:0;cursor:pointer;padding:0.75rem 1.25rem;background:${active ? 'linear-gradient(135deg,var(--brand),#7c3aed)' : 'var(--bg-panel)'};border:1px solid ${active ? 'var(--brand)' : 'var(--border)'};border-radius:12px;display:flex;align-items:center;gap:0.75rem;transition:all 0.2s;box-shadow:${active ? '0 4px 12px rgba(255,0,128,0.3)' : 'none'}">
+                            <span style="font-size:1.5rem">${icon}</span>
+                            <div style="text-align:left">
+                                <div style="font-weight:700;font-size:0.9rem;color:${active ? '#fff' : 'var(--text-main)'}">${p.name}</div>
+                                <div style="font-size:0.7rem;color:${active ? 'rgba(255,255,255,0.8)' : 'var(--text-muted)'}">${(p.countries || []).length} Countries</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            if (planets.length === 0 || !selectedPlanetId) {
+                if (noPlanet) noPlanet.style.display = 'block';
+                if (planetView) planetView.style.display = 'none';
+                if (planets.length > 0 && !selectedPlanetId) {
+                    // Auto-select first planet if none selected
+                    selectedPlanetId = planets[0].id;
+                    renderMap();
+                }
+                return;
+            }
+
+            const planet = planets.find(p => p.id === selectedPlanetId);
+            if (!planet) {
+                selectedPlanetId = null;
+                renderMap();
+                return;
+            }
+
+            if (noPlanet) noPlanet.style.display = 'none';
+            if (planetView) planetView.style.display = 'block';
+
+            // Update Selected Planet Info
+            document.getElementById('selected-planet-icon').textContent = PLANET_TYPES[planet.type] || '🪐';
+            document.getElementById('selected-planet-name').textContent = planet.name;
+            document.getElementById('selected-planet-type').textContent = planet.type;
+
+            const ownedCountries = planet.countries || [];
             const totalCountries = WORLD_COUNTRIES.length;
-            const completion = Math.round((ownedCount / totalCountries) * 100);
+            const completion = Math.round((ownedCountries.length / totalCountries) * 100);
             
+            // Calculate Total Income
+            let totalIncome = 0;
+            ownedCountries.forEach(c => {
+                const tier = getCountryTier(c);
+                totalIncome += tier.income;
+            });
+            document.getElementById('planet-total-income').textContent = '$' + formatNum(totalIncome) + '/day';
+
             // Update stats
             const countEl = document.getElementById('map-owned-count');
-            if (countEl) countEl.textContent = ownedCount;
+            if (countEl) countEl.textContent = ownedCountries.length;
             const compEl = document.getElementById('map-completion');
             if (compEl) compEl.textContent = completion + '%';
             const barEl = document.getElementById('map-progress-bar');
             if (barEl) barEl.style.width = completion + '%';
-            
-            // Show/hide planet section
-            const planetSection = document.getElementById('map-planet-section');
-            const planetOwned = document.getElementById('map-planet-owned');
-            
-            // Even if planet is owned, we show the countries grid to allow buying missing ones
-            const ownedPlanets = state.player.planets || [];
-            if (state.player.planetOwned || ownedPlanets.length > 0) {
-                if (planetSection) planetSection.style.display = 'none';
-                if (planetOwned) {
-                    planetOwned.style.display = 'block';
-                    // Update planet count display
-                    const planetCountEl = planetOwned.querySelector('#map-planet-count');
-                    if (planetCountEl) {
-                        const count = ownedPlanets.length || 1;
-                        planetCountEl.textContent = count + ' planet' + (count > 1 ? 's' : '') + ' owned';
-                    }
-                }
-            } else if (ownedCount === totalCountries) {
-                if (planetSection) planetSection.style.display = 'block';
-                if (planetOwned) planetOwned.style.display = 'none';
-            } else {
-                if (planetSection) planetSection.style.display = 'none';
-                if (planetOwned) planetOwned.style.display = 'none';
-            }
             
             // Search filter
             const searchInput = document.getElementById('map-search-input');
@@ -6476,14 +6650,23 @@ What is your experience?"></textarea></div>
             // Render owned countries
             const ownedList = document.getElementById('map-owned-list');
             if (ownedList) {
-                const filteredOwned = state.player.countriesOwned.filter(c => c.toLowerCase().includes(searchTerm));
+                const filteredOwned = ownedCountries.filter(c => c.toLowerCase().includes(searchTerm));
                 ownedList.innerHTML = filteredOwned.length === 0 ? 
                     '<div style="grid-column:1/-1;color:var(--text-muted);text-align:center;padding:2rem">No matching countries owned</div>' :
-                    filteredOwned.map(c => `
-                        <div style="background:linear-gradient(135deg,#10b981,#059669);border-radius:8px;padding:1rem;text-align:center;color:#fff;font-weight:700">
-                            ${c}
-                        </div>
-                    `).join('');
+                    filteredOwned.map(c => {
+                        const tier = getCountryTier(c);
+                        return `
+                            <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:12px;padding:1rem;text-align:center;position:relative;overflow:hidden">
+                                <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--success)"></div>
+                                <div style="font-weight:700;margin-bottom:0.25rem;font-size:0.95rem">${c}</div>
+                                <div style="font-size:0.75rem;color:var(--success);font-weight:700">+$${formatNum(tier.income)}/day</div>
+                                <div style="display:flex;gap:0.4rem;margin-top:0.75rem">
+                                    <button class="btn btn-secondary" onclick="showCountryInfo('${c}')" style="flex:1;font-size:0.65rem;padding:0.3rem">Info</button>
+                                    <button class="btn btn-danger" onclick="nukeOwnCountry('${c}')" style="flex:1;font-size:0.65rem;padding:0.3rem">Nuke</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
             }
             
             // Render available countries
@@ -6493,20 +6676,48 @@ What is your experience?"></textarea></div>
                 countriesGrid.innerHTML = filteredAvailable.length === 0 ?
                     '<div style="grid-column:1/-1;color:var(--text-muted);text-align:center;padding:2rem">No countries found</div>' :
                     filteredAvailable.map(country => {
-                        const isOwned = state.player.countriesOwned.includes(country);
-                        const canAfford = state.player.cash >= 10000000000000; // 10T
+                        const isOwned = ownedCountries.includes(country);
+                        const tier = getCountryTier(country);
+                        const canAfford = state.player.cash >= tier.price;
+                        if (isOwned) return ''; // Don't show owned in available grid
                         return `
-                            <div style="background:${isOwned ? 'var(--success)' : 'var(--bg-panel)'};border:1px solid var(--border);border-radius:8px;padding:1rem;text-align:center;cursor:${isOwned ? 'default' : canAfford ? 'pointer' : 'not-allowed'};opacity:${isOwned ? 0.6 : 1}" onclick="${isOwned ? '' : canAfford ? `buyCountry('${country}')` : ''}">
+                            <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:1rem;text-align:center;cursor:${canAfford ? 'pointer' : 'not-allowed'}">
                                 <div style="font-weight:700;margin-bottom:0.5rem;font-size:0.9rem">${country}</div>
-                                <div style="font-size:0.75rem;color:${isOwned ? '#fff' : 'var(--text-muted)'};margin-bottom:0.5rem">${isOwned ? '✓ Owned' : '10T'}</div>
-                                ${!isOwned ? `<button class="btn ${canAfford ? 'btn-primary' : 'btn-secondary'}" style="width:100%;font-size:0.7rem;padding:0.4rem" ${!canAfford ? 'disabled' : ''}>Buy</button>` : ''}
+                                <div style="font-size:0.75rem;color:var(--warning);font-weight:700;margin-bottom:0.5rem">$${formatNum(tier.price)}</div>
+                                <button class="btn ${canAfford ? 'btn-primary' : 'btn-secondary'}" onclick="buyCountry('${country}')" style="width:100%;font-size:0.7rem;padding:0.4rem" ${!canAfford ? 'disabled' : ''}>Buy Country</button>
                             </div>
                         `;
                     }).join('');
             }
         }
 
+        function showCountryInfo(country) {
+            const tier = getCountryTier(country);
+            showToast('Country Info: ' + country, `Tier: ${tier.tier}\nIncome: $${formatNum(tier.income)}/day\nBoosts: Stock +${(tier.stockBoost*100).toFixed(1)}%, Co +${(tier.companyBoost*100).toFixed(1)}%`, 'info');
+        }
+
+        function nukeOwnCountry(country) {
+            if (!confirm(`Are you sure you want to NUKE your own country (${country})? This will remove it from your possession and cause global economic damage!`)) return;
+            
+            const planet = state.player.planets.find(p => p.id === selectedPlanetId);
+            if (!planet) return;
+            
+            planet.countries = planet.countries.filter(c => c !== country);
+            addActivity(`Day ${state.player.day}`, `☢️ NUKED ${country} on planet ${planet.name}!`, 'danger');
+            showToast('TACTICAL NUKE INBOUND', `${country} has been wiped from the map.`, 'danger');
+            
+            // Economic impact
+            state.stockPrices = Object.fromEntries(Object.entries(state.stockPrices).map(([k, v]) => [k, v * 0.9]));
+            
+            saveGame();
+            renderMap();
+        }
+
         function buyCountry(country) {
+            if (!selectedPlanetId) { showToast('Error', 'Select a planet first', 'danger'); return; }
+            const planet = state.player.planets.find(p => p.id === selectedPlanetId);
+            if (!planet) return;
+
             const tierData = getCountryTier(country);
             const COUNTRY_PRICE = tierData.price;
             const priceDisplay = formatNum(COUNTRY_PRICE);
@@ -6515,14 +6726,15 @@ What is your experience?"></textarea></div>
                 showToast('Insufficient Funds', `You need ${priceDisplay} to buy ${country}`, 'danger');
                 return;
             }
-            if (state.player.countriesOwned.includes(country)) {
-                showToast('Already Owned', 'You already own this country', 'warning');
+            if (!planet.countries) planet.countries = [];
+            if (planet.countries.includes(country)) {
+                showToast('Already Owned', 'You already own this country on this planet', 'warning');
                 return;
             }
             state.player.cash -= COUNTRY_PRICE;
-            state.player.countriesOwned.push(country);
-            addActivity(`Day ${state.player.day}`, `Purchased ${country} (Tier ${tierData.tier}) for ${priceDisplay}!`, 'success');
-            showToast('Country Acquired!', `You now own ${country}! Earning $${formatNum(tierData.income)}/day`, 'success');
+            planet.countries.push(country);
+            addActivity(`Day ${state.player.day}`, `Purchased ${country} on ${planet.name} for ${priceDisplay}!`, 'success');
+            showToast('Country Acquired!', `You now own ${country} on ${planet.name}!`, 'success');
             saveGame();
             updateUI();
             renderMap();
@@ -8272,7 +8484,7 @@ What is your experience?"></textarea></div>
         }
 
         function switchAdminTab(tab) {
-            ['announce', 'players', 'stocks', 'crypto', 'support'].forEach(t => {
+            ['announce', 'players', 'stocks', 'crypto', 'support', 'gifts'].forEach(t => {
                 const panel = document.getElementById('admin-panel-' + t);
                 const btn = document.getElementById('atab-' + t);
                 if (panel) panel.style.display = t === tab ? '' : 'none';
@@ -8284,6 +8496,62 @@ What is your experience?"></textarea></div>
             if (tab === 'crypto') adminRenderCryptoTable();
             if (tab === 'announce') adminLoadAnnouncementHistory();
             if (tab === 'support') adminLoadSupportMessages();
+            if (tab === 'gifts') adminLoadGiftsPanel();
+        }
+
+        // ---- ADMIN GIFTS PANEL ----
+        let _adminAllGifts = [];
+        async function adminLoadGiftsPanel() {
+            if (!isAdmin()) return;
+            const container = document.getElementById('admin-gifts-panel-list');
+            if (!container) return;
+            container.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:2rem">Loading...</div>';
+            try {
+                const ref = window.fbMethods.collection(window.fbDb, 'gift_history');
+                const q = window.fbMethods.query(ref, window.fbMethods.orderBy('sentAt', 'desc'), window.fbMethods.limit(200));
+                const snap = await window.fbMethods.getDocs(q);
+                _adminAllGifts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                adminRenderGiftsPanel(_adminAllGifts);
+            } catch(e) {
+                container.innerHTML = `<div style="color:var(--danger);font-size:0.85rem">Error: ${e.message}</div>`;
+            }
+        }
+
+        function adminFilterGiftsPanel() {
+            const search = (document.getElementById('admin-gifts-search') || {}).value || '';
+            const typeF = (document.getElementById('admin-gifts-type') || {}).value || 'all';
+            const filtered = _adminAllGifts.filter(g => {
+                const matchSearch = !search || (g.playerName || '').toLowerCase().includes(search.toLowerCase()) || (g.displayName || '').toLowerCase().includes(search.toLowerCase());
+                const matchType = typeF === 'all' || g.type === typeF;
+                return matchSearch && matchType;
+            });
+            adminRenderGiftsPanel(filtered);
+        }
+
+        function adminRenderGiftsPanel(gifts) {
+            const container = document.getElementById('admin-gifts-panel-list');
+            if (!container) return;
+            if (gifts.length === 0) {
+                container.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:3rem;font-size:0.9rem">No gifts found.</div>';
+                return;
+            }
+            const typeColors = { cash:'#10b981', stock:'#3b82f6', crypto:'#f59e0b', property:'#8b5cf6', lifestyle:'#ec4899', aibot:'#06b6d4', country:'#14b8a6', planet:'#a855f7' };
+            container.innerHTML = gifts.map(g => {
+                const col = typeColors[g.type] || '#a1a1aa';
+                const time = g.sentAt ? new Date(g.sentAt).toLocaleString() : 'Unknown';
+                return `<div style="background:var(--bg-panel);border:1px solid var(--border);border-left:4px solid ${col};border-radius:10px;padding:1rem;margin-bottom:0.75rem;display:flex;gap:1rem;align-items:flex-start">
+                    <div style="font-size:2rem;flex-shrink:0">${g.icon || '🎁'}</div>
+                    <div style="flex:1;min-width:0">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.4rem">
+                            <div style="font-weight:700;font-size:0.95rem">${g.displayName || g.type}</div>
+                            <span style="font-size:0.7rem;padding:0.2rem 0.5rem;border-radius:4px;background:${col}22;color:${col};border:1px solid ${col}44;white-space:nowrap">${(g.type||'').toUpperCase()}</span>
+                        </div>
+                        <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.3rem">👤 <strong style="color:var(--text-main)">${g.playerName || g.uid}</strong></div>
+                        ${g.message ? `<div style="font-size:0.8rem;color:var(--brand);margin-bottom:0.3rem;font-style:italic">"​${g.message}​"</div>` : ''}
+                        <div style="font-size:0.75rem;color:var(--text-muted)">${time} &bull; by ${g.sentBy || 'Admin'}</div>
+                    </div>
+                </div>`;
+            }).join('');
         }
 
         // ---- ANNOUNCEMENTS ----
@@ -8386,6 +8654,47 @@ What is your experience?"></textarea></div>
                     <div style="background:${cfg.bg};border:1px solid ${cfg.border};border-radius:10px;padding:1.25rem;margin-bottom:1.5rem;color:var(--text-main);font-size:1rem;line-height:1.6">${data.message}</div>
                     <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:1.5rem">From: TradeLife Admin</div>
                     <button class="btn btn-primary" onclick="this.closest('.announcement-popup-overlay').remove()" style="width:100%;padding:0.9rem;font-size:1rem;background:${cfg.color};border:none">Got it!</button>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        // ---- GIFT POPUP (USER-FACING) ----
+        function showGiftPopup(gift) {
+            const overlay = document.createElement('div');
+            overlay.className = 'gift-popup-overlay';
+            // Confetti pieces
+            const confettiColors = ['#ff0080','#7c3aed','#3b82f6','#10b981','#f59e0b','#ec4899'];
+            const confettiHtml = Array.from({length: 18}, (_, i) => {
+                const col = confettiColors[i % confettiColors.length];
+                const left = Math.random() * 100;
+                const delay = Math.random() * 1.5;
+                const dur = 1.8 + Math.random() * 1.5;
+                const size = 6 + Math.random() * 8;
+                return `<div style="position:absolute;top:-10px;left:${left}%;width:${size}px;height:${size}px;background:${col};border-radius:${Math.random()>0.5?'50%':'2px'};animation:confettiFall ${dur}s ${delay}s ease-in forwards;opacity:0"></div>`;
+            }).join('');
+
+            overlay.innerHTML = `
+                <style>
+                    @keyframes confettiFall {
+                        0%   { transform: translateY(0) rotate(0deg);   opacity: 1; }
+                        100% { transform: translateY(500px) rotate(720deg); opacity: 0; }
+                    }
+                </style>
+                <div class="gift-popup" style="border:2px solid #ff0080">
+                    <div class="gift-confetti">${confettiHtml}</div>
+                    <div style="font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:0.15em;color:#ff0080;margin-bottom:0.5rem">🎁 You Received a Gift!</div>
+                    <div class="gift-icon-wrap">${gift.icon || '🎁'}</div>
+                    <h2 style="font-size:1.5rem;font-weight:900;color:var(--text-main);margin-bottom:0.25rem">Congratulations!</h2>
+                    <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:0">TradeLife Admin has sent you a gift</p>
+                    <div class="gift-item-card">
+                        <div class="gift-item-label">Your Gift</div>
+                        <div class="gift-item-value">${gift.displayName || gift.type}</div>
+                        ${gift.amount && gift.type !== 'cash' ? `<div style="font-size:0.85rem;color:var(--text-muted);margin-top:0.4rem">Quantity: <strong>${gift.amount}</strong></div>` : ''}
+                    </div>
+                    ${gift.message ? `<div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);border-radius:10px;padding:1rem;margin-bottom:1.25rem;font-size:0.95rem;color:var(--text-main);font-style:italic;line-height:1.5">"​${gift.message}​"</div>` : ''}
+                    <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:1.5rem">The gift has been added to your account automatically.</div>
+                    <button class="btn btn-primary" onclick="this.closest('.gift-popup-overlay').remove()" style="width:100%;padding:0.9rem;font-size:1rem;background:linear-gradient(135deg,#ff0080,#7c3aed);border:none;font-weight:800">🎉 Awesome, Thanks!</button>
                 </div>
             `;
             document.body.appendChild(overlay);
@@ -8608,46 +8917,67 @@ What is your experience?"></textarea></div>
             const type = document.getElementById('admin-gift-type').value;
             const itemId = document.getElementById('admin-gift-item').value;
             const amount = parseFloat(document.getElementById('admin-gift-amount').value) || 0;
+            const customMsg = (document.getElementById('admin-gift-message') ? document.getElementById('admin-gift-message').value.trim() : '');
 
             try {
                 const data = adminCurrentSaveData;
                 if (!data.player) data.player = {};
                 
                 let giftMsg = "";
+                let giftDisplayName = "";
+                let giftIcon = "🎁";
 
                 if (type === 'cash') {
                     data.player.cash = (data.player.cash || 0) + amount;
                     giftMsg = `Gifted $${formatNum(amount)} cash`;
+                    giftDisplayName = `$${formatNum(amount)} Cash`;
+                    giftIcon = "💰";
                 } else if (type === 'stock') {
                     if (!data.player.portfolio) data.player.portfolio = {};
                     if (!data.player.portfolio[itemId]) data.player.portfolio[itemId] = { shares: 0, avgCost: 0, totalCost: 0 };
                     data.player.portfolio[itemId].shares += amount;
                     giftMsg = `Gifted ${amount} shares of ${itemId}`;
+                    giftDisplayName = `${amount} shares of ${itemId}`;
+                    giftIcon = "📈";
                 } else if (type === 'crypto') {
                     if (!data.player.cryptoPortfolio) data.player.cryptoPortfolio = {};
                     if (!data.player.cryptoPortfolio[itemId]) data.player.cryptoPortfolio[itemId] = { amount: 0, avgCost: 0, totalCost: 0 };
                     data.player.cryptoPortfolio[itemId].amount += amount;
                     giftMsg = `Gifted ${amount} ${itemId}`;
+                    giftDisplayName = `${amount} ${itemId}`;
+                    giftIcon = "🪙";
                 } else if (type === 'property') {
                     if (!data.player.properties) data.player.properties = [];
                     data.player.properties.push({ id: itemId });
-                    giftMsg = `Gifted property: ${itemId}`;
+                    const propName = (REAL_ESTATE.find(r => r.id === itemId) || {}).name || itemId;
+                    giftMsg = `Gifted property: ${propName}`;
+                    giftDisplayName = propName;
+                    giftIcon = "🏠";
                 } else if (type === 'lifestyle') {
                     if (!data.player.lifestyle) data.player.lifestyle = [];
                     data.player.lifestyle.push({ id: itemId });
-                    giftMsg = `Gifted lifestyle item: ${itemId}`;
+                    const lsName = (LIFESTYLE.find(l => l.id === itemId) || {}).name || itemId;
+                    giftMsg = `Gifted lifestyle item: ${lsName}`;
+                    giftDisplayName = lsName;
+                    giftIcon = "✨";
                 } else if (type === 'aibot') {
                     if (!data.player.aiBots) data.player.aiBots = [];
                     const bot = AI_BOTS.find(b => b.id === itemId);
                     data.player.aiBots.push({ id: 'ab_' + Date.now(), botId: itemId, invested: bot.price * 0.5, value: bot.price * 0.5, totalPL: 0, daysActive: 0 });
                     giftMsg = `Gifted AI Bot: ${bot.name}`;
+                    giftDisplayName = `AI Bot: ${bot.name}`;
+                    giftIcon = "🤖";
                 } else if (type === 'country') {
                     if (!data.player.countriesOwned) data.player.countriesOwned = [];
                     if (!data.player.countriesOwned.includes(itemId)) data.player.countriesOwned.push(itemId);
                     giftMsg = `Gifted country: ${itemId}`;
+                    giftDisplayName = itemId;
+                    giftIcon = "🌍";
                 } else if (type === 'planet') {
                     data.player.planetOwned = true;
                     giftMsg = `Gifted THE PLANET!`;
+                    giftDisplayName = "THE PLANET";
+                    giftIcon = "🪐";
                 }
 
                 // Save to cloud
@@ -8656,13 +8986,103 @@ What is your experience?"></textarea></div>
                 
                 // Update profile net worth
                 const nw = calcNetWorthForPlayer(data.player);
-                await window.fbMethods.updateDoc(window.fbMethods.doc(window.fbDb, 'users', adminCurrentPlayerUid), { netWorth: nw });
 
-                showToast('Gift Sent', giftMsg, 'success');
+                // Build pending gift notification for the player
+                const pendingGift = {
+                    type,
+                    itemId: itemId || null,
+                    amount: amount || null,
+                    displayName: giftDisplayName,
+                    icon: giftIcon,
+                    message: customMsg || null,
+                    sentAt: new Date().toISOString(),
+                    sentBy: ADMIN_USERNAME
+                };
+
+                await window.fbMethods.updateDoc(window.fbMethods.doc(window.fbDb, 'users', adminCurrentPlayerUid), { 
+                    netWorth: nw,
+                    pendingGift: pendingGift
+                });
+
+                // Log gift to Firestore gift_history collection
+                try {
+                    const playerName = adminCurrentPlayerData ? (adminCurrentPlayerData.displayName || adminCurrentPlayerData.username || adminCurrentPlayerUid) : adminCurrentPlayerUid;
+                    await window.fbMethods.addDoc(window.fbMethods.collection(window.fbDb, 'gift_history'), {
+                        uid: adminCurrentPlayerUid,
+                        playerName,
+                        type,
+                        itemId: itemId || null,
+                        amount: amount || null,
+                        displayName: giftDisplayName,
+                        icon: giftIcon,
+                        message: customMsg || null,
+                        sentAt: new Date().toISOString(),
+                        sentBy: ADMIN_USERNAME
+                    });
+                } catch(logErr) { console.warn('Gift log failed:', logErr); }
+
+                // Clear message field
+                if (document.getElementById('admin-gift-message')) document.getElementById('admin-gift-message').value = '';
+
+                showToast('🎁 Gift Sent', giftMsg, 'success');
                 adminLoadPlayer(adminCurrentPlayerUid); // Refresh UI
             } catch(e) {
                 showToast('Error', 'Failed to send gift: ' + e.message, 'danger');
             }
+        }
+
+        // ---- GIFT HISTORY ----
+        let _allGiftHistory = [];
+        async function adminOpenGiftHistory() {
+            document.getElementById('admin-gift-history-modal').classList.remove('hidden');
+            const container = document.getElementById('gift-history-list');
+            container.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:2rem">Loading...</div>';
+            try {
+                const ref = window.fbMethods.collection(window.fbDb, 'gift_history');
+                const q = window.fbMethods.query(ref, window.fbMethods.orderBy('sentAt', 'desc'), window.fbMethods.limit(100));
+                const snap = await window.fbMethods.getDocs(q);
+                _allGiftHistory = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderGiftHistory(_allGiftHistory);
+            } catch(e) {
+                container.innerHTML = `<div style="color:var(--danger);font-size:0.85rem">Error: ${e.message}</div>`;
+            }
+        }
+
+        function filterGiftHistory() {
+            const search = (document.getElementById('gift-history-search') || {}).value || '';
+            const typeF = (document.getElementById('gift-history-type-filter') || {}).value || 'all';
+            const filtered = _allGiftHistory.filter(g => {
+                const matchSearch = !search || (g.playerName || '').toLowerCase().includes(search.toLowerCase()) || (g.displayName || '').toLowerCase().includes(search.toLowerCase());
+                const matchType = typeF === 'all' || g.type === typeF;
+                return matchSearch && matchType;
+            });
+            renderGiftHistory(filtered);
+        }
+
+        function renderGiftHistory(gifts) {
+            const container = document.getElementById('gift-history-list');
+            if (!container) return;
+            if (gifts.length === 0) {
+                container.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:3rem;font-size:0.9rem">No gifts found.</div>';
+                return;
+            }
+            const typeColors = { cash:'#10b981', stock:'#3b82f6', crypto:'#f59e0b', property:'#8b5cf6', lifestyle:'#ec4899', aibot:'#06b6d4', country:'#14b8a6', planet:'#a855f7' };
+            container.innerHTML = gifts.map(g => {
+                const col = typeColors[g.type] || '#a1a1aa';
+                const time = g.sentAt ? new Date(g.sentAt).toLocaleString() : 'Unknown';
+                return `<div style="background:var(--bg-panel);border:1px solid var(--border);border-left:4px solid ${col};border-radius:10px;padding:1rem;margin-bottom:0.75rem;display:flex;gap:1rem;align-items:flex-start">
+                    <div style="font-size:2rem;flex-shrink:0">${g.icon || '🎁'}</div>
+                    <div style="flex:1;min-width:0">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.4rem">
+                            <div style="font-weight:700;font-size:0.95rem">${g.displayName || g.type}</div>
+                            <span style="font-size:0.7rem;padding:0.2rem 0.5rem;border-radius:4px;background:${col}22;color:${col};border:1px solid ${col}44;white-space:nowrap">${g.type.toUpperCase()}</span>
+                        </div>
+                        <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.3rem">👤 <strong style="color:var(--text-main)">${g.playerName || g.uid}</strong></div>
+                        ${g.message ? `<div style="font-size:0.8rem;color:var(--brand);margin-bottom:0.3rem;font-style:italic">"​${g.message}​"</div>` : ''}
+                        <div style="font-size:0.75rem;color:var(--text-muted)">${time} &bull; by ${g.sentBy || 'Admin'}</div>
+                    </div>
+                </div>`;
+            }).join('');
         }
 
         function calcNetWorthForPlayer(p) {
