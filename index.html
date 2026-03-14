@@ -516,10 +516,68 @@
         <div class="modal-content" style="max-width:380px">
             <div class="modal-header" id="amount-modal-title">Enter Amount</div>
             <div id="amount-modal-desc" style="color:var(--text-muted);margin-bottom:1rem;font-size:0.9rem"></div>
-            <div class="input-group"><input type="number" id="amount-modal-input" placeholder="0" min="1"><span>$</span></div>
+            <div class="input-group" style="margin-bottom:0.5rem">
+                <input type="number" id="amount-modal-input" placeholder="0" min="1">
+                <span>$</span>
+            </div>
+            <div id="amount-modal-max-container" style="margin-bottom:1rem; text-align:right;">
+                <button id="amount-modal-max-btn" class="btn btn-secondary" style="font-size:0.75rem; padding:0.3rem 0.6rem;">Max Put</button>
+            </div>
             <div class="modal-buttons">
                 <button class="btn btn-secondary" onclick="document.getElementById('amount-modal').classList.add('hidden')">Cancel</button>
                 <button class="btn btn-primary" id="amount-modal-confirm" onclick="">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Moderation Modals -->
+    <div id="admin-warn-modal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width:400px">
+            <div class="modal-header">⚠️ Warn Player</div>
+            <div style="margin-bottom:1rem">
+                <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:0.4rem">Reason</label>
+                <textarea id="admin-warn-reason" placeholder="Enter reason for warning..." style="width:100%;padding:0.75rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem;min-height:100px"></textarea>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="document.getElementById('admin-warn-modal').classList.add('hidden')">Cancel</button>
+                <button class="btn btn-warning" onclick="adminSubmitWarn()">Send Warning</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="admin-ban-modal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width:400px">
+            <div class="modal-header">🚫 Ban Player</div>
+            <div style="margin-bottom:1rem">
+                <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:0.4rem">Reason</label>
+                <input type="text" id="admin-ban-reason" placeholder="Enter reason for ban..." style="width:100%;padding:0.75rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem;margin-bottom:1rem">
+                
+                <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:0.4rem">Duration</label>
+                <select id="admin-ban-duration" style="width:100%;padding:0.75rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem">
+                    <option value="3600">1 Hour</option>
+                    <option value="86400">24 Hours</option>
+                    <option value="604800">7 Days</option>
+                    <option value="2592000">30 Days</option>
+                    <option value="0">Permanent</option>
+                </select>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="document.getElementById('admin-ban-modal').classList.add('hidden')">Cancel</button>
+                <button class="btn btn-danger" onclick="adminSubmitBan()">Confirm Ban</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ban Screen -->
+    <div id="ban-screen" class="modal-overlay hidden" style="z-index:100000; background:var(--bg-base);">
+        <div class="modal-content" style="max-width:500px; text-align:center;">
+            <div style="font-size:4rem; margin-bottom:1rem;">🚫</div>
+            <h1 style="color:var(--danger); margin-bottom:1rem;">You are Banned</h1>
+            <p id="ban-reason-text" style="margin-bottom:1rem; color:var(--text-main);"></p>
+            <p id="ban-expiry-text" style="margin-bottom:2rem; color:var(--text-muted); font-size:0.9rem;"></p>
+            <div style="border-top:1px solid var(--border); padding-top:1.5rem;">
+                <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem;">If you think this is a mistake, contact us!</p>
+                <a href="https://discord.gg/tradelife" target="_blank" class="btn btn-primary" style="width:100%;">Contact Support</a>
             </div>
         </div>
     </div>
@@ -1209,6 +1267,10 @@ What is your experience?"></textarea></div>
                                         <div id="admin-pd-username" style="color:var(--text-muted);font-size:0.9rem">@username</div>
                                         <div id="admin-pd-uid" style="color:var(--text-muted);font-size:0.75rem">UID: —</div>
                                     </div>
+                                    <div style="margin-left:auto; display:flex; gap:0.5rem;">
+                                        <button class="btn btn-warning" onclick="adminOpenWarnModal()" style="font-size:0.8rem">⚠️ Warn</button>
+                                        <button class="btn btn-danger" onclick="adminOpenBanModal()" style="font-size:0.8rem">🚫 Ban</button>
+                                    </div>
                                 </div>
                                 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:1.5rem">
                                     <div style="background:var(--bg-panel);padding:0.75rem;border-radius:8px;text-align:center;border:1px solid var(--border)">
@@ -1223,6 +1285,26 @@ What is your experience?"></textarea></div>
                                         <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Level</div>
                                         <div id="admin-pd-level" style="font-weight:800;color:var(--warning);font-size:1.1rem">1</div>
                                     </div>
+                                </div>
+
+                                <!-- Gifting Control -->
+                                <div style="background:var(--bg-panel);border-radius:12px;padding:1.25rem;margin-bottom:1rem;border:1px solid var(--border)">
+                                    <h4 style="margin-bottom:1rem;color:#ff0080">🎁 Gift Assets</h4>
+                                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem">
+                                        <select id="admin-gift-type" onchange="adminUpdateGiftOptions()" style="padding:0.6rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem">
+                                            <option value="cash">Cash ($)</option>
+                                            <option value="stock">Stock Shares</option>
+                                            <option value="crypto">Crypto Amount</option>
+                                            <option value="property">Real Estate</option>
+                                            <option value="lifestyle">Lifestyle Item</option>
+                                            <option value="aibot">AI Bot</option>
+                                            <option value="country">Country</option>
+                                            <option value="planet">The Planet</option>
+                                        </select>
+                                        <select id="admin-gift-item" style="padding:0.6rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem;display:none"></select>
+                                        <input type="number" id="admin-gift-amount" placeholder="Amount/Qty" style="padding:0.6rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:0.9rem">
+                                    </div>
+                                    <button class="btn btn-success" onclick="adminSendGift()" style="width:100%;font-size:0.85rem">Send Gift</button>
                                 </div>
 
                                 <!-- Coin Control -->
@@ -2970,8 +3052,33 @@ What is your experience?"></textarea></div>
             }
             // Initialize Firebase Auth Listener
             if (window.fbMethods) {
-                window.fbMethods.onAuthStateChanged(window.fbAuth, (user) => {
+                window.fbMethods.onAuthStateChanged(window.fbAuth, async (user) => {
                     if (user) {
+                        // Check for Ban
+                        try {
+                            const userDoc = await window.fbMethods.getDoc(window.fbMethods.doc(window.fbDb, 'users', user.uid));
+                            if (userDoc.exists()) {
+                                const userData = userDoc.data();
+                                if (userData.isBanned) {
+                                    const now = Date.now();
+                                    if (!userData.banExpiry || userData.banExpiry === 0 || userData.banExpiry > now) {
+                                        document.getElementById('ban-reason-text').textContent = "Reason: " + (userData.banReason || "No reason provided");
+                                        document.getElementById('ban-expiry-text').textContent = userData.banExpiry ? "Expires: " + new Date(userData.banExpiry).toLocaleString() : "Duration: Permanent";
+                                        document.getElementById('ban-screen').classList.remove('hidden');
+                                        return;
+                                    } else {
+                                        // Ban expired, unban automatically
+                                        await window.fbMethods.updateDoc(window.fbMethods.doc(window.fbDb, 'users', user.uid), { isBanned: false });
+                                    }
+                                }
+                                // Check for Warning
+                                if (userData.pendingWarning) {
+                                    showToast('⚠️ WARNING', userData.pendingWarning, 'warning', 10000);
+                                    await window.fbMethods.updateDoc(window.fbMethods.doc(window.fbDb, 'users', user.uid), { pendingWarning: null });
+                                }
+                            }
+                        } catch(e) { console.error("Ban check failed", e); }
+
                         document.getElementById('auth-overlay').classList.add('hidden');
                         const displayName = user.displayName || user.email.replace('@tradelife.game','') || 'Player';
                         document.getElementById('user-email').textContent = displayName;
@@ -4961,15 +5068,19 @@ What is your experience?"></textarea></div>
 
         function investInCompany(coId) {
             const co = state.player.companies.find(c => c.id === coId);
-            const MAX_INVEST = 10000000000000; // 10 Trillion max per transaction
             document.getElementById('amount-modal-title').textContent = `Invest in ${co.name}`;
-            document.getElementById('amount-modal-desc').textContent = `Your cash: $${formatNum(state.player.cash)}. Max per transaction: $${formatNum(MAX_INVEST)}. Investment earns 1%/day revenue.`;
+            document.getElementById('amount-modal-desc').textContent = `Your cash: $${formatNum(state.player.cash)}. Investment earns 1%/day revenue.`;
             document.getElementById('amount-modal-input').value = '';
+            
+            const maxBtn = document.getElementById('amount-modal-max-btn');
+            maxBtn.onclick = () => {
+                document.getElementById('amount-modal-input').value = state.player.cash;
+            };
+
             const btn = document.getElementById('amount-modal-confirm');
             btn.onclick = () => {
                 const amt = parseFloat(document.getElementById('amount-modal-input').value);
                 if (!amt || amt <= 0) { showToast('Error', 'Enter a valid amount', 'danger'); return; }
-                if (amt > MAX_INVEST) { showToast('Exceeds Limit', `Maximum investment per transaction is $${formatNum(MAX_INVEST)}`, 'danger'); return; }
                 if (state.player.cash < amt) { showToast('Insufficient Funds', '', 'danger'); return; }
                 state.player.cash = Math.max(0, state.player.cash - amt);
                 co.cash += amt;
@@ -4983,15 +5094,19 @@ What is your experience?"></textarea></div>
 
         function withdrawFromCompany(coId) {
             const co = state.player.companies.find(c => c.id === coId);
-            const MAX_WITHDRAW = 10000000000000; // 10 Trillion max per transaction
             document.getElementById('amount-modal-title').textContent = `Withdraw from ${co.name}`;
-            document.getElementById('amount-modal-desc').textContent = `Company cash available: $${formatNum(co.cash)}. Max per transaction: $${formatNum(MAX_WITHDRAW)}`;
+            document.getElementById('amount-modal-desc').textContent = `Company cash available: $${formatNum(co.cash)}.`;
             document.getElementById('amount-modal-input').value = '';
+            
+            const maxBtn = document.getElementById('amount-modal-max-btn');
+            maxBtn.onclick = () => {
+                document.getElementById('amount-modal-input').value = co.cash;
+            };
+
             const btn = document.getElementById('amount-modal-confirm');
             btn.onclick = () => {
                 const amt = parseFloat(document.getElementById('amount-modal-input').value);
                 if (!amt || amt <= 0) { showToast('Error', 'Enter a valid amount', 'danger'); return; }
-                if (amt > MAX_WITHDRAW) { showToast('Exceeds Limit', `Maximum withdrawal per transaction is $${formatNum(MAX_WITHDRAW)}`, 'danger'); return; }
                 if (co.cash < amt) { showToast('Insufficient', 'Company does not have enough cash', 'danger'); return; }
                 co.cash = Math.max(0, co.cash - amt);
                 state.player.cash += amt;
@@ -6430,15 +6545,19 @@ What is your experience?"></textarea></div>
             const ab = state.player.aiBots.find(a => a.id === abId);
             if (!ab) return;
             const bot = AI_BOTS.find(b => b.id === ab.botId);
-            const MAX_BOT_FUNDS = 10000000000000; // 10 Trillion max per transaction
             document.getElementById('amount-modal-title').textContent = `Add Funds to ${bot ? bot.name : 'Bot'}`;
-            document.getElementById('amount-modal-desc').textContent = `Your cash: $${formatNum(state.player.cash)}. Max per transaction: $${formatNum(MAX_BOT_FUNDS)}. Funds will be managed by the bot.`;
+            document.getElementById('amount-modal-desc').textContent = `Your cash: $${formatNum(state.player.cash)}. Funds will be managed by the bot.`;
             document.getElementById('amount-modal-input').value = '';
+            
+            const maxBtn = document.getElementById('amount-modal-max-btn');
+            maxBtn.onclick = () => {
+                document.getElementById('amount-modal-input').value = state.player.cash;
+            };
+
             const btn = document.getElementById('amount-modal-confirm');
             btn.onclick = () => {
                 const amt = parseFloat(document.getElementById('amount-modal-input').value);
                 if (!amt || amt <= 0) { showToast('Error', 'Enter a valid amount', 'danger'); return; }
-                if (amt > MAX_BOT_FUNDS) { showToast('Exceeds Limit', `Maximum fund addition per transaction is $${formatNum(MAX_BOT_FUNDS)}`, 'danger'); return; }
                 if (state.player.cash < amt) { showToast('Insufficient Funds', '', 'danger'); return; }
                 state.player.cash -= amt;
                 ab.invested += amt;
@@ -7680,6 +7799,157 @@ What is your experience?"></textarea></div>
         }
 
         let adminCustomBadgeData = null;
+
+        function adminUpdateGiftOptions() {
+            const type = document.getElementById('admin-gift-type').value;
+            const itemSelect = document.getElementById('admin-gift-item');
+            const amountInput = document.getElementById('admin-gift-amount');
+            
+            itemSelect.innerHTML = '';
+            itemSelect.style.display = 'none';
+            amountInput.style.display = 'block';
+
+            if (type === 'stock') {
+                itemSelect.style.display = 'block';
+                itemSelect.innerHTML = STOCKS.map(s => `<option value="${s.ticker}">${s.name} (${s.ticker})</option>`).join('');
+            } else if (type === 'crypto') {
+                itemSelect.style.display = 'block';
+                itemSelect.innerHTML = CRYPTO_COINS.map(c => `<option value="${c.ticker}">${c.name} (${c.ticker})</option>`).join('');
+            } else if (type === 'property') {
+                itemSelect.style.display = 'block';
+                itemSelect.innerHTML = REAL_ESTATE.map(r => `<option value="${r.id}">${r.name} ($${formatNum(r.price)})</option>`).join('');
+                amountInput.style.display = 'none';
+            } else if (type === 'lifestyle') {
+                itemSelect.style.display = 'block';
+                itemSelect.innerHTML = LIFESTYLE.map(l => `<option value="${l.id}">${l.name} ($${formatNum(l.price)})</option>`).join('');
+                amountInput.style.display = 'none';
+            } else if (type === 'aibot') {
+                itemSelect.style.display = 'block';
+                itemSelect.innerHTML = AI_BOTS.map(b => `<option value="${b.id}">${b.name} (Tier ${b.tier})</option>`).join('');
+                amountInput.style.display = 'none';
+            } else if (type === 'country') {
+                itemSelect.style.display = 'block';
+                itemSelect.innerHTML = WORLD_COUNTRIES.map(c => `<option value="${c}">${c}</option>`).join('');
+                amountInput.style.display = 'none';
+            } else if (type === 'planet') {
+                itemSelect.style.display = 'none';
+                amountInput.style.display = 'none';
+            }
+        }
+
+        async function adminSendGift() {
+            if (!adminCurrentPlayerUid || !adminCurrentSaveData) { showToast('Error', 'No player loaded', 'danger'); return; }
+            const type = document.getElementById('admin-gift-type').value;
+            const itemId = document.getElementById('admin-gift-item').value;
+            const amount = parseFloat(document.getElementById('admin-gift-amount').value) || 0;
+
+            try {
+                const data = adminCurrentSaveData;
+                if (!data.player) data.player = {};
+                
+                let giftMsg = "";
+
+                if (type === 'cash') {
+                    data.player.cash = (data.player.cash || 0) + amount;
+                    giftMsg = `Gifted $${formatNum(amount)} cash`;
+                } else if (type === 'stock') {
+                    if (!data.player.portfolio) data.player.portfolio = {};
+                    if (!data.player.portfolio[itemId]) data.player.portfolio[itemId] = { shares: 0, avgCost: 0, totalCost: 0 };
+                    data.player.portfolio[itemId].shares += amount;
+                    giftMsg = `Gifted ${amount} shares of ${itemId}`;
+                } else if (type === 'crypto') {
+                    if (!data.player.cryptoPortfolio) data.player.cryptoPortfolio = {};
+                    if (!data.player.cryptoPortfolio[itemId]) data.player.cryptoPortfolio[itemId] = { amount: 0, avgCost: 0, totalCost: 0 };
+                    data.player.cryptoPortfolio[itemId].amount += amount;
+                    giftMsg = `Gifted ${amount} ${itemId}`;
+                } else if (type === 'property') {
+                    if (!data.player.properties) data.player.properties = [];
+                    data.player.properties.push({ id: itemId });
+                    giftMsg = `Gifted property: ${itemId}`;
+                } else if (type === 'lifestyle') {
+                    if (!data.player.lifestyle) data.player.lifestyle = [];
+                    data.player.lifestyle.push({ id: itemId });
+                    giftMsg = `Gifted lifestyle item: ${itemId}`;
+                } else if (type === 'aibot') {
+                    if (!data.player.aiBots) data.player.aiBots = [];
+                    const bot = AI_BOTS.find(b => b.id === itemId);
+                    data.player.aiBots.push({ id: 'ab_' + Date.now(), botId: itemId, invested: bot.price * 0.5, value: bot.price * 0.5, totalPL: 0, daysActive: 0 });
+                    giftMsg = `Gifted AI Bot: ${bot.name}`;
+                } else if (type === 'country') {
+                    if (!data.player.countriesOwned) data.player.countriesOwned = [];
+                    if (!data.player.countriesOwned.includes(itemId)) data.player.countriesOwned.push(itemId);
+                    giftMsg = `Gifted country: ${itemId}`;
+                } else if (type === 'planet') {
+                    data.player.planetOwned = true;
+                    giftMsg = `Gifted THE PLANET!`;
+                }
+
+                // Save to cloud
+                const saveDoc = window.fbMethods.doc(window.fbDb, 'users', adminCurrentPlayerUid, 'saves', adminCurrentSaveData.id || 'AutoSave');
+                await window.fbMethods.setDoc(saveDoc, data);
+                
+                // Update profile net worth
+                const nw = calcNetWorthForPlayer(data.player);
+                await window.fbMethods.updateDoc(window.fbMethods.doc(window.fbDb, 'users', adminCurrentPlayerUid), { netWorth: nw });
+
+                showToast('Gift Sent', giftMsg, 'success');
+                adminLoadPlayer(adminCurrentPlayerUid); // Refresh UI
+            } catch(e) {
+                showToast('Error', 'Failed to send gift: ' + e.message, 'danger');
+            }
+        }
+
+        function calcNetWorthForPlayer(p) {
+            let nw = p.cash || 0;
+            if (p.portfolio) Object.entries(p.portfolio).forEach(([t, h]) => { nw += h.shares * (state.stockPrices[t] || 0); });
+            if (p.cryptoPortfolio) Object.entries(p.cryptoPortfolio).forEach(([t, h]) => { nw += h.amount * (state.cryptoPrices[t] || 0); });
+            if (p.properties) p.properties.forEach(prop => { const r = REAL_ESTATE.find(x => x.id === prop.id); if (r) nw += r.price; });
+            if (p.lifestyle) p.lifestyle.forEach(l => { const ls = LIFESTYLE.find(x => x.id === l.id); if (ls) nw += ls.price * 0.7; });
+            if (p.companies) p.companies.forEach(co => { nw += co.cash; });
+            if (p.aiBots) p.aiBots.forEach(ab => { nw += (ab.value || 0); });
+            nw -= (p.debt || 0);
+            return nw;
+        }
+
+        function adminOpenWarnModal() {
+            if (!adminCurrentPlayerUid) return;
+            document.getElementById('admin-warn-reason').value = '';
+            document.getElementById('admin-warn-modal').classList.remove('hidden');
+        }
+
+        async function adminSubmitWarn() {
+            const reason = document.getElementById('admin-warn-reason').value.trim();
+            if (!reason) { showToast('Error', 'Enter a reason', 'danger'); return; }
+            try {
+                await window.fbMethods.updateDoc(window.fbMethods.doc(window.fbDb, 'users', adminCurrentPlayerUid), { pendingWarning: reason });
+                showToast('Success', 'Warning sent to player', 'success');
+                document.getElementById('admin-warn-modal').classList.add('hidden');
+            } catch(e) { showToast('Error', e.message, 'danger'); }
+        }
+
+        function adminOpenBanModal() {
+            if (!adminCurrentPlayerUid) return;
+            document.getElementById('admin-ban-reason').value = '';
+            document.getElementById('admin-ban-modal').classList.remove('hidden');
+        }
+
+        async function adminSubmitBan() {
+            const reason = document.getElementById('admin-ban-reason').value.trim();
+            const duration = parseInt(document.getElementById('admin-ban-duration').value);
+            if (!reason) { showToast('Error', 'Enter a reason', 'danger'); return; }
+            
+            const expiry = duration === 0 ? 0 : Date.now() + (duration * 1000);
+            
+            try {
+                await window.fbMethods.updateDoc(window.fbMethods.doc(window.fbDb, 'users', adminCurrentPlayerUid), { 
+                    isBanned: true, 
+                    banReason: reason, 
+                    banExpiry: expiry 
+                });
+                showToast('Success', 'Player has been banned', 'danger');
+                document.getElementById('admin-ban-modal').classList.add('hidden');
+            } catch(e) { showToast('Error', e.message, 'danger'); }
+        }
         function adminHandleCustomBadgePreview(event) {
             const file = event.target.files[0];
             if (!file) return;
