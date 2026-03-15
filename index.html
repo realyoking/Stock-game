@@ -4820,10 +4820,18 @@ What is your experience?"></textarea></div>
         function parseMoneyInput(str) {
             if (!str) return 0;
             str = str.toString().trim().toUpperCase();
-            const match = str.match(/^([\d.]+)([TBM]?)$/);
+            // Handle scientific notation like 3E+37 or 3.5E37
+            if (str.includes('E')) {
+                const num = parseFloat(str);
+                return isNaN(num) ? 0 : num;
+            }
+            // Support M, B, T, Q, SQ suffixes
+            const match = str.match(/^([\d.]+)\s*([A-Z]*)$/);
             if (!match) return 0;
             const num = parseFloat(match[1]);
             const suffix = match[2];
+            if (suffix === 'SQ') return num * 1e18;
+            if (suffix === 'Q') return num * 1e15;
             if (suffix === 'T') return num * 1e12;
             if (suffix === 'B') return num * 1e9;
             if (suffix === 'M') return num * 1e6;
@@ -5704,7 +5712,7 @@ What is your experience?"></textarea></div>
             
             const maxBtn = document.getElementById('amount-modal-max-btn');
             maxBtn.onclick = () => {
-                document.getElementById('amount-modal-input').value = state.player.cash;
+                document.getElementById('amount-modal-input').value = state.player.cash.toString();
             };
 
             const btn = document.getElementById('amount-modal-confirm');
@@ -5730,7 +5738,7 @@ What is your experience?"></textarea></div>
             
             const maxBtn = document.getElementById('amount-modal-max-btn');
             maxBtn.onclick = () => {
-                document.getElementById('amount-modal-input').value = co.cash;
+                document.getElementById('amount-modal-input').value = co.cash.toString();
             };
 
             const btn = document.getElementById('amount-modal-confirm');
@@ -6097,7 +6105,7 @@ What is your experience?"></textarea></div>
                         <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem">Invest any amount. Potential revenue is 5x-15x investment.</div>
                         <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.5rem">
                             <div class="input-group" style="flex:1;margin-bottom:0"><input type="number" id="custom-proj-amt" placeholder="Investment Amount" min="1000"><span>$</span></div>
-                            <button class="btn btn-secondary" onclick="document.getElementById('custom-proj-amt').value=state.player.companies.find(c=>c.id==='${coId}')?.cash||0" style="font-size:0.75rem;padding:0.5rem 0.6rem;white-space:nowrap">Max</button>
+                            <button class="btn btn-secondary" onclick="document.getElementById('custom-proj-amt').value=(state.player.companies.find(c=>c.id==='${coId}')?.cash||0).toString()" style="font-size:0.75rem;padding:0.5rem 0.6rem;white-space:nowrap">Max</button>
                         </div>
                         <div class="input-group" style="margin-bottom:0.75rem"><input type="text" id="custom-proj-name" placeholder="Project Name"></div>
                         <button class="btn btn-success" onclick="startCustomProject('${coId}')" style="width:100%;font-size:0.8rem">Start Custom Project</button>
