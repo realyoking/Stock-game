@@ -1443,7 +1443,29 @@ What is your experience?"></textarea></div>
                         <div style="padding:1.25rem;background:var(--bg-panel);border-radius:10px;border:1px solid var(--border);margin-bottom:1rem">
                             <h4 style="margin-bottom:0.5rem;color:var(--brand)">🌍 Global Market Event</h4>
                             <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem">Trigger a random market event for ALL players globally.</p>
-                            <button class="btn btn-success" onclick="triggerRandomEvent()" style="width:100%;font-size:0.9rem;padding:0.7rem">⚡ Trigger Global Event Now</button>
+                            <button class="btn btn-success" onclick="triggerRandomEvent()" style="width:100%;font-size:0.9rem;padding:0.7rem;margin-bottom:1rem">⚡ Trigger Random Global Event</button>
+                            
+                            <hr style="border:none;border-top:1px solid var(--border);margin:1rem 0">
+                            
+                            <h4 style="margin-bottom:0.5rem;color:var(--brand)">✨ Custom Global Event</h4>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.5rem">
+                                <input type="text" id="admin-custom-event-icon" placeholder="Icon (e.g. 🚀)" style="padding:0.5rem;background:var(--bg-base);border:1px solid var(--border);border-radius:6px;color:var(--text-main);font-size:0.8rem">
+                                <input type="text" id="admin-custom-event-title" placeholder="Title" style="padding:0.5rem;background:var(--bg-base);border:1px solid var(--border);border-radius:6px;color:var(--text-main);font-size:0.8rem">
+                            </div>
+                            <input type="text" id="admin-custom-event-desc" placeholder="Description" style="width:100%;padding:0.5rem;background:var(--bg-base);border:1px solid var(--border);border-radius:6px;color:var(--text-main);font-size:0.8rem;margin-bottom:0.5rem">
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.5rem">
+                                <select id="admin-custom-event-effect" style="padding:0.5rem;background:var(--bg-base);border:1px solid var(--border);border-radius:6px;color:var(--text-main);font-size:0.8rem">
+                                    <option value="stocks_up">All Stocks Up</option>
+                                    <option value="stocks_down">All Stocks Down</option>
+                                    <option value="crypto_up">All Crypto Up</option>
+                                    <option value="crypto_down">All Crypto Down</option>
+                                    <option value="random_stock_up">Specific Stock Up</option>
+                                    <option value="random_stock_crash">Specific Stock Crash</option>
+                                </select>
+                                <input type="number" id="admin-custom-event-mag" placeholder="Magnitude (0.1 = 10%)" step="0.05" style="padding:0.5rem;background:var(--bg-base);border:1px solid var(--border);border-radius:6px;color:var(--text-main);font-size:0.8rem">
+                            </div>
+                            <input type="text" id="admin-custom-event-ticker" placeholder="Ticker (for specific stock only)" style="width:100%;padding:0.5rem;background:var(--bg-base);border:1px solid var(--border);border-radius:6px;color:var(--text-main);font-size:0.8rem;margin-bottom:1rem">
+                            <button class="btn btn-primary" onclick="adminTriggerCustomEvent()" style="width:100%;font-size:0.9rem;padding:0.7rem;background:linear-gradient(135deg,#ff0080,#7c3aed)">🔥 Launch Custom Event</button>
                         </div>
 
                         <div style="margin-top:1.5rem">
@@ -4046,7 +4068,7 @@ What is your experience?"></textarea></div>
 
         async function confirmGiveMoney(uid, username) {
             const amt = parseMoneyInput(document.getElementById('amount-modal-input').value);
-            if (!amt || amt <= 0) { showToast('Error', 'Enter a valid amount', 'danger'); return; }
+            if (!amt || amt <= 0 || !Number.isFinite(amt)) { showToast('Error', 'Enter a valid amount', 'danger'); return; }
             if (state.player.cash < amt) { showToast('Insufficient Funds', '', 'danger'); return; }
 
             try {
@@ -4117,11 +4139,15 @@ What is your experience?"></textarea></div>
             document.body.appendChild(popup);
 
             document.getElementById('claim-money-btn').onclick = async () => {
-                state.player.cash += amount;
-                updateUI();
-                addActivity(`Day ${state.player.day}`, `Received $${formatNum(amount)} from ${from}`, 'success');
-                showToast('Cash Claimed', `+$${formatNum(amount)} added to wallet`, 'success');
-                
+                const safeAmount = (typeof amount === 'number' && Number.isFinite(amount) && amount > 0) ? amount : 0;
+                if (safeAmount > 0) {
+                    state.player.cash += safeAmount;
+                    updateUI();
+                    addActivity(`Day ${state.player.day}`, `Received $${formatNum(safeAmount)} from ${from}`, 'success');
+                    showToast('Cash Claimed', `+$${formatNum(safeAmount)} added to wallet`, 'success');
+                } else {
+                    showToast('Error', 'Invalid amount received, not applied.', 'danger');
+                }
                 // Mark notification as read
                 const user = window.fbAuth.currentUser;
                 const docRef = window.fbMethods.doc(window.fbDb, 'users', user.uid, 'notifications', notifId);
@@ -4461,6 +4487,18 @@ What is your experience?"></textarea></div>
                         state.cryptoHistory[c.ticker].push(state.cryptoPrices[c.ticker]);
                         if (state.cryptoHistory[c.ticker].length > 30) state.cryptoHistory[c.ticker].shift();
                     });
+                    
+                    // SYNC TO RTDB EVERY SECOND FOR REAL-TIME SYNC
+                    const marketData = {
+                        stocks: {},
+                        crypto: {},
+                        lastTick: Date.now()
+                    };
+                    STOCKS.forEach(s => { marketData.stocks[s.ticker] = { price: state.stockPrices[s.ticker] }; });
+                    CRYPTO_COINS.forEach(c => { marketData.crypto[c.ticker] = { price: state.cryptoPrices[c.ticker] }; });
+                    
+                    const marketRef = window.fbMethods.rtdbRef(window.fbRtdb, 'globalMarket');
+                    window.fbMethods.rtdbSet(marketRef, marketData);
                 }
                 
                 // Update UI based on active tab
@@ -4592,15 +4630,7 @@ What is your experience?"></textarea></div>
         // ===================== RANDOM EVENTS =====================
         function startEventTimer() {
             if (state.eventInterval) clearInterval(state.eventInterval);
-            // Random event every 30-60 seconds (More frequent!)
-            const scheduleNext = () => {
-                const delay = (30 + Math.random() * 30) * 1000;
-                state.eventInterval = setTimeout(() => {
-                    triggerRandomEvent();
-                    scheduleNext();
-                }, delay);
-            };
-            scheduleNext();
+            // Random events removed per user request. Only Admin can trigger events now.
         }
 
         async function triggerRandomEvent() {
@@ -4625,6 +4655,32 @@ What is your experience?"></textarea></div>
             applyGlobalEventLocally(event);
         }
 
+        async function adminTriggerCustomEvent() {
+            if (!isAdmin()) return;
+            const icon = document.getElementById('admin-custom-event-icon').value.trim() || '✨';
+            const title = document.getElementById('admin-custom-event-title').value.trim() || 'Global Event';
+            const desc = document.getElementById('admin-custom-event-desc').value.trim() || 'Something big is happening...';
+            const effect = document.getElementById('admin-custom-event-effect').value;
+            const mag = parseFloat(document.getElementById('admin-custom-event-mag').value) || 0.1;
+            const ticker = document.getElementById('admin-custom-event-ticker').value.trim().toUpperCase();
+
+            const customEvent = { type: 'admin', icon, title, desc, effect, magnitude: mag, ticker };
+            
+            try {
+                if (window.fbDb && window.fbMethods) {
+                    const eventRef = window.fbMethods.collection(window.fbDb, 'global_events');
+                    await window.fbMethods.addDoc(eventRef, {
+                        customEvent: customEvent,
+                        timestamp: Date.now(),
+                        active: true
+                    });
+                    showToast('Success', 'Custom event launched globally!', 'success');
+                }
+            } catch(e) { showToast('Error', 'Failed to launch event: ' + e.message, 'danger'); }
+
+            applyGlobalEventLocally(customEvent);
+        }
+
         function applyGlobalEventLocally(event) {
             applyEventEffect(event);
             document.getElementById('event-icon').textContent = event.icon;
@@ -4636,9 +4692,9 @@ What is your experience?"></textarea></div>
                 case 'stocks_up': effectText = `📈 All stocks up ~${Math.round(event.magnitude*100)}%`; break;
                 case 'crypto_down': effectText = `📉 Crypto markets down ~${Math.round(event.magnitude*100)}%`; break;
                 case 'crypto_up': effectText = `📈 Crypto markets up ~${Math.round(event.magnitude*100)}%`; break;
-                case 'random_stock_crash': effectText = `💥 A random stock crashed ~${Math.round(event.magnitude*100)}%`; break;
-                case 'random_stock_up': effectText = `🚀 A random stock surged ~${Math.round(event.magnitude*100)}%`; break;
-                case 'random_stock_down': effectText = `📉 A random stock fell ~${Math.round(event.magnitude*100)}%`; break;
+                case 'random_stock_crash': effectText = `💥 ${event.ticker || 'A random stock'} crashed ~${Math.round(event.magnitude*100)}%`; break;
+                case 'random_stock_up': effectText = `🚀 ${event.ticker || 'A random stock'} surged ~${Math.round(event.magnitude*100)}%`; break;
+                case 'random_stock_down': effectText = `📉 ${event.ticker || 'A random stock'} fell ~${Math.round(event.magnitude*100)}%`; break;
                 case 'ai_stocks_up': effectText = `🤖 AI stocks surged ~${Math.round(event.magnitude*100)}%`; break;
                 case 'ai_down': effectText = `🤖 AI stocks fell ~${Math.round(event.magnitude*100)}%`; break;
                 case 'oil_up': effectText = `🛢️ Oil stocks surged ~${Math.round(event.magnitude*100)}%`; break;
@@ -4660,52 +4716,52 @@ What is your experience?"></textarea></div>
             const mag = event.magnitude;
             switch(event.effect) {
                 case 'stocks_down':
-                    STOCKS.forEach(s => { state.stockPrices[s.ticker] *= (1 - mag * (0.5 + Math.random())); });
+                    STOCKS.forEach(s => { state.stockPrices[s.ticker] *= (1 - mag); });
                     break;
                 case 'stocks_up':
-                    STOCKS.forEach(s => { state.stockPrices[s.ticker] *= (1 + mag * (0.5 + Math.random())); });
+                    STOCKS.forEach(s => { state.stockPrices[s.ticker] *= (1 + mag); });
                     break;
                 case 'crypto_down':
-                    CRYPTO_COINS.forEach(c => { state.cryptoPrices[c.ticker] *= (1 - mag * (0.5 + Math.random())); });
+                    CRYPTO_COINS.forEach(c => { state.cryptoPrices[c.ticker] *= (1 - mag); });
                     break;
                 case 'crypto_up':
-                    CRYPTO_COINS.forEach(c => { state.cryptoPrices[c.ticker] *= (1 + mag * (0.5 + Math.random())); });
+                    CRYPTO_COINS.forEach(c => { state.cryptoPrices[c.ticker] *= (1 + mag); });
                     break;
                 case 'random_stock_crash': {
-                    const s = STOCKS[Math.floor(Math.random() * STOCKS.length)];
-                    state.stockPrices[s.ticker] *= (1 - mag * (0.8 + Math.random() * 0.4));
+                    const s = STOCKS.find(st => st.ticker === event.ticker) || STOCKS[Math.floor(Math.random() * STOCKS.length)];
+                    state.stockPrices[s.ticker] *= (1 - mag);
                     break;
                 }
                 case 'random_stock_up': {
-                    const s = STOCKS[Math.floor(Math.random() * STOCKS.length)];
-                    state.stockPrices[s.ticker] *= (1 + mag * (0.8 + Math.random() * 0.4));
+                    const s = STOCKS.find(st => st.ticker === event.ticker) || STOCKS[Math.floor(Math.random() * STOCKS.length)];
+                    state.stockPrices[s.ticker] *= (1 + mag);
                     break;
                 }
                 case 'random_stock_down': {
-                    const s = STOCKS[Math.floor(Math.random() * STOCKS.length)];
-                    state.stockPrices[s.ticker] *= (1 - mag * (0.5 + Math.random()));
+                    const s = STOCKS.find(st => st.ticker === event.ticker) || STOCKS[Math.floor(Math.random() * STOCKS.length)];
+                    state.stockPrices[s.ticker] *= (1 - mag);
                     break;
                 }
                 case 'ai_stocks_up':
-                    STOCKS.filter(s => s.sector === 'AI').forEach(s => { state.stockPrices[s.ticker] *= (1 + mag * (0.8 + Math.random())); });
+                    STOCKS.filter(s => s.sector === 'AI').forEach(s => { state.stockPrices[s.ticker] *= (1 + mag); });
                     break;
                 case 'ai_down':
-                    STOCKS.filter(s => s.sector === 'AI').forEach(s => { state.stockPrices[s.ticker] *= (1 - mag * (0.5 + Math.random())); });
+                    STOCKS.filter(s => s.sector === 'AI').forEach(s => { state.stockPrices[s.ticker] *= (1 - mag); });
                     break;
                 case 'oil_up':
-                    STOCKS.filter(s => s.sector === 'Oil & Gas').forEach(s => { state.stockPrices[s.ticker] *= (1 + mag * (0.8 + Math.random())); });
+                    STOCKS.filter(s => s.sector === 'Oil & Gas').forEach(s => { state.stockPrices[s.ticker] *= (1 + mag); });
                     break;
                 case 'biotech_up':
-                    STOCKS.filter(s => s.sector === 'Biotech').forEach(s => { state.stockPrices[s.ticker] *= (1 + mag * (0.8 + Math.random())); });
+                    STOCKS.filter(s => s.sector === 'Biotech').forEach(s => { state.stockPrices[s.ticker] *= (1 + mag); });
                     break;
                 case 'banking_down':
-                    STOCKS.filter(s => s.sector === 'Banking').forEach(s => { state.stockPrices[s.ticker] *= (1 - mag * (0.5 + Math.random())); });
+                    STOCKS.filter(s => s.sector === 'Banking').forEach(s => { state.stockPrices[s.ticker] *= (1 - mag); });
                     break;
                 case 'green_up':
-                    STOCKS.filter(s => s.sector === 'Green Energy').forEach(s => { state.stockPrices[s.ticker] *= (1 + mag * (0.8 + Math.random())); });
+                    STOCKS.filter(s => s.sector === 'Green Energy').forEach(s => { state.stockPrices[s.ticker] *= (1 + mag); });
                     break;
                 case 'tech_up':
-                    STOCKS.filter(s => s.sector === 'Big Tech').forEach(s => { state.stockPrices[s.ticker] *= (1 + mag * (0.5 + Math.random())); });
+                    STOCKS.filter(s => s.sector === 'Big Tech').forEach(s => { state.stockPrices[s.ticker] *= (1 + mag); });
                     break;
             }
             // Clamp prices
@@ -4809,7 +4865,10 @@ What is your experience?"></textarea></div>
 
         function formatNum(n) {
             if (n === undefined || n === null) return '0';
+            if (!Number.isFinite(n)) return '0';
             const abs = Math.abs(n);
+            if (abs >= 1e18) return (n/1e18).toFixed(2) + 'SQ';
+            if (abs >= 1e15) return (n/1e15).toFixed(2) + 'Q';
             if (abs >= 1e12) return (n/1e12).toFixed(2) + 'T';
             if (abs >= 1e9) return (n/1e9).toFixed(2) + 'B';
             if (abs >= 1e6) return (n/1e6).toFixed(2) + 'M';
@@ -8718,7 +8777,12 @@ What is your experience?"></textarea></div>
                         const data = change.doc.data();
                         if (data.timestamp > lastEventTime) {
                             lastEventTime = data.timestamp;
-                            const event = RANDOM_EVENTS[data.eventIndex];
+                            let event;
+                            if (data.customEvent) {
+                                event = data.customEvent;
+                            } else {
+                                event = RANDOM_EVENTS[data.eventIndex];
+                            }
                             if (event) applyGlobalEventLocally(event);
                         }
                     }
@@ -9030,6 +9094,7 @@ What is your experience?"></textarea></div>
             const type = document.getElementById('admin-gift-type').value;
             const itemId = document.getElementById('admin-gift-item').value;
             const amount = parseFloat(document.getElementById('admin-gift-amount').value) || 0;
+            if ((type === 'cash' || type === 'stock' || type === 'crypto') && (!Number.isFinite(amount) || amount <= 0)) { showToast('Error', 'Enter a valid finite amount', 'danger'); return; }
             const customMsg = (document.getElementById('admin-gift-message') ? document.getElementById('admin-gift-message').value.trim() : '');
 
             try {
@@ -9378,7 +9443,7 @@ What is your experience?"></textarea></div>
         async function adminModifyCoins(mode) {
             if (!adminCurrentPlayerUid || !adminCurrentSaveData) { showToast('Error', 'No player loaded', 'danger'); return; }
             const amount = parseFloat(document.getElementById('admin-coin-amount').value);
-            if (isNaN(amount) || amount <= 0) { showToast('Error', 'Enter a valid amount', 'danger'); return; }
+            if (!Number.isFinite(amount) || amount <= 0) { showToast('Error', 'Enter a valid amount', 'danger'); return; }
             try {
                 const saveId = adminCurrentSaveData.id || 'AutoSave';
                 const saveRef = window.fbMethods.doc(window.fbDb, 'users', adminCurrentPlayerUid, 'saves', saveId);
