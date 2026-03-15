@@ -9457,6 +9457,14 @@ What is your experience?"></textarea></div>
                 else newCash = amount; // set
                 data.player.cash = newCash;
                 await window.fbMethods.setDoc(saveRef, data);
+                
+                // Also update the player's netWorth in their profile document for the leaderboard
+                try {
+                    const userRef = window.fbMethods.doc(window.fbDb, 'users', adminCurrentPlayerUid);
+                    const nw = calcNetWorthForPlayer(data.player);
+                    await window.fbMethods.updateDoc(userRef, { netWorth: nw });
+                } catch(nwErr) { console.warn('Failed to update profile netWorth:', nwErr); }
+
                 adminCurrentSaveData = { ...data, id: saveId };
                 document.getElementById('admin-pd-cash').textContent = '$' + formatNum(newCash);
                 showToast('Done!', (mode === 'add' ? '+' : mode === 'remove' ? '-' : '=') + '$' + formatNum(amount) + ' applied', 'success');
