@@ -1438,7 +1438,14 @@ What is your experience?"></textarea></div>
                                 <option value="event">🎉 Special Event (Purple)</option>
                             </select>
                         </div>
-                        <button class="btn btn-primary" onclick="adminSendAnnouncement()" style="width:100%;padding:0.9rem;font-size:1rem;background:linear-gradient(135deg,#ff0080,#7c3aed)">📢 Send to All Players</button>
+                        <button class="btn btn-primary" onclick="adminSendAnnouncement()" style="width:100%;padding:0.9rem;font-size:1rem;background:linear-gradient(135deg,#ff0080,#7c3aed);margin-bottom:1rem">📢 Send to All Players</button>
+                        
+                        <div style="padding:1.25rem;background:var(--bg-panel);border-radius:10px;border:1px solid var(--border);margin-bottom:1rem">
+                            <h4 style="margin-bottom:0.5rem;color:var(--brand)">🌍 Global Market Event</h4>
+                            <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem">Trigger a random market event for ALL players globally.</p>
+                            <button class="btn btn-success" onclick="triggerRandomEvent()" style="width:100%;font-size:0.9rem;padding:0.7rem">⚡ Trigger Global Event Now</button>
+                        </div>
+
                         <div style="margin-top:1.5rem">
                             <h4 style="margin-bottom:1rem;color:var(--text-muted)">Recent Announcements</h4>
                             <div id="admin-announce-history" style="max-height:300px;overflow-y:auto"></div>
@@ -1698,7 +1705,7 @@ What is your experience?"></textarea></div>
                 <div id="support" class="tab-panel">
                     <h2 style="margin-bottom:0.5rem">📩 Contact Support</h2>
                     <p style="color:var(--text-muted);margin-bottom:2rem;font-size:0.9rem">Need help? Submit a support message below. Our team will review it as soon as possible. You can use this to appeal a ban, report a bug, or ask a general question.</p>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;max-width:900px">
+                    <div style="display:grid;grid-template-columns:1fr;gap:2rem;max-width:600px">
                         <!-- Submit Form -->
                         <div class="widget">
                             <h3 style="margin-bottom:1.5rem;color:#06b6d4">📝 New Support Message</h3>
@@ -1721,13 +1728,6 @@ What is your experience?"></textarea></div>
                             </div>
                             <button class="btn btn-primary" onclick="submitSupportMessage()" style="width:100%;padding:0.9rem;font-size:1rem;background:linear-gradient(135deg,#06b6d4,#3b82f6)">📤 Send Message</button>
                             <div id="support-submit-status" style="margin-top:1rem;font-size:0.85rem;text-align:center"></div>
-                        </div>
-                        <!-- My Previous Messages -->
-                        <div class="widget">
-                            <h3 style="margin-bottom:1.5rem;color:#06b6d4">📂 My Previous Messages</h3>
-                            <div id="support-my-messages">
-                                <div style="color:var(--text-muted);text-align:center;padding:2rem;font-size:0.9rem">Sign in to view your messages</div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -2576,11 +2576,11 @@ What is your experience?"></textarea></div>
         ];
 
         const PROJECT_TYPES = [
-            { name: 'Mobile App', cost: 50000, timeline: 6, potential: 500000 },
-            { name: 'Web Platform', cost: 75000, timeline: 8, potential: 750000 },
-            { name: 'AI Tool', cost: 100000, timeline: 10, potential: 1000000 },
-            { name: 'Game', cost: 150000, timeline: 12, potential: 2000000 },
-            { name: 'SaaS Product', cost: 200000, timeline: 15, potential: 5000000 }
+            { name: 'Mobile App', cost: 50000, timeline: 6, potential: 150000 },
+            { name: 'Web Platform', cost: 75000, timeline: 8, potential: 200000 },
+            { name: 'AI Tool', cost: 100000, timeline: 10, potential: 250000 },
+            { name: 'Game', cost: 150000, timeline: 12, potential: 350000 },
+            { name: 'SaaS Product', cost: 200000, timeline: 15, potential: 500000 }
         ];
 
         const RANDOM_EVENTS = [
@@ -3772,6 +3772,8 @@ What is your experience?"></textarea></div>
             // Admin: check access and start announcement listener
             checkAdminAccess();
             startAnnouncementListener();
+            // Start Global Event Listener
+            startGlobalEventListener();
             // Start RTDB market sync (picks up admin price changes in real-time)
             startAdminMarketSync();
             // Render profile badges
@@ -4043,7 +4045,7 @@ What is your experience?"></textarea></div>
         }
 
         async function confirmGiveMoney(uid, username) {
-            const amt = parseFloat(document.getElementById('amount-modal-input').value);
+            const amt = parseMoneyInput(document.getElementById('amount-modal-input').value);
             if (!amt || amt <= 0) { showToast('Error', 'Enter a valid amount', 'danger'); return; }
             if (state.player.cash < amt) { showToast('Insufficient Funds', '', 'danger'); return; }
 
@@ -4132,13 +4134,15 @@ What is your experience?"></textarea></div>
 
         // ===================== DAY TIMER =====================
         function startDayTimer() {
-            if (state.dayTimerInterval) clearInterval(state.dayTimerInterval);
+            if (state.dayTimerInterval) { clearInterval(state.dayTimerInterval); state.dayTimerInterval = null; }
             state.dayTimer = 300; // 5 minutes
             updateTimerDisplay();
             state.dayTimerInterval = setInterval(() => {
                 state.dayTimer--;
                 updateTimerDisplay();
                 if (state.dayTimer <= 0) {
+                    clearInterval(state.dayTimerInterval);
+                    state.dayTimerInterval = null;
                     endDay();
                 }
             }, 1000);
@@ -4201,10 +4205,13 @@ What is your experience?"></textarea></div>
 
         function _processEndOfDay() {
             clearInterval(state.dayTimerInterval);
+            state.dayTimerInterval = null;
+            let totalDailyIncome = 0;
             state.player.day++;
             // Pay salary
             if (state.player.salary > 0) {
                 state.player.cash += state.player.salary;
+                totalDailyIncome += state.player.salary;
                 addActivity(`Day ${state.player.day}`, `Salary received: $${state.player.salary.toLocaleString()}`, 'success');
             }
             // Property income
@@ -4212,6 +4219,7 @@ What is your experience?"></textarea></div>
                 const prop = REAL_ESTATE.find(r => r.id === p.id);
                 if (prop) {
                     state.player.cash += prop.yield;
+                    totalDailyIncome += prop.yield;
                     addActivity(`Day ${state.player.day}`, `Rental income from ${prop.name}: $${prop.yield}`, 'success');
                 }
             });
@@ -4267,11 +4275,11 @@ What is your experience?"></textarea></div>
                         // Support custom projects with customPotential
                         let revenue;
                         if (proj.customPotential) {
-                            revenue = proj.customPotential * (0.5 + Math.random() * 0.5);
+                            revenue = proj.customPotential * (0.5 + Math.random() * 0.3);
                         } else if (projType) {
-                            revenue = projType.potential * (0.5 + Math.random() * 0.8);
+                            revenue = projType.potential * (0.6 + Math.random() * 0.4);
                         } else {
-                            revenue = (proj.invested || 10000) * (5 + Math.random() * 10);
+                            revenue = (proj.invested || 10000) * (1.5 + Math.random() * 1.5);
                         }
                         co.cash += revenue;
                         addActivity(`Day ${state.player.day}`, `${co.name}: ${proj.name} completed! +$${Math.round(revenue).toLocaleString()}`, 'success');
@@ -4334,7 +4342,7 @@ What is your experience?"></textarea></div>
         }
 
         // ===================== MARKET TICK =====================
-        function tickMarket() {
+        async function tickMarket() {
             STOCKS.forEach(s => {
                 // 30% chance of EXTREME volatility (10-50% swings)
                 const isExtreme = Math.random() < 0.30;
@@ -4378,60 +4386,80 @@ What is your experience?"></textarea></div>
                 state.cryptoHistory[c.ticker].push(state.cryptoPrices[c.ticker]);
                 if (state.cryptoHistory[c.ticker].length > 30) state.cryptoHistory[c.ticker].shift();
             });
+
+            // GLOBAL SYNC: Only the Admin player pushes price updates to RTDB
+            if (isAdmin() && window.fbRtdb && window.fbMethods) {
+                try {
+                    const marketData = {
+                        stocks: {},
+                        crypto: {},
+                        lastTick: Date.now()
+                    };
+                    STOCKS.forEach(s => { marketData.stocks[s.ticker] = { price: state.stockPrices[s.ticker] }; });
+                    CRYPTO_COINS.forEach(c => { marketData.crypto[c.ticker] = { price: state.cryptoPrices[c.ticker] }; });
+                    
+                    const marketRef = window.fbMethods.rtdbRef(window.fbRtdb, 'globalMarket');
+                    await window.fbMethods.rtdbSet(marketRef, marketData);
+                } catch(e) { console.warn('Global market sync failed:', e); }
+            }
         }
 
         // ===================== PER-SECOND PRICE TICKER =====================
         function startPriceTicker() {
             if (state.priceTickerInterval) clearInterval(state.priceTickerInterval);
             state.priceTickerInterval = setInterval(() => {
-                // Update stock prices
-                STOCKS.forEach(s => {
-                    // 30% chance of EXTREME per-second swings (2-10% per second)
-                    const isExtreme = Math.random() < 0.30;
-                    let volatility;
-                    
-                    if (isExtreme) {
-                        // Extreme per-second volatility: 2-10% change
-                        volatility = 0.02 + Math.random() * 0.08;
-                    } else {
-                        // Normal per-second volatility
-                        const baseVol = s.volatility ? s.volatility * 0.08 : (0.001 + Math.random() * 0.003);
-                        volatility = baseVol * (0.5 + Math.random());
-                    }
-                    
-                    const direction = Math.random() > 0.5 ? 1 : -1;
-                    const change = state.stockPrices[s.ticker] * volatility * direction;
-                    state.stockPrices[s.ticker] = Math.max(0.01, state.stockPrices[s.ticker] + change);
-                    
-                    // Update history for charts
-                    if (!state.stockHistory[s.ticker]) state.stockHistory[s.ticker] = [];
-                    state.stockHistory[s.ticker].push(state.stockPrices[s.ticker]);
-                    if (state.stockHistory[s.ticker].length > 30) state.stockHistory[s.ticker].shift();
-                });
-                // Update crypto prices
-                CRYPTO_COINS.forEach(c => {
-                    // 30% chance of EXTREME per-second swings (2-10% per second)
-                    const isExtreme = Math.random() < 0.30;
-                    let vol;
-                    
-                    if (isExtreme) {
-                        // Extreme per-second volatility: 2-10% change
-                        vol = 0.02 + Math.random() * 0.08;
-                    } else {
-                        // Normal per-second volatility
-                        const scaleFactor = (c.volatility || 0.05) >= 0.20 ? 0.05 : 0.02;
-                        vol = (c.volatility || 0.05) * scaleFactor;
-                    }
-                    
-                    const direction = Math.random() > 0.5 ? 1 : -1;
-                    const change = state.cryptoPrices[c.ticker] * vol * direction;
-                    state.cryptoPrices[c.ticker] = Math.max(0.000000001, state.cryptoPrices[c.ticker] + change);
-                    
-                    // Update history for charts
-                    if (!state.cryptoHistory[c.ticker]) state.cryptoHistory[c.ticker] = [];
-                    state.cryptoHistory[c.ticker].push(state.cryptoPrices[c.ticker]);
-                    if (state.cryptoHistory[c.ticker].length > 30) state.cryptoHistory[c.ticker].shift();
-                });
+                // Only the Admin player ticks prices locally. 
+                // All other players get their prices synced from RTDB via startAdminMarketSync().
+                if (isAdmin()) {
+                    // Update stock prices
+                    STOCKS.forEach(s => {
+                        // 30% chance of EXTREME per-second swings (2-10% per second)
+                        const isExtreme = Math.random() < 0.30;
+                        let volatility;
+                        
+                        if (isExtreme) {
+                            // Extreme per-second volatility: 2-10% change
+                            volatility = 0.02 + Math.random() * 0.08;
+                        } else {
+                            // Normal per-second volatility
+                            const baseVol = s.volatility ? s.volatility * 0.08 : (0.001 + Math.random() * 0.003);
+                            volatility = baseVol * (0.5 + Math.random());
+                        }
+                        
+                        const direction = Math.random() > 0.5 ? 1 : -1;
+                        const change = state.stockPrices[s.ticker] * volatility * direction;
+                        state.stockPrices[s.ticker] = Math.max(0.01, state.stockPrices[s.ticker] + change);
+                        
+                        // Update history for charts
+                        if (!state.stockHistory[s.ticker]) state.stockHistory[s.ticker] = [];
+                        state.stockHistory[s.ticker].push(state.stockPrices[s.ticker]);
+                        if (state.stockHistory[s.ticker].length > 30) state.stockHistory[s.ticker].shift();
+                    });
+                    // Update crypto prices
+                    CRYPTO_COINS.forEach(c => {
+                        // 30% chance of EXTREME per-second swings (2-10% per second)
+                        const isExtreme = Math.random() < 0.30;
+                        let vol;
+                        
+                        if (isExtreme) {
+                            // Extreme per-second volatility: 2-10% change
+                            vol = 0.02 + Math.random() * 0.08;
+                        } else {
+                            // Normal per-second volatility
+                            const scaleFactor = (c.volatility || 0.05) >= 0.20 ? 0.05 : 0.02;
+                            vol = (c.volatility || 0.05) * scaleFactor;
+                        }
+                        
+                        const direction = Math.random() > 0.5 ? 1 : -1;
+                        const change = state.cryptoPrices[c.ticker] * vol * direction;
+                        state.cryptoPrices[c.ticker] = Math.max(0.000000001, state.cryptoPrices[c.ticker] + change);
+                        
+                        // Update history for charts
+                        if (!state.cryptoHistory[c.ticker]) state.cryptoHistory[c.ticker] = [];
+                        state.cryptoHistory[c.ticker].push(state.cryptoPrices[c.ticker]);
+                        if (state.cryptoHistory[c.ticker].length > 30) state.cryptoHistory[c.ticker].shift();
+                    });
+                }
                 
                 // Update UI based on active tab
                 const activeTab = state.currentTab;
@@ -4573,8 +4601,29 @@ What is your experience?"></textarea></div>
             scheduleNext();
         }
 
-        function triggerRandomEvent() {
-            const event = RANDOM_EVENTS[Math.floor(Math.random() * RANDOM_EVENTS.length)];
+        async function triggerRandomEvent() {
+            // Only the Admin player triggers and pushes the event to Firestore
+            if (!isAdmin()) return;
+
+            const eventIndex = Math.floor(Math.random() * RANDOM_EVENTS.length);
+            const event = RANDOM_EVENTS[eventIndex];
+            
+            try {
+                if (window.fbDb && window.fbMethods) {
+                    const eventRef = window.fbMethods.collection(window.fbDb, 'global_events');
+                    await window.fbMethods.addDoc(eventRef, {
+                        eventIndex: eventIndex,
+                        timestamp: Date.now(),
+                        active: true
+                    });
+                }
+            } catch(e) { console.warn('Failed to push global event:', e); }
+
+            // Admin also applies it locally immediately
+            applyGlobalEventLocally(event);
+        }
+
+        function applyGlobalEventLocally(event) {
             applyEventEffect(event);
             document.getElementById('event-icon').textContent = event.icon;
             document.getElementById('event-title').textContent = event.title;
@@ -4766,6 +4815,19 @@ What is your experience?"></textarea></div>
             return n.toFixed ? n.toFixed(2) : n.toString();
         }
 
+        function parseMoneyInput(str) {
+            if (!str) return 0;
+            str = str.toString().trim().toUpperCase();
+            const match = str.match(/^([\d.]+)([TBM]?)$/);
+            if (!match) return 0;
+            const num = parseFloat(match[1]);
+            const suffix = match[2];
+            if (suffix === 'T') return num * 1e12;
+            if (suffix === 'B') return num * 1e9;
+            if (suffix === 'M') return num * 1e6;
+            return num;
+        }
+
         function formatPrice(n) {
             if (n === undefined || n === null) return '$0.00';
             if (n < 0.0001) return '$' + n.toFixed(10);
@@ -4793,7 +4855,6 @@ What is your experience?"></textarea></div>
             const titles = { dashboard:'Dashboard', market:'Stock Market', portfolio:'Portfolio', career:'Career', company:'Company Management', properties:'Real Estate', lifestyle:'Lifestyle', banking:'Banking', blackmarket:'Black Market', crypto:'Cryptocurrency', education:'Education', achievements:'Achievements', aibot:'AI Invest Bot', club:'The Club', search:'Search Players', leaderboard:'Leaderboard', profile:'Profile & Settings', admin:'⚙️ Admin Panel', support:'📩 Contact Support' };
             document.getElementById('tab-title').textContent = titles[tab] || tab;
             renderAll();
-            if (tab === 'support') loadMySupportMessages();
         }
 
         function toggleTheme() {
@@ -5080,7 +5141,7 @@ What is your experience?"></textarea></div>
         function confirmPortSell() {
             if (!state.pendingPortSell) return;
             const { ticker, type } = state.pendingPortSell;
-            const qty = parseFloat(document.getElementById('port-sell-qty').value);
+            const qty = parseMoneyInput(document.getElementById('port-sell-qty').value);
             if (!qty || qty <= 0) { showToast('Invalid', 'Enter a valid amount', 'danger'); return; }
             if (type === 'crypto') {
                 const h = state.player.cryptoPortfolio[ticker];
@@ -5646,7 +5707,7 @@ What is your experience?"></textarea></div>
 
             const btn = document.getElementById('amount-modal-confirm');
             btn.onclick = () => {
-                const amt = parseFloat(document.getElementById('amount-modal-input').value);
+                const amt = parseMoneyInput(document.getElementById('amount-modal-input').value);
                 if (!amt || amt <= 0) { showToast('Error', 'Enter a valid amount', 'danger'); return; }
                 if (state.player.cash < amt) { showToast('Insufficient Funds', '', 'danger'); return; }
                 state.player.cash = Math.max(0, state.player.cash - amt);
@@ -5672,7 +5733,7 @@ What is your experience?"></textarea></div>
 
             const btn = document.getElementById('amount-modal-confirm');
             btn.onclick = () => {
-                const amt = parseFloat(document.getElementById('amount-modal-input').value);
+                const amt = parseMoneyInput(document.getElementById('amount-modal-input').value);
                 if (!amt || amt <= 0) { showToast('Error', 'Enter a valid amount', 'danger'); return; }
                 if (co.cash < amt) { showToast('Insufficient', 'Company does not have enough cash', 'danger'); return; }
                 co.cash = Math.max(0, co.cash - amt);
@@ -6032,7 +6093,10 @@ What is your experience?"></textarea></div>
                     <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;border:1px solid var(--border);margin-bottom:1rem">
                         <div style="font-weight:700;margin-bottom:0.5rem">Custom Project</div>
                         <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem">Invest any amount. Potential revenue is 5x-15x investment.</div>
-                        <div class="input-group" style="margin-bottom:0.5rem"><input type="number" id="custom-proj-amt" placeholder="Investment Amount" min="1000"><span>$</span></div>
+                        <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.5rem">
+                            <div class="input-group" style="flex:1;margin-bottom:0"><input type="number" id="custom-proj-amt" placeholder="Investment Amount" min="1000"><span>$</span></div>
+                            <button class="btn btn-secondary" onclick="document.getElementById('custom-proj-amt').value=state.player.companies.find(c=>c.id==='${coId}')?.cash||0" style="font-size:0.75rem;padding:0.5rem 0.6rem;white-space:nowrap">Max</button>
+                        </div>
                         <div class="input-group" style="margin-bottom:0.75rem"><input type="text" id="custom-proj-name" placeholder="Project Name"></div>
                         <button class="btn btn-success" onclick="startCustomProject('${coId}')" style="width:100%;font-size:0.8rem">Start Custom Project</button>
                     </div>
@@ -6086,7 +6150,7 @@ What is your experience?"></textarea></div>
             const co = state.player.companies.find(c => c.id === coId);
             const activeProjects = co.projects.filter(p => !p.completed);
             if (activeProjects.length >= 5) { showToast('Project Limit', 'Max 5 active projects! Finish existing ones first.', 'warning'); return; }
-            const amt = parseFloat(document.getElementById('custom-proj-amt').value);
+            const amt = parseMoneyInput(document.getElementById('custom-proj-amt').value);
             const name = document.getElementById('custom-proj-name').value || "Custom Project";
             if (!amt || amt < 1000) { showToast('Error', 'Minimum investment is $1,000', 'danger'); return; }
             if (co.cash < amt) { showToast('Insufficient', 'Company needs more cash', 'danger'); return; }
@@ -6096,7 +6160,7 @@ What is your experience?"></textarea></div>
                 progress: 0, 
                 completed: false, 
                 invested: amt,
-                customPotential: amt * (5 + Math.random() * 10)
+                customPotential: amt * (2 + Math.random() * 3)
             });
             saveGame(); renderCompanies(); showProjects(coId);
             showToast('Project Started', `${name} is now in development`, 'success');
@@ -6304,7 +6368,7 @@ What is your experience?"></textarea></div>
         }
 
         function takeLoanWithRefresh() {
-            const amt = parseFloat(document.getElementById('loan-amount').value);
+            const amt = parseMoneyInput(document.getElementById('loan-amount').value);
             if (!amt || amt < 1000) { showToast('Invalid', 'Minimum loan is $1,000', 'danger'); return; }
             const limit = calcBorrowLimit();
             if (amt > limit) { showToast('Limit Exceeded', `Max: $${formatNum(limit)}`, 'danger'); return; }
@@ -6349,7 +6413,7 @@ What is your experience?"></textarea></div>
         function closeLoanModal() { document.getElementById('loan-modal').classList.add('hidden'); state.pendingLoan = null; }
 
         function confirmLoanPayment() {
-            const amt = parseFloat(document.getElementById('loan-pay-amt').value);
+            const amt = parseMoneyInput(document.getElementById('loan-pay-amt').value);
             if (!amt || amt <= 0) { showToast('Invalid', 'Enter amount', 'danger'); return; }
             if (state.player.cash < amt) { showToast('Insufficient Funds', '', 'danger'); return; }
             const loan = state.player.loans[state.pendingLoan];
@@ -6495,7 +6559,7 @@ What is your experience?"></textarea></div>
 
         function buyCrypto(ticker) {
             if (!ticker) return;
-            const qty = parseFloat(document.getElementById('crypto-qty').value) || 0.01;
+            const qty = parseMoneyInput(document.getElementById('crypto-qty').value) || 0.01;
             const price = state.cryptoPrices[ticker];
             const total = qty * price;
             if (state.player.cash < total) { showToast('Insufficient Funds', `Need $${formatNum(total)}`, 'danger'); return; }
@@ -6516,7 +6580,7 @@ What is your experience?"></textarea></div>
 
         function sellCrypto(ticker) {
             if (!ticker) return;
-            const qty = parseFloat(document.getElementById('crypto-qty').value) || 0.01;
+            const qty = parseMoneyInput(document.getElementById('crypto-qty').value) || 0.01;
             const h = state.player.cryptoPortfolio[ticker];
             if (!h || h.amount < qty) { showToast('Insufficient', 'Not enough crypto', 'danger'); return; }
             const price = state.cryptoPrices[ticker];
@@ -7354,7 +7418,7 @@ What is your experience?"></textarea></div>
 
             const btn = document.getElementById('amount-modal-confirm');
             btn.onclick = () => {
-                const amt = parseFloat(document.getElementById('amount-modal-input').value);
+                const amt = parseMoneyInput(document.getElementById('amount-modal-input').value);
                 if (!amt || amt <= 0) { showToast('Error', 'Enter a valid amount', 'danger'); return; }
                 if (state.player.cash < amt) { showToast('Insufficient Funds', '', 'danger'); return; }
                 state.player.cash -= amt;
@@ -7451,7 +7515,7 @@ What is your experience?"></textarea></div>
             document.getElementById('amount-modal-input').value = '';
             const btn = document.getElementById('amount-modal-confirm');
             btn.onclick = () => {
-                const amt = parseFloat(document.getElementById('amount-modal-input').value);
+                const amt = parseMoneyInput(document.getElementById('amount-modal-input').value);
                 if (!amt || amt <= 0) { showToast('Error', 'Enter a valid amount', 'danger'); return; }
                 if (state.player.cash < amt) { showToast('Insufficient Funds', '', 'danger'); return; }
                 state.player.cash -= amt;
@@ -7469,7 +7533,7 @@ What is your experience?"></textarea></div>
             document.getElementById('amount-modal-input').value = '';
             const btn = document.getElementById('amount-modal-confirm');
             btn.onclick = () => {
-                const amt = parseFloat(document.getElementById('amount-modal-input').value);
+                const amt = parseMoneyInput(document.getElementById('amount-modal-input').value);
                 if (!amt || amt <= 0) { showToast('Error', 'Enter a valid amount', 'danger'); return; }
                 if (state.player.clubBalance < amt) { showToast('Insufficient Club Balance', '', 'danger'); return; }
                 state.player.clubBalance -= amt;
@@ -7539,6 +7603,7 @@ What is your experience?"></textarea></div>
                         <input type="number" id="bj-bet-input" placeholder="Bet amount" min="100">
                         <span>$</span>
                     </div>
+                    <button class="btn btn-secondary" onclick="document.getElementById('bj-bet-input').value=state.player.clubBalance" style="font-size:0.8rem;padding:0.5rem 0.75rem">Max</button>
                     <button class="btn btn-success" id="bj-deal-btn" onclick="bjDeal()">Deal</button>
                     <button class="btn btn-primary" id="bj-hit-btn" onclick="bjHit()" style="display:none">Hit</button>
                     <button class="btn btn-secondary" id="bj-stand-btn" onclick="bjStand()" style="display:none">Stand</button>
@@ -7547,7 +7612,7 @@ What is your experience?"></textarea></div>
             </div>`;
         }
         function bjDeal() {
-            const bet = parseFloat(document.getElementById('bj-bet-input').value);
+            const bet = parseMoneyInput(document.getElementById('bj-bet-input').value);
             if (!bet || bet <= 0) { showToast('Error','Enter a bet amount','danger'); return; }
             if (state.player.clubBalance < bet) { showToast('Insufficient Club Balance','Deposit more funds','danger'); return; }
             state.player.clubBalance -= bet;
@@ -7645,6 +7710,7 @@ What is your experience?"></textarea></div>
                         <input type="number" id="slot-bet-input" placeholder="Bet" min="100">
                         <span>$</span>
                     </div>
+                    <button class="btn btn-secondary" onclick="document.getElementById('slot-bet-input').value=state.player.clubBalance" style="font-size:0.8rem;padding:0.5rem 0.75rem">Max</button>
                     <button class="btn btn-warning" onclick="spinSlots()" style="background:var(--warning);color:#000;font-size:1rem;padding:0.75rem 2rem">🎰 SPIN!</button>
                 </div>
                 <div style="margin-top:1rem;font-size:0.75rem;color:var(--text-muted)">
@@ -7653,7 +7719,7 @@ What is your experience?"></textarea></div>
             </div>`;
         }
         function spinSlots() {
-            const bet = parseFloat(document.getElementById('slot-bet-input').value);
+            const bet = parseMoneyInput(document.getElementById('slot-bet-input').value);
             if (!bet || bet <= 0) { showToast('Error','Enter a bet','danger'); return; }
             if (state.player.clubBalance < bet) { showToast('Insufficient Club Balance','','danger'); return; }
             state.player.clubBalance -= bet;
@@ -7709,15 +7775,18 @@ What is your experience?"></textarea></div>
                     <button class="btn btn-secondary" onclick="rouletteBet('dozen3')">3rd 12 (×3)</button>
                     <button class="btn btn-secondary" onclick="rouletteBet('zero')">0 (×36)</button>
                 </div>
-                <div class="input-group" style="margin-bottom:0">
-                    <input type="number" id="roulette-bet-input" placeholder="Bet amount" min="100">
-                    <span>$</span>
+                <div style="display:flex;gap:0.75rem;align-items:center;margin-bottom:0">
+                    <div class="input-group" style="flex:1;margin-bottom:0">
+                        <input type="number" id="roulette-bet-input" placeholder="Bet amount" min="100">
+                        <span>$</span>
+                    </div>
+                    <button class="btn btn-secondary" onclick="document.getElementById('roulette-bet-input').value=state.player.clubBalance" style="font-size:0.8rem;padding:0.5rem 0.75rem">Max</button>
                 </div>
                 <div id="roulette-status" style="margin-top:0.75rem;font-weight:700;min-height:1.5rem"></div>
             </div>`;
         }
         function rouletteBet(type) {
-            const bet = parseFloat(document.getElementById('roulette-bet-input').value);
+            const bet = parseMoneyInput(document.getElementById('roulette-bet-input').value);
             if (!bet || bet <= 0) { showToast('Error','Enter a bet','danger'); return; }
             if (state.player.clubBalance < bet) { showToast('Insufficient Club Balance','','danger'); return; }
             state.player.clubBalance -= bet;
@@ -7771,15 +7840,18 @@ What is your experience?"></textarea></div>
                     <button class="btn btn-secondary" onclick="rollDice('exact6')">Exact 6 ×6</button>
                     <button class="btn btn-secondary" onclick="rollDice('exact1')">Exact 1 ×6</button>
                 </div>
-                <div class="input-group" style="margin-bottom:0">
-                    <input type="number" id="dice-bet-input" placeholder="Bet amount" min="100">
-                    <span>$</span>
+                <div style="display:flex;gap:0.75rem;align-items:center;margin-bottom:0">
+                    <div class="input-group" style="flex:1;margin-bottom:0">
+                        <input type="number" id="dice-bet-input" placeholder="Bet amount" min="100">
+                        <span>$</span>
+                    </div>
+                    <button class="btn btn-secondary" onclick="document.getElementById('dice-bet-input').value=state.player.clubBalance" style="font-size:0.8rem;padding:0.5rem 0.75rem">Max</button>
                 </div>
             </div>`;
         }
         const DICE_FACES = ['','⚀','⚁','⚂','⚃','⚄','⚅'];
         function rollDice(type) {
-            const bet = parseFloat(document.getElementById('dice-bet-input').value);
+            const bet = parseMoneyInput(document.getElementById('dice-bet-input').value);
             if (!bet || bet <= 0) { showToast('Error','Enter a bet','danger'); return; }
             if (state.player.clubBalance < bet) { showToast('Insufficient Club Balance','','danger'); return; }
             state.player.clubBalance -= bet;
@@ -7824,9 +7896,12 @@ What is your experience?"></textarea></div>
                     <button class="btn btn-danger" onclick="hiloGuess('lower')" style="flex:1">📉 Lower (×1.8)</button>
                     <button class="btn btn-secondary" onclick="hiloNewCard()" style="flex:1">🔄 New Card</button>
                 </div>
-                <div class="input-group" style="margin-bottom:0">
-                    <input type="number" id="hilo-bet-input" placeholder="Bet amount" min="100">
-                    <span>$</span>
+                <div style="display:flex;gap:0.75rem;align-items:center;margin-bottom:0">
+                    <div class="input-group" style="flex:1;margin-bottom:0">
+                        <input type="number" id="hilo-bet-input" placeholder="Bet amount" min="100">
+                        <span>$</span>
+                    </div>
+                    <button class="btn btn-secondary" onclick="document.getElementById('hilo-bet-input').value=state.player.clubBalance" style="font-size:0.8rem;padding:0.5rem 0.75rem">Max</button>
                 </div>
             </div>`;
         }
@@ -7844,7 +7919,7 @@ What is your experience?"></textarea></div>
         }
         function hiloGuess(dir) {
             if (!hiloState.current) { hiloNewCard(); showToast('Info','Card drawn! Now place your bet and guess.','warning'); return; }
-            const bet = parseFloat(document.getElementById('hilo-bet-input').value);
+            const bet = parseMoneyInput(document.getElementById('hilo-bet-input').value);
             if (!bet || bet <= 0) { showToast('Error','Enter a bet','danger'); return; }
             if (state.player.clubBalance < bet) { showToast('Insufficient Club Balance','','danger'); return; }
             state.player.clubBalance -= bet;
@@ -7881,13 +7956,14 @@ What is your experience?"></textarea></div>
                         <input type="number" id="crash-bet-input" placeholder="Bet" min="100">
                         <span>$</span>
                     </div>
+                    <button class="btn btn-secondary" onclick="document.getElementById('crash-bet-input').value=state.player.clubBalance" style="font-size:0.8rem;padding:0.5rem 0.75rem">Max</button>
                     <button class="btn btn-success" id="crash-start-btn" onclick="crashStart()">🚀 Start</button>
                     <button class="btn btn-warning" id="crash-cashout-btn" onclick="crashCashOut()" style="display:none;background:var(--warning);color:#000">💰 Cash Out</button>
                 </div>
             </div>`;
         }
         function crashStart() {
-            const bet = parseFloat(document.getElementById('crash-bet-input').value);
+            const bet = parseMoneyInput(document.getElementById('crash-bet-input').value);
             if (!bet || bet <= 0) { showToast('Error','Enter a bet','danger'); return; }
             if (state.player.clubBalance < bet) { showToast('Insufficient Club Balance','','danger'); return; }
             state.player.clubBalance -= bet;
@@ -8137,10 +8213,13 @@ What is your experience?"></textarea></div>
             const targetCity = strikeType === 'entire_planet' ? '__entire_planet__' : citySelect.value;
             
             // Calculate nuke cost based on target country tier (2x the country price)
-            let nukeCost = 5000000000000; // Default 5T fallback
+            let nukeCost = 0;
             if (targetCity && targetCity !== '__entire_planet__') {
                 const tierData = getCountryTier(targetCity);
                 nukeCost = tierData.price * 2; // 2x the country price
+            } else if (targetCity === '__entire_planet__') {
+                // For entire planet, use 2x the price of a tier 1 country (2x 1e26 = 2e26)
+                nukeCost = 2e26;
             }
             
             if (!targetUid || !targetPlanetId) {
@@ -8611,6 +8690,30 @@ What is your experience?"></textarea></div>
                 showToast('Deleted', 'Announcement removed', 'success');
                 adminLoadAnnouncementHistory();
             } catch(e) { showToast('Error', e.message, 'danger'); }
+        }
+
+        // ---- GLOBAL EVENT LISTENER ----
+        function startGlobalEventListener() {
+            if (!window.fbMethods || !window.fbDb) return;
+            // Only non-admins listen to global events (admins trigger them)
+            if (isAdmin()) return;
+
+            const eventRef = window.fbMethods.collection(window.fbDb, 'global_events');
+            const q = window.fbMethods.query(eventRef, window.fbMethods.orderBy('timestamp', 'desc'), window.fbMethods.limit(1));
+            
+            let lastEventTime = Date.now();
+            window.fbMethods.onSnapshot(q, (snapshot) => {
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === "added") {
+                        const data = change.doc.data();
+                        if (data.timestamp > lastEventTime) {
+                            lastEventTime = data.timestamp;
+                            const event = RANDOM_EVENTS[data.eventIndex];
+                            if (event) applyGlobalEventLocally(event);
+                        }
+                    }
+                });
+            });
         }
 
         // Listen for announcements and show popup to all players
@@ -9724,7 +9827,7 @@ What is your experience?"></textarea></div>
         }
 
         // ---- SYNC GLOBAL MARKET PRICES FROM RTDB (for all players) ----
-        // This listens to admin-controlled prices in RTDB and applies them globally
+        // This listens to market updates in RTDB and applies them globally
         function startAdminMarketSync() {
             if (!window.fbRtdb || !window.fbMethods) {
                 // Retry after Firebase is ready
@@ -9733,13 +9836,22 @@ What is your experience?"></textarea></div>
             }
             const marketRef = window.fbMethods.rtdbRef(window.fbRtdb, 'globalMarket');
             window.fbMethods.rtdbOnValue(marketRef, (snapshot) => {
+                // Don't sync if we are the admin (we are the source of truth)
+                if (isAdmin()) return;
+
                 const data = snapshot.val();
                 if (!data) return;
                 // Sync stock prices
                 if (data.stocks) {
                     Object.keys(data.stocks).forEach(ticker => {
                         if (data.stocks[ticker] && data.stocks[ticker].price) {
-                            state.stockPrices[ticker] = data.stocks[ticker].price;
+                            const newPrice = data.stocks[ticker].price;
+                            state.stockPrices[ticker] = newPrice;
+                            
+                            // Update history for charts
+                            if (!state.stockHistory[ticker]) state.stockHistory[ticker] = [];
+                            state.stockHistory[ticker].push(newPrice);
+                            if (state.stockHistory[ticker].length > 30) state.stockHistory[ticker].shift();
                         }
                     });
                 }
@@ -9747,12 +9859,29 @@ What is your experience?"></textarea></div>
                 if (data.crypto) {
                     Object.keys(data.crypto).forEach(ticker => {
                         if (data.crypto[ticker] && data.crypto[ticker].price) {
-                            state.cryptoPrices[ticker] = data.crypto[ticker].price;
+                            const newPrice = data.crypto[ticker].price;
+                            state.cryptoPrices[ticker] = newPrice;
+                            
+                            // Update history for charts
+                            if (!state.cryptoHistory[ticker]) state.cryptoHistory[ticker] = [];
+                            state.cryptoHistory[ticker].push(newPrice);
+                            if (state.cryptoHistory[ticker].length > 30) state.cryptoHistory[ticker].shift();
                         }
                     });
                 }
-                if (state.currentTab === 'market') renderMarket();
-                if (state.currentTab === 'crypto') renderCrypto();
+                
+                // Update UI based on active tab
+                const activeTab = state.currentTab;
+                if (activeTab === 'market') renderMarket();
+                else if (activeTab === 'crypto') renderCrypto();
+                else if (activeTab === 'portfolio') renderPortfolio();
+                else if (activeTab === 'dashboard') updateUI();
+
+                // Always update sidebar stats to reflect net worth changes from price sync
+                const sidebarCash = document.getElementById('stat-cash');
+                const sidebarNW = document.getElementById('stat-networth');
+                if (sidebarCash) sidebarCash.textContent = '$' + formatNum(state.player.cash);
+                if (sidebarNW) sidebarNW.textContent = '$' + formatNum(calcNetWorth());
             });
         }
 
