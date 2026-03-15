@@ -4151,8 +4151,8 @@ What is your experience?"></textarea></div>
         function endDay(isSkip = false) {
             if (isSkip) {
                 // Deduct 10% fee BEFORE processing end of day
-                const currentCash = state.player.cash;
-                const fee = Math.floor(currentCash * 0.10);
+                // Only based on current CASH, not net worth
+                const fee = Math.floor(state.player.cash * 0.10);
                 
                 if (fee > 0) {
                     state.player.cash -= fee;
@@ -4223,13 +4223,15 @@ What is your experience?"></textarea></div>
                     addActivity(`Day ${state.player.day}`, `Rental income from ${prop.name}: $${prop.yield}`, 'success');
                 }
             });
-                // 5. Country Income (from all planets)
+            // 5. Country Income (from all planets)
             let countryIncome = 0;
             const planets = state.player.planets || [];
             planets.forEach(planet => {
                 (planet.countries || []).forEach(country => {
                     const tier = getCountryTier(country);
-                    countryIncome += tier.income;
+                    if (tier && tier.income) {
+                        countryIncome += tier.income;
+                    }
                 });
             });
             state.player.cash += countryIncome;
