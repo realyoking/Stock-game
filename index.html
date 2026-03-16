@@ -4865,14 +4865,22 @@ What is your experience?"></textarea></div>
 
         function formatNum(n) {
             if (n === undefined || n === null) return '0';
-            if (!Number.isFinite(n)) return '0';
+            // Handle Infinity explicitly — overflow used to silently show as $0
+            if (n === Infinity || n > 1e300) return '\u221e Inf';
+            if (n === -Infinity || n < -1e300) return '-\u221e Inf';
+            if (!Number.isFinite(n) || isNaN(n)) return '0';
             const abs = Math.abs(n);
-            if (abs >= 1e18) return (n/1e18).toFixed(2) + 'SQ';
-            if (abs >= 1e15) return (n/1e15).toFixed(2) + 'Q';
-            if (abs >= 1e12) return (n/1e12).toFixed(2) + 'T';
-            if (abs >= 1e9) return (n/1e9).toFixed(2) + 'B';
-            if (abs >= 1e6) return (n/1e6).toFixed(2) + 'M';
-            if (abs >= 1e3) return (n/1e3).toFixed(1) + 'K';
+            if (abs >= 1e33) return (n/1e33).toFixed(2) + 'Dc';   // Decillion
+            if (abs >= 1e30) return (n/1e30).toFixed(2) + 'Nn';   // Nonillion
+            if (abs >= 1e27) return (n/1e27).toFixed(2) + 'Oc';   // Octillion
+            if (abs >= 1e24) return (n/1e24).toFixed(2) + 'Sp';   // Septillion
+            if (abs >= 1e21) return (n/1e21).toFixed(2) + 'Sx';   // Sextillion
+            if (abs >= 1e18) return (n/1e18).toFixed(2) + 'Qt';   // Quintillion
+            if (abs >= 1e15) return (n/1e15).toFixed(2) + 'Q';    // Quadrillion
+            if (abs >= 1e12) return (n/1e12).toFixed(2) + 'T';    // Trillion
+            if (abs >= 1e9)  return (n/1e9).toFixed(2)  + 'B';    // Billion
+            if (abs >= 1e6)  return (n/1e6).toFixed(2)  + 'M';    // Million
+            if (abs >= 1e3)  return (n/1e3).toFixed(1)  + 'K';    // Thousand
             return n.toFixed ? n.toFixed(2) : n.toString();
         }
 
@@ -4880,20 +4888,26 @@ What is your experience?"></textarea></div>
             if (!str) return 0;
             str = str.toString().trim().toUpperCase();
             // Handle scientific notation like 3E+37 or 3.5E37
-            if (str.includes('E')) {
+            if (/^-?[\d.]+E[+\-]?\d+$/.test(str)) {
                 const num = parseFloat(str);
                 return isNaN(num) ? 0 : num;
             }
-            // Support M, B, T, Q, SQ suffixes
+            // Support K, M, B, T, Q, QT/SQ, SX, SP, OC, NN, DC suffixes
             const match = str.match(/^([\d.]+)\s*([A-Z]*)$/);
             if (!match) return 0;
             const num = parseFloat(match[1]);
             const suffix = match[2];
-            if (suffix === 'SQ') return num * 1e18;
-            if (suffix === 'Q') return num * 1e15;
-            if (suffix === 'T') return num * 1e12;
-            if (suffix === 'B') return num * 1e9;
-            if (suffix === 'M') return num * 1e6;
+            if (suffix === 'DC') return num * 1e33;  // Decillion
+            if (suffix === 'NN') return num * 1e30;  // Nonillion
+            if (suffix === 'OC') return num * 1e27;  // Octillion
+            if (suffix === 'SP') return num * 1e24;  // Septillion
+            if (suffix === 'SX') return num * 1e21;  // Sextillion
+            if (suffix === 'QT' || suffix === 'SQ') return num * 1e18; // Quintillion (SQ kept for backward compat)
+            if (suffix === 'Q') return num * 1e15;   // Quadrillion
+            if (suffix === 'T') return num * 1e12;   // Trillion
+            if (suffix === 'B') return num * 1e9;    // Billion
+            if (suffix === 'M') return num * 1e6;    // Million
+            if (suffix === 'K') return num * 1e3;    // Thousand
             return num;
         }
 
