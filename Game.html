@@ -40,6 +40,300 @@
             doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, onSnapshot, updateDoc, arrayUnion, where, addDoc, deleteDoc,
             rtdbRef, rtdbSet, rtdbGet, rtdbOnValue
         };
+
+        // ============================================================
+        // FIRESTORE QUOTA MANAGEMENT SYSTEM
+        // ============================================================
+        // Handles quota exceeded errors, queues failed writes, and auto-retries
+        
+        const QUOTA_QUEUE_KEY = 'firestore_write_queue';
+        const QUOTA_STATUS_KEY = 'firestore_quota_status';
+        
+        window.firestoreQuotaManager = {
+            isQuotaExceeded: false,
+            writeQueue: [],
+            retryInterval: null,
+            maxRetries: 10,
+            
+            // Initialize the quota manager
+            init() {
+                this.loadQueue();
+                this.startQuotaMonitoring();
+                this.processQueue();
+            },
+            
+            // Load queue from localStorage
+            loadQueue() {
+                try {
+                    const stored = localStorage.getItem(QUOTA_QUEUE_KEY);
+                    this.writeQueue = stored ? JSON.parse(stored) : [];
+                } catch (e) {
+                    console.error('Failed to load quota queue:', e);
+                    this.writeQueue = [];
+                }
+            },
+            
+            // Save queue to localStorage
+            saveQueue() {
+                try {
+                    localStorage.setItem(QUOTA_QUEUE_KEY, JSON.stringify(this.writeQueue));
+                } catch (e) {
+                    console.error('Failed to save quota queue:', e);
+                }
+            },
+            
+            // Check if error is quota-related
+            isQuotaError(error) {
+                if (!error) return false;
+                const msg = error.message || error.toString();
+                return msg.includes('quota') || 
+                       msg.includes('RESOURCE_EXHAUSTED') || 
+                       msg.includes('too many writes') ||
+                       error.code === 'resource-exhausted';
+            },
+            
+            // Add operation to queue
+            queueOperation(operation) {
+                const queueItem = {
+                    id: Date.now() + Math.random(),
+                    timestamp: new Date().toISOString(),
+                    operation: operation.type,
+                    retries: 0,
+                    data: operation
+                };
+                this.writeQueue.push(queueItem);
+                this.saveQueue();
+                return queueItem.id;
+            },
+            
+            // Process queued operations
+            async processQueue() {
+                if (this.writeQueue.length === 0) return;
+                
+                const itemsToProcess = [...this.writeQueue];
+                let successCount = 0;
+                
+                for (let i = 0; i < itemsToProcess.length; i++) {
+                    const item = itemsToProcess[i];
+                    if (item.retries >= this.maxRetries) {
+                        console.warn(`Max retries reached for operation ${item.id}`);
+                        this.removeFromQueue(item.id);
+                        continue;
+                    }
+                    
+                    try {
+                        await this.executeQueuedOperation(item.data);
+                        this.removeFromQueue(item.id);
+                        successCount++;
+                    } catch (error) {
+                        if (this.isQuotaError(error)) {
+                            item.retries++;
+                            this.saveQueue();
+                            this.setQuotaExceeded(true);
+                            break; // Stop processing if quota still exceeded
+                        } else {
+                            console.error(`Operation ${item.id} failed:`, error);
+                            this.removeFromQueue(item.id);
+                        }
+                    }
+                }
+                
+                if (successCount > 0) {
+                    this.updateUI();
+                }
+            },
+            
+            // Execute a queued operation
+            async executeQueuedOperation(operation) {
+                const { type, payload } = operation;
+                
+                switch(type) {
+                    case 'setDoc':
+                        return await window.fbMethods.setDoc(
+                            window.fbMethods.doc(window.fbDb, ...payload.path),
+                            payload.data,
+                            payload.options
+                        );
+                    case 'updateDoc':
+                        return await window.fbMethods.updateDoc(
+                            window.fbMethods.doc(window.fbDb, ...payload.path),
+                            payload.data
+                        );
+                    case 'addDoc':
+                        return await window.fbMethods.addDoc(
+                            window.fbMethods.collection(window.fbDb, ...payload.path),
+                            payload.data
+                        );
+                    case 'deleteDoc':
+                        return await window.fbMethods.deleteDoc(
+                            window.fbMethods.doc(window.fbDb, ...payload.path)
+                        );
+                    default:
+                        throw new Error(`Unknown operation type: ${type}`);
+                }
+            },
+            
+            // Remove item from queue
+            removeFromQueue(id) {
+                this.writeQueue = this.writeQueue.filter(item => item.id !== id);
+                this.saveQueue();
+            },
+            
+            // Set quota exceeded status
+            setQuotaExceeded(exceeded) {
+                this.isQuotaExceeded = exceeded;
+                localStorage.setItem(QUOTA_STATUS_KEY, exceeded ? 'true' : 'false');
+                this.updateUI();
+                
+                if (exceeded) {
+                    this.showQuotaAlert();
+                } else if (this.writeQueue.length > 0) {
+                    this.showQuotaRestored();
+                }
+            },
+            
+            // Start monitoring quota status
+            startQuotaMonitoring() {
+                // Check quota status every 30 seconds
+                this.retryInterval = setInterval(() => {
+                    if (this.isQuotaExceeded && this.writeQueue.length > 0) {
+                        this.processQueue();
+                    }
+                }, 30000);
+            },
+            
+            // Stop monitoring
+            stopMonitoring() {
+                if (this.retryInterval) {
+                    clearInterval(this.retryInterval);
+                    this.retryInterval = null;
+                }
+            },
+            
+            // Show quota alert
+            showQuotaAlert() {
+                const alertEl = document.getElementById('quota-alert');
+                if (alertEl) {
+                    alertEl.style.display = 'flex';
+                    alertEl.innerHTML = `
+                        <div style="background:var(--danger);color:white;padding:1rem;border-radius:8px;display:flex;align-items:center;gap:1rem;width:100%;">
+                            <span style="font-size:1.2rem">⚠️</span>
+                            <div style="flex:1">
+                                <strong>Firestore Write Quota Exceeded</strong>
+                                <div style="font-size:0.85rem;margin-top:0.25rem">Your write quota has been exceeded. Operations are being queued and will resume automatically when quota is restored (usually within 24 hours).</div>
+                            </div>
+                            <button onclick="document.getElementById('quota-alert').style.display='none'" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:0.5rem 1rem;border-radius:4px;cursor:pointer;font-weight:600">Dismiss</button>
+                        </div>
+                    `;
+                }
+            },
+            
+            // Show quota restored message
+            showQuotaRestored() {
+                if (typeof showToast === 'function') {
+                    showToast('Quota Restored', `✓ Firestore quota restored. Retrying ${this.writeQueue.length} queued operation(s)...`, 'success');
+                }
+            },
+            
+            // Update UI to show queue status
+            updateUI() {
+                const queueCountEl = document.getElementById('quota-queue-count');
+                if (queueCountEl) {
+                    if (this.writeQueue.length > 0) {
+                        queueCountEl.textContent = `${this.writeQueue.length} pending`;
+                        queueCountEl.style.display = 'inline-block';
+                    } else {
+                        queueCountEl.style.display = 'none';
+                    }
+                }
+            },
+            
+            // Get queue status
+            getStatus() {
+                return {
+                    isQuotaExceeded: this.isQuotaExceeded,
+                    queueLength: this.writeQueue.length,
+                    operations: this.writeQueue.map(item => ({
+                        id: item.id,
+                        type: item.operation,
+                        timestamp: item.timestamp,
+                        retries: item.retries
+                    }))
+                };
+            }
+        };
+        
+        // Wrapped Firestore write methods with quota handling
+        window.safeFirestoreWrite = {
+            async setDoc(docRef, data, options = {}) {
+                try {
+                    return await window.fbMethods.setDoc(docRef, data, options);
+                } catch (error) {
+                    if (window.firestoreQuotaManager.isQuotaError(error)) {
+                        window.firestoreQuotaManager.setQuotaExceeded(true);
+                        // Extract path from docRef for queueing
+                        const path = docRef._key.path.segments;
+                        window.firestoreQuotaManager.queueOperation({
+                            type: 'setDoc',
+                            payload: { path, data, options }
+                        });
+                        throw new Error('Firestore quota exceeded. Your operation has been queued and will be retried when quota is restored.');
+                    }
+                    throw error;
+                }
+            },
+            
+            async updateDoc(docRef, data) {
+                try {
+                    return await window.fbMethods.updateDoc(docRef, data);
+                } catch (error) {
+                    if (window.firestoreQuotaManager.isQuotaError(error)) {
+                        window.firestoreQuotaManager.setQuotaExceeded(true);
+                        const path = docRef._key.path.segments;
+                        window.firestoreQuotaManager.queueOperation({
+                            type: 'updateDoc',
+                            payload: { path, data }
+                        });
+                        throw new Error('Firestore quota exceeded. Your operation has been queued and will be retried when quota is restored.');
+                    }
+                    throw error;
+                }
+            },
+            
+            async addDoc(collectionRef, data) {
+                try {
+                    return await window.fbMethods.addDoc(collectionRef, data);
+                } catch (error) {
+                    if (window.firestoreQuotaManager.isQuotaError(error)) {
+                        window.firestoreQuotaManager.setQuotaExceeded(true);
+                        const path = collectionRef._key.path.segments;
+                        window.firestoreQuotaManager.queueOperation({
+                            type: 'addDoc',
+                            payload: { path, data }
+                        });
+                        throw new Error('Firestore quota exceeded. Your operation has been queued and will be retried when quota is restored.');
+                    }
+                    throw error;
+                }
+            },
+            
+            async deleteDoc(docRef) {
+                try {
+                    return await window.fbMethods.deleteDoc(docRef);
+                } catch (error) {
+                    if (window.firestoreQuotaManager.isQuotaError(error)) {
+                        window.firestoreQuotaManager.setQuotaExceeded(true);
+                        const path = docRef._key.path.segments;
+                        window.firestoreQuotaManager.queueOperation({
+                            type: 'deleteDoc',
+                            payload: { path }
+                        });
+                        throw new Error('Firestore quota exceeded. Your operation has been queued and will be retried when quota is restored.');
+                    }
+                    throw error;
+                }
+            }
+        };
     </script>
     <style>
         :root {
@@ -177,6 +471,42 @@
         .quick-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 1rem; }
         .quick-buttons button { padding: 0.5rem; font-size: 0.8rem; }
 
+        /* QUOTA ALERT STYLES */
+        #quota-alert {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            max-width: 500px;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(600px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        #quota-queue-count {
+            display: none;
+            background: var(--danger);
+            color: white;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-left: 0.5rem;
+        }
+        .quota-status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem 1rem;
+            background: var(--warning);
+            color: white;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        
         /* ADMIN PANEL STYLES */
         .admin-badge-pill {
             display: inline-flex; align-items: center; gap: 0.3rem;
@@ -761,6 +1091,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Firestore Quota Alert -->
+    <div id="quota-alert"></div>
 
     <!-- Main App -->
     <div id="app-layout" class="hidden">
@@ -3857,6 +4190,11 @@ What is your experience?"></textarea></div>
         }
 
         function launchApp() {
+            // Initialize Firestore Quota Manager
+            if (window.firestoreQuotaManager) {
+                window.firestoreQuotaManager.init();
+            }
+            
             document.getElementById('setup-screen').classList.add('hidden');
             document.getElementById('app-layout').classList.remove('hidden');
             state.initialized = true;
