@@ -8849,16 +8849,25 @@ What is your experience?"></textarea></div>
                 const targetData = targetDocSnap.data();
                 const targetName = targetData.username || targetData.displayName || 'Unknown Player';
                 
-                // Get target's save data
-                const savesCol = window.fbMethods.collection(window.fbDb, 'users', targetUid, 'saves');
-                const savesSnapshot = await window.fbMethods.getDocs(savesCol);
+                // Get target's save data (Try RTDB first, fallback to Firestore)
                 let targetSaveData = null;
-                
-                savesSnapshot.forEach(doc => {
-                    if (doc.id === 'QuickSave' || !targetSaveData) {
-                        targetSaveData = doc.data();
+                if (window.fbRtdb && window.fbMethods.rtdbRef) {
+                    const targetRtdbSaveRef = window.fbMethods.rtdbRef(window.fbRtdb, 'saves/' + targetUid + '/QuickSave');
+                    const snap = await window.fbMethods.rtdbGet(targetRtdbSaveRef);
+                    if (snap.exists()) {
+                        targetSaveData = snap.val();
                     }
-                });
+                }
+
+                if (!targetSaveData) {
+                    const savesCol = window.fbMethods.collection(window.fbDb, 'users', targetUid, 'saves');
+                    const savesSnapshot = await window.fbMethods.getDocs(savesCol);
+                    savesSnapshot.forEach(doc => {
+                        if (doc.id === 'QuickSave' || !targetSaveData) {
+                            targetSaveData = doc.data();
+                        }
+                    });
+                }
                 
                 if (!targetSaveData) {
                     showToast('Error', 'Could not access target player data', 'danger');
@@ -8932,9 +8941,19 @@ What is your experience?"></textarea></div>
                 // Store nuke effects for 10 minute duration
                 targetSaveData.player.nukeEffects = nukeEffects;
                 
-                // Update target's save
-                const targetSaveRef = window.fbMethods.doc(window.fbDb, 'users', targetUid, 'saves', 'QuickSave');
-                await window.fbMethods.setDoc(targetSaveRef, targetSaveData);
+                // Update target's save (Strictly following Firestore rules: cash and level must remain identical)
+                if (targetSaveData.player) {
+                    targetSaveData.player.cash = targetData.gameState?.player?.cash || targetSaveData.player.cash;
+                    targetSaveData.player.level = targetData.gameState?.player?.level || targetSaveData.player.level;
+                }
+
+                if (window.fbRtdb && window.fbMethods.rtdbRef) {
+                    const targetRtdbSaveRef = window.fbMethods.rtdbRef(window.fbRtdb, 'saves/' + targetUid + '/QuickSave');
+                    await window.fbMethods.rtdbSet(targetRtdbSaveRef, targetSaveData);
+                } else {
+                    const targetSaveRef = window.fbMethods.doc(window.fbDb, 'users', targetUid, 'saves', 'QuickSave');
+                    await window.fbMethods.setDoc(targetSaveRef, targetSaveData);
+                }
                 
                 // Send notification to target
                 const currentUserName = window.fbAuth.currentUser.displayName || window.fbAuth.currentUser.email || 'A Player';
