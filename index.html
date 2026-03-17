@@ -510,8 +510,7 @@
                 </div>
                 <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;border:1px solid var(--border);font-size:0.85rem;color:var(--text-muted)">
                     <div style="margin-bottom:0.5rem"><strong>Cost &amp; Effects:</strong></div>
-                    <div style="color:var(--danger);font-weight:700;margin-bottom:0.25rem">💸 Cost: $5,000,000,000,000 (5T)</div>
-                    <div style="color:var(--text-muted);font-size:0.8rem;margin-bottom:0.5rem"><em>(Price may change in future updates)</em></div>
+                    <div id="nuke-cost-display" style="color:var(--danger);font-weight:700;margin-bottom:0.5rem">💸 Cost: Select a target to see price</div>
                     <div>💰 Company stock: -50% (if public)</div>
                     <div>📉 All stocks &amp; crypto: -50% for 10 mins</div>
                     <div>🔔 Target receives notification</div>
@@ -8608,6 +8607,55 @@ What is your experience?"></textarea></div>
         let nukeExecuting = false; // Prevent multiple simultaneous nuke executions
         let _nukeTargetSaveData = null; // Store target save data for nuke execution
 
+        // Compute the nuke cost dynamically:
+        //   country / city strike  = that target's price × 2
+        //   entire_planet strike   = sum of all countries on that planet × 2
+        function computeNukeCost() {
+            const strikeTypeEl = document.getElementById('nuke-strike-type');
+            const planetSelect = document.getElementById('nuke-planet-select');
+            const citySelect   = document.getElementById('nuke-city-select');
+            if (!strikeTypeEl || !planetSelect) return null;
+            const strikeType     = strikeTypeEl.value;
+            const selectedPlanetId = planetSelect.value;
+            if (!selectedPlanetId) return null;
+
+            const player = _nukeTargetSaveData ? (_nukeTargetSaveData.player || {}) : {};
+
+            if (strikeType === 'entire_planet') {
+                // Sum all countries on the planet × 2
+                let countries = [];
+                if (selectedPlanetId === 'classic_planet') {
+                    countries = player.countriesOwned || [];
+                } else {
+                    const planet = (player.planets || []).find(p => p.id === selectedPlanetId);
+                    countries = planet ? [...(planet.countries || []), ...(planet.cities || [])] : [];
+                }
+                const total = countries.reduce((sum, c) => {
+                    const name = c.name || c;
+                    const tier = getCountryTier(name);
+                    return sum + (tier ? tier.price : 0);
+                }, 0);
+                return total * 2;
+            } else {
+                // Single target (country or city) × 2
+                const targetName = citySelect ? citySelect.value : '';
+                if (!targetName) return null;
+                const tier = getCountryTier(targetName);
+                return (tier ? tier.price : 0) * 2;
+            }
+        }
+
+        function updateNukeCostDisplay() {
+            const costEl = document.getElementById('nuke-cost-display');
+            if (!costEl) return;
+            const cost = computeNukeCost();
+            if (cost === null) {
+                costEl.textContent = '\uD83D\uDCB8 Cost: Select a target to see price';
+            } else {
+                costEl.textContent = '\uD83D\uDCB8 Cost: $' + formatNum(cost);
+            }
+        }
+
         function updateNukeTargetOptions() {
             const strikeType = document.getElementById('nuke-strike-type').value;
             const targetSection = document.getElementById('nuke-target-section');
@@ -8618,6 +8666,7 @@ What is your experience?"></textarea></div>
 
             if (strikeType === 'entire_planet') {
                 targetSection.style.display = 'none';
+                updateNukeCostDisplay();
                 return;
             }
             targetSection.style.display = '';
@@ -8669,6 +8718,10 @@ What is your experience?"></textarea></div>
                     citySelect.innerHTML = '<option value="" disabled>No countries on this planet</option>';
                 }
             }
+            // Update cost display whenever options change
+            updateNukeCostDisplay();
+            // Also update cost when user picks a specific city/country
+            citySelect.onchange = updateNukeCostDisplay;
         }
 
         async function openNukeModal() {
@@ -8687,6 +8740,7 @@ What is your experience?"></textarea></div>
             if (planetSection) planetSection.style.display = 'none';
             if (targetSection) targetSection.style.display = 'none';
             document.getElementById('nuke-strike-section').style.display = 'none';
+            updateNukeCostDisplay();
             
             // Fetch all players from Firestore
             try {
@@ -8769,6 +8823,7 @@ What is your experience?"></textarea></div>
                 if (!planetSelect.value) {
                     if (targetSection) targetSection.style.display = 'none';
                     document.getElementById('nuke-strike-section').style.display = 'none';
+                    updateNukeCostDisplay();
                     return;
                 }
                 document.getElementById('nuke-strike-section').style.display = '';
@@ -8798,8 +8853,9 @@ What is your experience?"></textarea></div>
             const strikeType = strikeTypeEl ? strikeTypeEl.value : 'country';
             const targetCity = strikeType === 'entire_planet' ? '__entire_planet__' : citySelect.value;
             
-            // Fixed nuke cost
-            let nukeCost = NUKE_COST;
+            // Dynamic nuke cost: target price × 2 (or sum of all planet countries × 2 for entire_planet)
+            let nukeCost = computeNukeCost();
+            if (nukeCost === null || nukeCost <= 0) nukeCost = NUKE_COST; // fallback
             
             if (!targetUid || !targetPlanetId) {
                 showToast('Invalid', 'Please select a player and a planet', 'warning');
@@ -8822,13 +8878,13 @@ What is your experience?"></textarea></div>
             try {
                 if (!window.fbDb || !window.fbMethods) {
                     showToast('Error', 'Database not ready', 'danger');
-                    return;
+                    throw new Error('__handled__');
                 }
                 
                 const currentUser = window.fbAuth.currentUser;
                 if (!currentUser) {
                     showToast('Error', 'Not logged in', 'danger');
-                    return;
+                    throw new Error('__handled__');
                 }
                 
                 // Get target player data
@@ -8837,7 +8893,7 @@ What is your experience?"></textarea></div>
                 
                 if (!targetDocSnap.exists()) {
                     showToast('Error', 'Target player not found', 'danger');
-                    return;
+                    throw new Error('__handled__');
                 }
                 
                 const targetData = targetDocSnap.data();
@@ -8865,7 +8921,7 @@ What is your experience?"></textarea></div>
                 
                 if (!targetSaveData) {
                     showToast('Error', 'Could not access target player data', 'danger');
-                    return;
+                    throw new Error('__handled__');
                 }
                 
                 // Apply nuke effects
@@ -8971,16 +9027,18 @@ What is your experience?"></textarea></div>
 
                 // Add activity to current player
                 const strikeLabel = strikeType === 'entire_planet' ? 'entire planet' : `${strikeType} "${targetCity}"`;
-                addActivity(`Day ${state.player.day}`, `🎯 Launched nuclear strike on ${targetName}'s ${strikeLabel}! (-$5T)`, 'danger');
+                addActivity(`Day ${state.player.day}`, `🎯 Launched nuclear strike on ${targetName}'s ${strikeLabel}! (-$${formatNum(nukeCost)})`, 'danger');
                 
                 // Show success message
-                showToast('Nuke Launched!', `💣 ${targetName}'s ${strikeLabel} has been hit! (-$5T)`, 'success');
+                showToast('Nuke Launched!', `💣 ${targetName}'s ${strikeLabel} has been hit! (-$${formatNum(nukeCost)})`, 'success');
                 closeNukeModal();
                 saveGame();
                 
             } catch (e) {
                 console.error('Nuke execution error:', e);
-                showToast('Error', 'Failed to launch nuke: ' + e.message, 'danger');
+                if (e.message !== '__handled__') {
+                    showToast('Error', 'Failed to launch nuke: ' + e.message, 'danger');
+                }
             } finally {
                 // Reset executing state and re-enable button
                 nukeExecuting = false;
