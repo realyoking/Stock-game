@@ -511,6 +511,7 @@
                 <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;border:1px solid var(--border);font-size:0.85rem;color:var(--text-muted)">
                     <div style="margin-bottom:0.5rem"><strong>Cost &amp; Effects:</strong></div>
                     <div style="color:var(--danger);font-weight:700;margin-bottom:0.25rem">💸 Cost: $5,000,000,000,000 (5T)</div>
+                    <div style="color:var(--text-muted);font-size:0.8rem;margin-bottom:0.5rem"><em>(Price may change in future updates)</em></div>
                     <div>💰 Company stock: -50% (if public)</div>
                     <div>📉 All stocks &amp; crypto: -50% for 10 mins</div>
                     <div>🔔 Target receives notification</div>
@@ -1281,12 +1282,7 @@ What is your experience?"></textarea></div>
                         </div>
                         <div id="search-results" style="margin-top:1.5rem"></div>
                     </div>
-                    <div class="widget">
-                        <h3 style="margin-bottom:1rem">Planet Owners</h3>
-                        <p style="color:var(--text-muted);margin-bottom:1rem;font-size:0.9rem">See who owns the entire planet!</p>
-                        <button class="btn btn-primary" onclick="searchPlanetOwners()" style="width:100%;margin-bottom:1rem">Search Planet Owners</button>
-                        <div id="planet-search-results" style="margin-top:1rem"></div>
-                    </div>
+
                 </div>
             </div>
 
@@ -1813,6 +1809,7 @@ What is your experience?"></textarea></div>
 
     <script>
         // AI BOTS DATA
+        const NUKE_COST = 5000000000000; // $5 Trillion
         const AI_BOTS = [
             { id: 'bot1', name: 'Budget Guesser', tier: 1, price: 100000, icon: '🤖', color: '#ef4444', desc: 'Barely knows what a stock is. Guaranteed to lose money every day.', winRate: 0.10, dailyReturn: -0.08, maxLoss: 0.15 },
             { id: 'bot2', name: 'Penny Predictor', tier: 2, price: 500000, icon: '🤖', color: '#f97316', desc: 'Occasionally gets lucky, but mostly just burns your cash slowly.', winRate: 0.20, dailyReturn: -0.05, maxLoss: 0.10 },
@@ -3875,58 +3872,7 @@ What is your experience?"></textarea></div>
             // No specific render logic needed for search tab itself
         }
 
-        async function searchPlanetOwners() {
-            const resultsDiv = document.getElementById('planet-search-results');
-            resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--text-muted)">Searching for planet owners...</div>';
 
-            try {
-                if (!window.fbMethods || !window.fbDb) {
-                    resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--danger)">Database not ready. Please wait a few seconds and try again.</div>';
-                    return;
-                }
-
-                const usersCol = window.fbMethods.collection(window.fbDb, "users");
-                const snapshot = await window.fbMethods.getDocs(usersCol);
-                
-                const planetOwners = [];
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    if (data.gameState && data.gameState.player && data.gameState.player.planetOwned === true) {
-                        planetOwners.push({
-                            username: data.username || 'Unknown',
-                            displayName: data.displayName || data.username || 'Unknown',
-                            character: data.gameState.player.character,
-                            cash: data.gameState.player.cash || 0,
-                            day: data.gameState.player.day || 1,
-                            uid: doc.id
-                        });
-                    }
-                });
-
-                if (planetOwners.length === 0) {
-                    resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--text-muted)">No planet owners found yet. Be the first!</div>';
-                } else {
-                    resultsDiv.innerHTML = planetOwners.map(owner => `
-                        <div style="background:linear-gradient(135deg,#ec4899,#f43f5e);border-radius:8px;padding:1rem;margin-bottom:0.75rem;color:#fff;cursor:pointer" onclick="visitPlayer('${owner.uid}')">
-                            <div style="display:flex;align-items:center;gap:1rem">
-                                <div style="font-size:2rem">👑</div>
-                                <div style="flex:1">
-                                    <div style="font-weight:700">${owner.displayName}</div>
-                                    <div style="font-size:0.85rem;opacity:0.9">@${owner.username}</div>
-                                    <div style="font-size:0.8rem;opacity:0.8;margin-top:0.25rem">Day ${owner.day} | Cash: $${formatNum(owner.cash)}</div>
-                                </div>
-                                <div style="text-align:right">
-                                    <div style="font-size:0.9rem;opacity:0.9">Planet Owner</div>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('');
-                }
-            } catch (e) {
-                console.error('Planet search error:', e);
-                resultsDiv.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--danger)">Error searching for planet owners</div>';
-            }
-        }
 
         async function searchPlayer() {
             const query = document.getElementById('search-player-input').value.trim().toLowerCase();
@@ -8858,15 +8804,8 @@ What is your experience?"></textarea></div>
             const strikeType = strikeTypeEl ? strikeTypeEl.value : 'country';
             const targetCity = strikeType === 'entire_planet' ? '__entire_planet__' : citySelect.value;
             
-            // Calculate nuke cost based on target country tier (2x the country price)
-            let nukeCost = 0;
-            if (targetCity && targetCity !== '__entire_planet__') {
-                const tierData = getCountryTier(targetCity);
-                nukeCost = tierData.price * 2; // 2x the country price
-            } else if (targetCity === '__entire_planet__') {
-                // For entire planet, use 2x the price of a tier 1 country (2x 1e26 = 2e26)
-                nukeCost = 2e26;
-            }
+            // Fixed nuke cost
+            let nukeCost = NUKE_COST;
             
             if (!targetUid || !targetPlanetId) {
                 showToast('Invalid', 'Please select a player and a planet', 'warning');
