@@ -3672,14 +3672,8 @@ What is your experience?"></textarea></div>
                                     showToast('⚠️ WARNING', userData.pendingWarning, 'warning', 10000);
                                     await window.fbMethods.updateDoc(window.fbMethods.doc(window.fbDb, 'users', user.uid), { pendingWarning: null });
                                 }
-                                // Check for Pending Gift
-                                if (userData.pendingGift) {
-                                    const gift = userData.pendingGift;
-                                    // Clear the pending gift immediately
-                                    await window.fbMethods.updateDoc(window.fbMethods.doc(window.fbDb, 'users', user.uid), { pendingGift: null });
-                                    // Show gift popup with a small delay
-                                    setTimeout(() => showGiftPopup(gift), 1800);
-                                }
+                                // Start Real-time Notification Listener
+                                startGlobalNotificationListener();
                             }
                         } catch(e) { console.error("Ban check failed", e); }
 
@@ -9020,11 +9014,12 @@ What is your experience?"></textarea></div>
             processNotificationQueue();
         }
         
-        // Listen for nuke and job notifications
+        // Listen for nuke, job, and gift notifications
         function startGlobalNotificationListener() {
             const user = window.fbAuth ? window.fbAuth.currentUser : null;
             if (!user || !window.fbMethods.onSnapshot) return;
 
+            // 1. Listen for new notifications (Nukes, Jobs)
             const notifRef = window.fbMethods.collection(window.fbDb, 'users', user.uid, 'notifications');
             const q = window.fbMethods.query(notifRef, window.fbMethods.where('read', '==', false));
 
@@ -9040,6 +9035,77 @@ What is your experience?"></textarea></div>
                     }
                 });
             });
+
+            // 2. Listen for Admin Gifts & Nuke Effects (Real-time)
+            const userDocRef = window.fbMethods.doc(window.fbDb, 'users', user.uid);
+            window.fbMethods.onSnapshot(userDocRef, async (doc) => {
+                if (doc.exists()) {
+                    const userData = doc.data();
+                    
+                    // Handle Admin Gifts
+                    if (userData.pendingGift) {
+                        const gift = userData.pendingGift;
+                        await window.fbMethods.updateDoc(userDocRef, { pendingGift: null });
+                        showGiftPopup(gift);
+                    }
+                }
+            });
+
+            // 3. Listen for Nuke Effects in the Save File (Real-time)
+            const saveDocRef = window.fbMethods.doc(window.fbDb, 'users', user.uid, 'saves', 'QuickSave');
+            window.fbMethods.onSnapshot(saveDocRef, (doc) => {
+                if (doc.exists()) {
+                    const saveData = doc.data();
+                    // If the nuke effects in the cloud are newer than our local state
+                    if (saveData.player && saveData.player.nukeEffects) {
+                        const cloudNuke = saveData.player.nukeEffects;
+                        const localNuke = state.player.nukeEffects;
+                        
+                        if (!localNuke || cloudNuke.timestamp > localNuke.timestamp) {
+                            // Apply the nuke effects immediately to the local state
+                            state.player.nukeEffects = cloudNuke;
+                            state.player.countriesOwned = saveData.player.countriesOwned || state.player.countriesOwned;
+                            state.player.planets = saveData.player.planets || state.player.planets;
+                            state.player.planetOwned = saveData.player.planetOwned !== undefined ? saveData.player.planetOwned : state.player.planetOwned;
+                            
+                            updateUI();
+                            console.log("Real-time nuke effects applied from cloud.");
+                        }
+                    }
+                }
+            });
+        }
+
+        function showGiftPopup(gift) {
+            const popup = document.createElement('div');
+            popup.className = 'modal-overlay';
+            popup.style.zIndex = '10000';
+            popup.innerHTML = `
+                <div class="modal-content" style="max-width:400px;text-align:center;border:2px solid var(--brand);background:linear-gradient(135deg,rgba(59,130,246,0.1),rgba(79,70,229,0.1))">
+                    <div style="font-size:4rem;margin-bottom:1rem">${gift.icon || '🎁'}</div>
+                    <h2 style="color:var(--brand);margin-bottom:0.5rem">ADMIN GIFT!</h2>
+                    <p style="margin-bottom:1.5rem">You've received a gift from <strong>${gift.sentBy || 'Admin'}</strong>!</p>
+                    <div style="background:var(--bg-panel);padding:1rem;border-radius:8px;margin-bottom:1.5rem;border:1px solid var(--brand)">
+                        <div style="font-weight:800;color:var(--brand);font-size:1.2rem">${gift.displayName}</div>
+                        ${gift.message ? `<div style="color:var(--text-muted);font-size:0.85rem;margin-top:0.5rem;font-style:italic">"${gift.message}"</div>` : ''}
+                    </div>
+                    <button class="btn btn-primary" id="gift-claim-btn" style="width:100%">Claim Gift</button>
+                </div>
+            `;
+            document.body.appendChild(popup);
+
+            document.getElementById('gift-claim-btn').onclick = () => {
+                document.body.removeChild(popup);
+                // The actual data (cash, stocks, etc.) is already in the save file
+                // We just need to reload the local state to see the changes
+                syncSavesFromCloud().then(() => {
+                    if (state && state.player) {
+                        // Refresh the UI to show new cash/assets
+                        updateUI();
+                        showToast('Gift Claimed!', gift.displayName, 'success');
+                    }
+                });
+            };
         }
 
         function showJobHiredPopupQueued(title, company, salary, notifId) {
